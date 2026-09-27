@@ -1,0 +1,25 @@
+
+% Percorso per stampare sul main text il logo del Politecnico in maniera semplificata
+\newcommand{\thesisuniversitylogo}{images/logo/polito_logo_2021_blu-2-2}
+
+% Permette di rinominare l'indice dei contenuti
+\addto\captionsitalian{
+  \renewcommand{\contentsname}%
+    {Indice}%
+}
+
+% Permette di introdurre righe commentate nello pseudocodice (con il simbolo del triangolo) tramite il comando \LineComment{testo}
+\algnewcommand{\LineComment}[1]{\State \(\triangleright\) #1}
+
+% Permette di gestire al meglio valore assoluto e norma
+\DeclarePairedDelimiter\abs{\lvert}{\rvert}%
+\DeclarePairedDelimiter\norm{\lVert}{\rVert}%
+
+% Permette di modificare automaticamente l'altezza delle stanghe di valore assoluto e norma in base al contenuto
+\makeatletter
+\let\oldabs\abs
+\def\abs{\@ifstar{\oldabs}{\oldabs*}}
+%
+\let\oldnorm\norm
+\def\norm{\@ifstar{\oldnorm}{\oldnorm*}}
+\makeatother

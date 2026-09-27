@@ -1,0 +1,72 @@
+
+\chapter{Sviluppo algoritmo di guida}
+
+%%%%% Scaletta %%%%%%%%
+
+% - Spiegazione scelta effettuata e motivazioni
+
+% - Descrizione lavoro fatto
+
+%%%%%%%%%%%%%%%%%%%%%%%
+
+\chapter{Analisi statistica}
+
+Al termine della fase di pre-processing dei dati, presentata nel precedente paragrafo, si è ottenuto un dataset completo, contenente le misurazioni di tutti i sensori equipaggiati sull'AUV ordinate su una griglia temporale comune e uniforme. Prima di poter procedere con la fase di training della rete neurale, tuttavia, data l'enorme mole di dati, si vuole stabilire se esistono delle relazioni o proporzionalità significative tra di essi, in modo tale da ridurre il numero complessivo di variabili fornite in input alla rete. Questa scrematura, inoltre, consente di individuare ed eliminare eventuali misurazioni che, avendo un livello di correlazione con le grandezze target molto basso, non apportano alcun contributo alla predizione della posizione del drone, ma che, al contrario, potrebbero confondere la rete, peggiorandone le prestazioni.  
+
+Un processo di questo tipo ha necessariamente carattere statistico e, in particolare, si basa sul calcolo di un coefficiente di correlazione, univoco per ogni coppia di variabili, il cui valore risulta compreso nell'intervallo $\pm 1$. Tipicamente un valore positivo indica una proporzionalità diretta tra le due variabili, mentre un coefficiente negativo è segno di una proporzionalità inversa. In particolare, dal punto di vista del modulo si possono distinguere quattro casi principali:
+
+\begin{itemize}
+    \item $\mathbf{r(x, y) = \pm 1}$ $\rightarrow$ le variabili sono caratterizzate da una correlazione perfetta e, pertanto, al variare di una grandezza varia analogamente anche l'altra.
+    
+    \item $\mathbf{-1 < r(x, y) < -0.7 \ \cup \ 0.7 < r(x, y) < 1}$ $\rightarrow$ in questo caso si parla di correlazioni forti, con variabili legate tra loro da una proporzionalità significativa.
+    
+    \item $\mathbf{-0.7 < r(x, y) < -0.3 \ \cup \ 0.3 < r(x, y) < 0.7}$ $\rightarrow$ in questo intervallo si ottengono correlazioni moderate, con legami tra le grandezze presenti ma non particolarmente significativi.
+    
+    \item $\mathbf{-0.3 < r(x, y) < 0.3}$ $\rightarrow$ l'ultimo caso analizzato riguarda le correlazioni deboli, indice di legami tra variabili di entità trascurabile e, probabilmente, associati a fenomeni casuali o occasionali.
+\end{itemize}
+
+Esistono, naturalmente, svariati metodi in grado di stimare tali coefficienti di correlazione, classificati in base al tipo di relazione che si vuole individuare o alla tipologia di dati oggetto di analisi. In questo lavoro di tesi, in particolare, si è scelto di utilizzare due dei metodi più citati nella letteratura scientifica, basati sul lavoro di Pearson e Spearmann e presentati dettagliatamente nel seguito.
+
+\section{Metodo di Pearson}
+
+Questo metodo, sviluppato inizialmente da August Bravais e presentato nella sua forma attuale da Karl Pearson nel 1896, risulta essere ancora oggi uno dei più efficaci per stimare e quantificare la correlazione esistente tra due variabili. Dal punto di vista matematico, il calcolo del coefficiente si basa su una relazione dipendente sia dalla covarianza che dalla deviazione standard ($\sigma_{x,y}$) associate alle due grandezze, identificate genericamente con $x$ e $y$:
+    
+    \begin{center}
+        \begin{math}
+            \displaystyle r_{p} (x, y) = \frac{\text{covarianza}(x, y)}{\sigma_{x} \sigma_{y}} = \frac{\sum_{i} (x_{i} - \bar{x})(y_{i} - \bar{y})}{\sqrt{\sum_{i}(x_{i} - \bar{x})^{2}} \sqrt{\sum_{i}(y_{i} - \bar{y})^{2}}} \ \ \ (4.1)
+        \end{math}
+    \end{center}
+
+Nonostante le ottime prestazioni e la relativa semplicità di calcolo associate al metodo, sono presenti diverse limitazioni dal punto di vista dell'applicabilità. Le grandezze, infatti, devono essere continue, quantificabili, caratterizzate da una distribuzione di probabilità normale e associate agli stessi casi, ovvero per ogni istante temporale deve essere presente una misurazione di entrambi i sensori. Inoltre, un coefficiente di correlazione simile, risulta essere sensibile alla presenza di outliers nei dati e, pertanto, si rende necessario valutare opportunamente questo aspetto. Infine, occorre tenere presente che questa tecnica è applicabile unicamente a proporzionalità di tipo lineare. 
+
+% Potrebbe aver senso mettere qui una verifica della distribuzion dei dati per verificare sia normale
+
+\section{Metodo di Spearman}
+
+In questo caso, l'obiettivo del metodo non è più l'individuazione diretta di una relazione lineare tra le variabili, bensì si cerca di stabilire con che grado di accuratezza la relazione tra i dati si può approssimare tramite una funzione monotona. Dal punto di vista matematico, il calcolo del coefficiente è, sostanzialmente, un'evoluzione rispetto a quanto proposto da Pearson, con l'utilizzo dei ranghi delle variabili, $r$ e $s$, al posto delle variabili stesse: 
+
+    \begin{center}
+        \begin{math}
+            \displaystyle r_{s} (x, y) = \frac{\text{covarianza}(r, s)}{\sigma_{r} \sigma_{s}} = \frac{\sum_{i} (r_{i} - \bar{r})(s_{i} - \bar{s})}{\sqrt{\sum_{i}(r_{i} - \bar{r})^{2}} \sqrt{\sum_{i}(s_{i} - \bar{s})^{2}}} \ \ \ (4.2)
+        \end{math}
+    \end{center}
+
+Dal punto di vista applicativo, uno dei principali vantaggi rispetto al metodo di Pearson risiede nella maggiore versatilità che lo caratterizza. Per poter effettuare un'analisi di Spearman, infatti, occorre verificare unicamente che i dati siano quantitativi o qualitativi ordinali, legati da una proporzionalità monotona e associati ai medesimi casi. D'altro canto, tale metodo fornisce un'informazione solo parziale rispetto alle relazioni esistenti tra le variabili, non consentendo di valutare nel dettaglio il tipo di proporzionalità.  
+
+\section{Discussione risultati analisi}
+
+Tenendo conto delle potenzialità e delle limitazioni associate a ciascun metodo, emergono chiaramente le ragioni che hanno portato all'utilizzo combinato di entrambi. Una volta appurato che le condizioni di applicabilità sono rispettate per i dati di telemetria raccolti, confrontando i valori dei coefficienti ottenuti dai due metodi si possono catturare tutte le relazioni monotone presenti e verificare, allo stesso tempo, se sono o meno lineari. Se una coppia di variabili presenta un risconntro per entrambe le analisi ma il coefficiente di correlazione di Pearson supera in modulo quello di Spearman, infatti, la proporzionalità è necessariamente monotona lineare. Viceversa, se la coppia è caratterizzata da un alto coefficiente di Spearman e un basso, o assente, coefficiente di Pearson, la relazione è sicuramente non lineare, seppur monotona.
+    
+Al fine di valutare al meglio la proporzionalità tra misurazioni, si è scelto di calcolare la media dei coefficienti di correlazione sulla totalità delle missioni considerate. I risultati sono riassunti nella seguente heatmap e all'interno della tabella (citare tabella inserita in appendice): 
+
+% Inserire la heatmap delle medie 
+
+Analizzando nel dettaglio quanto emerge da entrambe le analisi effettuate, emerge chiaramente che le principali relazioni sono: 
+
+% Inserire discorso messo sulla prima presentazione fatta
+
+Per poter poi definire al meglio quali sono le variabili principali, è necessario affiancare a queste analisi, che forniscono informazioni sulle proporzionalità tra sensori, un diverso tipo di analisi, ovvero la Principle Component Analysis (PCA). Questa permette di ridurre la dimensionalità di un dataset (il numero di colonne di telemetria) mantenendo il maggior numerodi informazioni possibili. Per farlo occorre determinare uno o più target, che sono le variabili di riferimento che la rete neurale dovrà successivamente riuscire a predire (le posizioni del drone misurate dal GPS). Sul resto delle colonne, definitite come dati, si va ad eseguire l'operazione matematica nel concreto 
+
+% Inserire tutte le heatmap prodotte in una appendice e riferire qui (opzionale)
+
+% Commentare quali relazioni si sono individuate e cosa si è scelto di fare per il proseguio

@@ -1,0 +1,104 @@
+
+%%%%% 1. GESTIONE LINGUA, CARATTERI E CODIFICA
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english, italian]{babel}    % Gestisce entrambe le lingue, l'ultima è quella attiva di default
+\usepackage{lmodern}                    % Carica i font stabili suggeriti dal template
+\usepackage{hyphenat}                   % Gestione della sillabazione all'interno del testo (usare \nohypenation{parola} per evitare che venga spezzata)
+\usepackage{csquotes}                   % Gestione del virgolettato all'interno delle citazioni (usare \enquote{testo} per inserire il testo tra virgolette)
+\usepackage{mfirstuc}                   % Gestione della prima lettera maiuscola per parole selezionate (usare \makefirstuc{parola})
+
+%%%%% 2. COLORI (Caricato subito con le opzioni del tuo file)
+\usepackage[table, xcdraw]{xcolor}
+\usepackage{colortbl}
+\definecolor{blupolito}{RGB}{0, 46, 95}
+
+%%%%% 3. GEOMETRIA E SPAZIATURA PAGINA
+% Per forzare i margini con la dimensione voluta, togliere il simbolo "%" da \usepackage{geometry} e \geometry{...} qui sotto.
+\usepackage{geometry}
+%\geometry{a4paper, left = 20mm, top = 25mm, bottom = 25mm}
+\usepackage{layout}                     % Utile per visualizzare graficamente il layout completo della pagina (usare \layout) --> solo diagnostica
+\usepackage{setspace}                   % Gestione dell'interlinea all'interno del documento (usare \onehalfspacing o \setstretch{1.4})
+\usepackage{ragged2e}                   % Miglioramento del controllo sull'allineamento del testo
+\usepackage[skip=10pt minus 3pt, tocskip=5pt, indent=0pt]{parskip}     % Gestione della spaziatura tra i paragrafi (skip valore di spazio nominale, il minus indica che se serve per far stare il testo in pagina questo può essere ridotto di 3pt, tocskip è lo spazio nella tabella dei contenuti)
+
+%%%%% 4. GRAFICA, IMMAGINI E CODICE
+\usepackage{graphicx}                   % Gestione delle immagini in Latex
+\usepackage[export]{adjustbox}          % Estensione funzionalità di centramento e ridimensionamento anche ad altra strutture come tabelle e formule
+\usepackage{wrapfig}                    % Gestione della posizione fluida con testo dell'immagine (testo tutto intorno)
+\usepackage{subfig}                     % Gestione dei grafici posti all'interno di un'unica figura
+\usepackage{svg}                        % Gestione delle immagini in formato svg, garantendo una qualità perfetta
+\usepackage{listings}                   % Gestione del codice sorgente, con possibilità di evidenziare la sintassi e di formattare il testo
+\usepackage{verbatim}                   % Permette di inserire blocchi di test senza che vengano interpretati come codice Latex
+
+%%%%% 5. MATEMATICA E FISICA
+\usepackage{amsmath}                    % Pacchetto per la gestione avanzata della matematica in Latex
+\usepackage{amsfonts}                   % Pacchetto per la gestione di font matematici aggiuntivi  
+\usepackage{amssymb}                    % Pacchetto per la gestione di font matematici aggiuntivi
+\usepackage{bm}                         % Pacchetto per la gestione di simboli matematici in grassetto           
+\usepackage{mathtools}                  % Pacchetto per la gestione di simboli matematici (introduce ad esempio \xrightarrow{})
+\usepackage{nicefrac}                   % Pacchetto per la gestione di frazioni oblique e compatte (usare \nicefrac{num}{den})
+\usepackage{siunitx}                    % Pacchetto per la gestione delle unità di misura (usare \qty{20}{\kilogram\per\cubic\meter})
+
+%%%%% 6. STRUTTURA DELLE TABELLE
+\usepackage{array}                      % Pacchetto per la gestione avanzata delle tabelle in Latex
+\usepackage{tabularx}                   % Pacchetto per la gestione di tabelle con colonne a larghezza fissa e altre a larghezza variabile
+\usepackage{multirow}                   % Pacchetto che permette di unire celle verticalmente in una tabella
+\usepackage{longtable}                  % Pacchetto per l'ambiente longtable per la creazione di tabelle che si estendono su più pagine
+\usepackage{makecell}                   % Pacchetto per la gestione avanzata delle celle di una tabella, con possibilità di andare a capo
+\usepackage{booktabs}                   % Pacchetto per la gestione delle linee orizzontali e verticali in una tabella (\toprule, \midrule, \bottomrule)
+\usepackage{ltablex}                    % Pacchetto che unisce tabularx e longtable
+
+%%%%% 7. FORMATTAZIONE CAPITOLI, TITOLI E DIDASCALIE
+\usepackage{titlesec}                   % Pacchetto per la gestione avanzata dei titoli di capitolo, sezione e sottosezione
+\usepackage[labelfont=bf]{caption}      % Pacchetto per la gestione avanzata delle didascalie di figure e tabelle
+\titleformat{\chapter}{\normalfont\huge\bfseries\color{blupolito}}{\thechapter}{1em}{}
+\titleformat{\section}{\normalfont\Large\bfseries\color{blupolito}}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalfont\large\bfseries\color{blupolito}}{\thesubsection}{1em}{}
+
+%%%%% 8. GESTIONE TABELLE (Definizioni personalizzate dell'utente)
+\newcolumntype{P}[1]{>{\centering\arraybackslash}m{#1}} 
+\renewcommand{\cellalign}{cc} 
+\newcolumntype{Q}[1]{>{\columncolor[HTML]{87cefa}\centering\arraybackslash}m{#1}} 
+\renewcommand{\arraystretch}{0.5} 
+
+%%%%% 9. ALGORITMI ED ELENCHI
+\usepackage{algorithm}                  % Pacchetto per la gestione dell'ambiente algoritmo (introduce automaticamente anche l'indice apposito)
+\usepackage{algpseudocode}              % Pacchetto che introduce un ambiente per scrivere pseudocodice in Latex
+\usepackage{enumitem}                   % Pacchetto che permette il controllo di personalizzazione degli elenchi puntati e numerati
+\usepackage{lipsum}                     % Pacchetto che introduce il comando \lipsum per generare testo fittizio
+
+%%%%% 10. BIBLIOGRAFIA E CITAZIONI
+\usepackage[final]{microtype}           % Rende la spaziatura del testo e della bibliografia perfetta
+\usepackage[style=numeric, backend=biber, maxbibnames=9, maxcitenames=2, sorting=none, language=italian, autocite=superscript]{biblatex}           
+\let\cite\autocite 
+
+% Configurazione dell'ambiente bibliografia (dal tuo file)
+\defbibenvironment{bibliography}
+  {\list
+     {\printfield[labelnumberwidth]{labelnumber}}
+     {\setlength{\labelwidth}{\labelnumberwidth}%
+      \setlength{\leftmargin}{\labelwidth}%
+      \setlength{\labelsep}{\biblabelsep}%
+      \addtolength{\leftmargin}{\labelsep}%
+      \setlength{\itemsep}{\bibitemsep}%
+      \setlength{\parsep}{\bibparsep}}%
+      \renewcommand*{\makelabel}[1]{##1\hss}}
+  {\endlist}
+  {\item}     
+
+%%%%% 11. COLLEGAMENTI IPERTESTUALI (Sempre per ultimo)
+\usepackage{hyperref}                   % Pacchetto per la gestione dei collegamenti ipertestuali (link) all'interno del documento
+\usepackage{bookmark}                   % Pacchetto per la gestione dei segnalibri (bookmarks) all'interno del documento
+\usepackage{textcomp}                   % Pacchetto per l'introduzione di simboli extra (€, ©, ecc.) prima di hyperref
+\usepackage{url}                        % Pacchetto per la gestione corretta dei link internet all'interno di testo e bibliografia
+
+%%%%% 12. GLOSSARI E ACRONIMI
+\usepackage[%
+    toc,                                % Permette l'inserimento del glossario nell'indice 
+    abbreviations,                      % Permette l'inserimento degli acronimi nel glossario
+    nonumberlist,                       % Permette di non inserire i numeri di pagina delle occorrenze degli acronimi nel glossario
+]{glossaries-extra}                     % Pacchetto per la gestione degli acronimi e dei glossari
+
+
+%\usepackage{xcolor} % to define colors and use standard CSS names add dvipsnames as option, but it clashes with xcolor loaded in toptesi, pay attention that if it goes in conflict with tikz/beamer, simply use \documentclass[usenames,dvipsnames]{beamer}, along with other custom options when defining the document class

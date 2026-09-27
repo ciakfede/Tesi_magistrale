@@ -1,0 +1,21 @@
+% for glossary entry
+% @entry{bird,
+%     name={bird},                          % Nome completo e scorciatoia per richiamare il termine nel testo
+%     description = {feathered animal},     % Spiegazione per la pagina del glossrio 
+%     see={[see also]{duck,goose}}          % Se sono presenti termini correlati all'acronimo
+% }
+
+% if this bib file does not work, try using \input{file.tex}
+% where all the \newabbreviation commands have been inserted
+% containing all the definitions
+
+% Possibili comandi:
+% \gls{parola} permette di stampare il termine (la prima volta esteso e con l'abbreviazione tra parentesi, le successive volte solo l'abbreviazione)
+% \Gls{parola} permette di stampare il termine con la prima lettera maiuscola (la prima volta esteso e con l'abbreviazione tra parentesi)
+% \GLS{parola} permette di stampare il termine tutto in maiuscolo (la prima volta esteso e con l'abbreviazione tra parentesi)
+% \glspl{parola} permette di stampare il termine al plurale
+% \glsxtrshort{parola} permette di stampare solo l'abbreviazione (anche se è la prima volta che si usa)
+
+
+% if you want to use also description for the abbreviations/acronyms, you should use bib2gls and define all the entries in a bib file, which is incompatible with Overleaf
+\newacronym{DBMS}{DBMS}{Database Management System}

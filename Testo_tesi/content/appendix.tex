@@ -1,0 +1,80 @@
+% appendix
+
+\chapter{Appendice}
+\label{sec:appendix_galileo}
+
+\begingroup
+    \footnotesize
+    \keepXColumns
+    \renewcommand{\arraystretch}{1.4}
+    \begin{tabularx}{\textwidth}{|X | cc | cc |}
+
+        \caption{Analisi comparativa dei risultati medi}
+        \label{tab:analisi_correlazione} \\
+        \hline
+        \textbf{Relazione} & \multicolumn{2}{c|}{\textbf{Resampling}} & \multicolumn{2}{c|}{\textbf{Interpolazione}} \\
+        \cline{2-5}
+        & \textbf{Pearson} & \textbf{Spearman} & \textbf{Pearson} & \textbf{Spearman} \\
+        \hline
+        \endfirsthead
+
+        \multicolumn{5}{|c|}{{Continua dalla pagina precedente}} \\
+        \hline
+        & \textbf{Pearson} & \textbf{Spearman} & \textbf{Pearson} & \textbf{Spearman} \\
+        \hline
+        \endhead
+        \hline \multicolumn{5}{|r|}{{Continua nella pagina successiva}} \\ \hline
+        \endfoot
+        \hline \endlastfoot
+        Depth [m] <--> DVL\_Altitude [m/s] & 0.000 & -0.857 & 0.000 & -0.833 \\
+        Depth\_Rate [m/s] <--> DVL\_Vz [m/s] & 0.750 & 0.756 & 0.739 & 0.740 \\
+        Depth\_Rate [m/s] <--> Pitch [deg] & -0.633 & -0.499 & -0.622 & -0.465 \\
+        Mot\_FL [\%] <--> DVL\_Vy [m/s] & 0.538 & 0.541 & 0.514 & 0.490 \\
+        Mot\_FL [\%] <--> Ref\_$\omega$z [\%] & 0.000 & -0.980 & 0.000 & -0.935 \\
+        Mot\_FV [\%] <--> DVL\_Vz [m/s] & 0.836 & 0.709 & 0.714 & 0.588 \\
+        Mot\_FV [\%] <--> Depth\_Rate [m/s] & 0.789 & 0.834 & 0.727 & 0.734 \\
+        Mot\_FV [\%] <--> Pitch [deg] & -0.461 & -0.501 & -0.458 & -0.481 \\
+        Mot\_FV [\%] <--> Ref\_Vz [\%] & 0.916 & 0.794 & 0.906 & 0.770 \\
+        Mot\_FW1 [\%] <--> DVL\_Vx [m/s] & 0.000 & 0.733 & 0.000 & 0.707 \\
+        Mot\_FW1 [\%] <--> Mot\_FL [\%] & 0.000 & 0.000 & 0.000 & -0.341 \\
+        Mot\_FW1 [\%] <--> Ref\_Vx [\%] & 0.000 & 0.863 & 0.000 & 0.828 \\
+        Mot\_FW1 [\%] <--> Ref\_$\omega$z [\%] & 0.000 & 0.349 & 0.000 & 0.000 \\
+        Mot\_FW2 [\%] <--> DVL\_Vx [m/s] & 0.781 & 0.739 & 0.795 & 0.690 \\
+        Mot\_FW2 [\%] <--> Mot\_FL [\%] & 0.000 & 0.412 & 0.000 & 0.427 \\
+        Mot\_FW2 [\%] <--> Mot\_FW1 [\%] & 0.000 & 0.599 & 0.000 & 0.526 \\
+        Mot\_FW2 [\%] <--> Mot\_RL [\%] & 0.000 & -0.406 & 0.000 & -0.416 \\
+        Mot\_FW2 [\%] <--> Ref\_Vx [\%] & 0.871 & 0.869 & 0.865 & 0.823 \\
+        Mot\_FW2 [\%] <--> Ref\_$\omega$z [\%] & 0.000 & -0.335 & 0.000 & -0.400 \\
+        Mot\_RL [\%] <--> DVL\_Vy [m/s] & 0.000 & -0.543 & 0.000 & -0.491 \\
+        Mot\_RL [\%] <--> Mot\_FL [\%] & 0.000 & -0.981 & 0.000 & -0.988 \\
+        Mot\_RL [\%] <--> Ref\_$\omega$z [\%] & 0.000 & 0.968 & 0.000 & 0.925 \\
+        Mot\_RV [\%] <--> DVL\_Vz [m/s] & 0.676 & 0.617 & 0.557 & 0.491 \\
+        Mot\_RV [\%] <--> Mot\_FV [\%] & 0.589 & 0.000 & 0.589 & 0.000 \\
+        Mot\_RV [\%] <--> Pitch [deg] & 0.000 & 0.390 & 0.000 & 0.408 \\
+        Mot\_RV [\%] <--> Ref\_Vz [\%] & 0.765 & 0.783 & 0.768 & 0.732 \\
+        Mot\_RV [\%] <--> Ref\_$\omega$y [\%] & 0.000 & 0.654 & 0.000 & 0.688 \\
+        NED\_East [m] <--> Depth [m] & -0.362 & -0.355 & -0.357 & -0.345 \\
+        NED\_East [m] <--> NED\_North [m] & 0.000 & -0.361 & 0.000 & -0.338 \\
+        NED\_North [m] <--> Pitch [deg] & 0.000 & 0.000 & 0.000 & 0.342 \\
+        NED\_North [m] <--> Ref\_$\omega$y [\%] & 0.000 & 0.347 & 0.000 & 0.000 \\
+        Ref\_Vx [\%] <--> DVL\_Vx [m/s] & 0.870 & 0.815 & 0.855 & 0.762 \\
+        Ref\_Vz [\%] <--> DVL\_Vz [m/s] & 0.865 & 0.794 & 0.728 & 0.679 \\
+        Ref\_Vz [\%] <--> Depth\_Rate [m/s] & 0.604 & 0.659 & 0.552 & 0.589 \\
+        Ref\_$\omega$y [\%] <--> Pitch [deg] & 0.357 & 0.833 & 0.379 & 0.796 \\
+        Ref\_$\omega$z [\%] <--> DVL\_Vy [m/s] & 0.000 & -0.538 & 0.000 & -0.512 \\
+        X\_body\_ist [m] <--> DVL\_Vx [m/s] & 0.000 & 0.000 & 0.971 & 0.923 \\
+        X\_body\_ist [m] <--> Mot\_FW1 [\%] & 0.000 & 0.000 & 0.000 & 0.686 \\
+        X\_body\_ist [m] <--> Mot\_FW2 [\%] & 0.000 & 0.000 & 0.767 & 0.682 \\
+        X\_body\_ist [m] <--> Ref\_Vx [\%] & 0.000 & 0.000 & 0.819 & 0.742 \\
+        Y\_body\_ist [m] <--> DVL\_Vy [m/s] & 0.000 & 0.000 & 0.849 & 0.834 \\
+        Y\_body\_ist [m] <--> Mot\_FL [\%] & 0.000 & 0.000 & 0.430 & 0.414 \\
+        Y\_body\_ist [m] <--> Mot\_RL [\%] & 0.000 & 0.000 & 0.000 & -0.413 \\
+        Y\_body\_ist [m] <--> Ref\_$\omega$z [\%] & 0.000 & 0.000 & 0.000 & -0.434 \\
+        Y\_body\_ist [m] <--> Yaw [deg] & 0.000 & 0.000 & 0.000 & 0.482 \\
+        Yaw [deg] <--> DVL\_Vy [m/s] & 0.000 & 0.556 & 0.000 & 0.566 \\
+    \end{tabularx}
+\endgroup
+
+
+
+

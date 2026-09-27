@@ -1,0 +1,30 @@
+
+\chapter{Algoritmi di navigazione}
+
+\section{Kalman Filters}
+
+Tradizionalmente, la navigazione di un drone autonomo si basa su approcci model-based, che simulano il comportamento dinamico di quest'ultimo in base alle misurazioni derivanti dai sensori presenti a bordo. 
+
+(dovuti ai sensori, caratterizzati da imperfezioni che nascono al momento della loro costruzione, e al modello del drone, che è soggetto per forza di cose ad approssimazioni rispetto alla controparte reale)
+
+\section{Literature Review}
+
+A seguito del rapido sviluppo avuto dal settore dell'intelligenza artificiale e, in particolare, del machine learning negli ultimi anni, sono comparse in letteratura numerose architetture in grado di unire i vantaggi degli approcci model-based e data-driven. Tra di esse, si distinguono metodologie atte a migliorare i vari aspetti che concorrono alla precisione finale della navigazione, tra cui la calibrazione iniziale dei sensori, l'accuratezza della stima del vettore velocità, input del metodo utilizzato, e la correzione del vettore posizione stimato dal filtro di Kalman. 
+
+% Inserire possibili architetture per categoria: 
+                                                % BeamsNet e derivati, UDON, SMNN per miglioramento velocità
+                                                % VM-PMC-EKF e tutti quelli per miglioramento diretto navigazione
+                                                % Algoritmi solo ML per navigazione
+
+\subsection{Calibrazione e denoising sensori}
+
+Il processo di fusione tra dati inerziali e DVL genera enormi vantaggi in termini di precisione della navigazione in assenza di strumenti di posizionamento esterni come il GNSS. Tuttavia, la riuscita di questo approccio dipende fortemente dal corretto allineamento tra i sistemi di riferimento dei sensori coinvolti. In letteratura sono presenti molti approcci di stampo tradizionale che propongono possibili soluzioni a tale problematica, sebbene mostrino tutti notevoli margini di miglioramento in termini di precisione e velocità di convergenza. Un importante passo in avanti può essere fatto impiegando algoritmi di machine learning, che permettono di trattare grandi volumi di dati caratterizzati da relazioni non-lineari. Damari et al.~\cite{AlignNet} nel suo lavoro presenta un approccio, basato su una rete neurale convoluzionale 1D, in grado di generare una matrice di rotazione tra i due sistemi di riferimento in questione. Nel tentativo di migliorare tale approccio, sempre Damari et al.~\cite{ResAlignNet} presenta un algoritmo differente, questa volta basato su layer convoluzionali raccolti in vari residual blocks. % Da chiedere poi quanto bisogna andare nel dettaglio con le descrizioni
+
+Altri approcci si concentrano su differenti problematiche, riguardanti la struttura intrinseca dei sensori. Yampolsky et al.~\cite{DCNet} propone un approccio data-driven per la calibrazione del DVL, basato su una rete neurale convoluzionale molto complessa. % Si potrebbe cercare anche approcci su denoising che compaiono nel paper di Cohen sulla review
+
+
+\subsection{Miglioramento precisione navigazione}
+
+Uno dei parametri chiave per la navigazione dell'AUV è senza dubbio il vettore della velocità fornito dal Doppler Velocity Log, che fornisce una misura correttiva per le componenti stimate, tramite integrazione numerica classica, dal filtro di Kalman. Tradizionalmente, il passaggio dalle misurazioni grezze del sensore alle componenti del vettore finale, avviene attraverso l'utilizzo di un \textbf{Least Square Estimator}. % Si potrebbe approfondire di più l'LS concentrandosi sui lati negativi 
+
+Tuttavia, un simile approccio presenta diverse criticità, tra cui l'eccessiva sensibilità alla presenza di outliers nelle misurazioni e la necessità di definire un modello del sensore, producendo ulteriori incertezze nei dati. Una soluzione a tale problematica passa, ovviamente, attraverso l'utilizzo di tecniche di machine learning, basate unicamente sull'addestramento tramite dati misurati sperimentalmente. Una delle architetture più versatili ed efficienti si rivela sicuramente essere il BeamsNet, proposta da Cohen et al.~\cite{BeamsNet} nel 2022. Questo approccio permette di migliorare il livello di precisione della velocità fornita al filtro di Kalman tramite l'integrazione delle misurazioni IMU e DVL. In particolare, questo viene fatto grazie all'utilizzo di un filtro 1DCNN, un dropout layer e diversi FC layers posti in successione. I risultati presentati sono sicuramente incoraggianti, con un miglioramento rispetto all'utilizzo dell'LS estimator del 62.28 \% in termini di Root Mean Squared Error della velocità. Un approccio simile è stato presentato da Zhang et al.~\cite{UDON} nel 2025. All'interno di questa rete neurale l'architettura utilizzata risulta essere molto simile a quella legata al BeamsNet, con la fondamentale aggiunta di un layer LSTM; quest'ultimo, infatti, consente di catturare meglio le dipendenze temporali a lungo termine, ottenendo così un miglioramento più ampio rispetto alla prima rete. I test, seppur basati su dati provenienti da missioni svolte in ambiente lacustre, nettamente meno indicativo rispetto ai test in mare per la valutazione della robustezza della rete, mostrano un miglioramente pari al 69 \% in termini di RMSE sulla velocità stimata rispetto all'LS estimator.

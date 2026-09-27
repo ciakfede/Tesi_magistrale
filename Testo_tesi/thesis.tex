@@ -1,0 +1,122 @@
+% !TEX encoding = UTF-8 Unicode
+% !TEX TS-program = pdflatex
+% !BIB program = biber
+
+% toptesti document class
+\documentclass[    
+    a4paper,
+    corpo=12pt, % dimension of basic font
+    twoside, % two side optimizes for two-face printing, having chapters open on the right (aka odd numbers), if you don't want blank pages put oneside here
+    stile=standard,
+    %evenboxes, % not needed, to put supervisors and candidate at the same level
+    tipotesi=magistrale,
+    numerazioneromana, % roman numbering for appendixes and preambles, up to Table of Contents
+    openright, % to force opening on the right for double-sided printing
+    cucitura=7mm, % for printing, 7mm should be enough
+]{toptesi}
+
+
+\input{common/packages}             % File contenente tutti i pacchetti usati nel file
+
+\input{common/package_config}       % File contenente alcune istruzioni e comandi personalizzati per i pacchetti
+
+\input{common/new_commands}         % File contenente comandi e istruzioni aggiuntive per ambienti come quelli matematici e algoritmici
+
+\input{common/thesis_info.tex}      % File con le informazioni per il frontespizio
+
+\input{common/font_config.tex}      % File per la gestione del font e delle dimensioni del testo nelle varie sezioni
+
+\addbibresource{bibliography.bib}   % Richiamo del file di bibliografia in formato bibtex
+
+\input{glossaries.tex}              % File per la gestione del glossario e degli acronimi
+%\makeglossaries
+
+
+% Inizio documento
+\begin{document}
+
+\input{common/config}               % File che contiene istruzioni utili per il debug
+
+\input{common/toptesi_config}       % File con la configurazione della toptesi (qui usato solo per definire l'utilizzo di codici JavaScript)
+
+\input{common/frontpage.tex}        % File che permette di implementare il frontespizio nel pdf
+
+\paginavuota                        % Introduce una pagina vuota necessaria per la stampa fronte-retro
+
+\frontmatter                        % Permette di iniziare la sezione di introduzione --> numerazione apposita in numeri romani
+
+% abstract if needed
+% \begin{abstract}
+%     \input{content/abstract.tex}
+% \end{abstract}
+
+% to create blank pages for openright in frontmatter
+% use one of the following two methods
+% 1) use the following three lines
+%\phantom{0} % needed otherwise cleardoublepage does not clean the page because it sees it empty
+%\cleardoublepage
+%\thispagestyle{empty} % to have empty page, without numbers
+% 2) or
+\paginavuota % to manually create a blank page
+
+% summary (uncomment until "end summary" if needed)
+%\sommario
+%\input{content/summary}
+
+%\phantom{0}
+%\cleardoublepage
+%\thispagestyle{empty}
+% end summary
+
+\ringraziamenti                     % Comando per introdurre le caratteristiche del template per la pagina dei ringraziamenti
+\input{content/acknowledgements}    % File contenente il testo dei ringraziamenti
+
+\paginavuota
+
+\tableofcontents                    % Indice dei contenuti per i capitoli
+
+\listoftables                       % Indice dei contenuti per le tabelle 
+
+\listoffigures                      % Indice dei contenuti per le figure
+
+% actually abbreviation is the name used for acronym in glossaries-extra
+% title sets the name
+% type tells the type of glossary to print
+% style overrides the global style
+% here we are printing only abbreviations
+% printunsrtglossary if using record, otherwise printglossary is ok
+%\paginavuota
+%\printunsrtglossary[style=altlist,title=Glossario,type=\glsxtrabbrvtype]
+
+% Qui si potrebbe inserire anche la lista dei simboli se necessaria e il glossario 
+
+
+\input{common/post_summary_config.tex}  % File con alcune istruzioni per la gestione del passaggio a testo principale (reset indice acronimi usati in introduzione e abstract)
+
+\mainmatter                             % Comando che permette di iniziare la parte di testo principale --> si resetta la numerazione delle pagine e la si imposta in numeri arabi
+
+% Qui andrebbe inserita l'inizio della parte se il file è così suddiviso (occorre inserire una pagina bianca prima del capitolo perché non può essere sul retro di questa)
+
+% Inserire i singoli capitoli della tesi 
+\input{content/chapters/chapter1}
+\input{content/chapters/chapter2}
+\input{content/chapters/chapter3}
+\input{content/chapters/chapter4}
+\input{content/chapters/chapter5}
+\input{content/chapters/chapter6}
+
+% \paginavuota % it works even without stile=classica
+
+\appendix
+\input{content/appendix}
+
+% endnotes here if needed
+
+\phantom{0}
+\cleardoublepage
+
+\begin{sloppypar}
+    \printbibliography[heading=bibintoc, title={Bibliografia}]
+\end{sloppypar}
+
+\end{document}

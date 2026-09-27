@@ -1,0 +1,24 @@
+# Cartelle di cui non effettuare mai lo staging
+Telemetrie/
+Dizionari_dataframes/
+Risultati_analisi/
+__pycache__/
+
+# Estensioni file da non considerare mai
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.lof
+*.log
+*.lot
+*.run.xml
+*.synctex.gz
+*.toc
+*.pdf
+
+# Ambiente virtuale
+venv/
+.venv/
+
+
