@@ -1,6 +1,6 @@
-'''     ANALISI STATISTICA DATI TELEMETRIA
+"""     ANALISI STATISTICA DATI TELEMETRIA
               FEDERICO CECCHINI
-            ANNO ACCADEMICO 2025/26             '''
+            ANNO ACCADEMICO 2025/26             """
 
 import pandas as pd                                             # Libreria per l'analisi di dataframe
 import os                                                       # Libreria necessaria per creare cartelle direttamente da Python
@@ -102,7 +102,7 @@ def tabella_tesi(storico_coppie_medie):
 sensors_frequencies = {'IMU': 5, 'DVL': 10, 'Depth': 5, 'Depth_rate': 5, 'MOT': 5, 'V_ref': 5, 'GPS': 1}  # Frequenze associate ai sensori
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-ROOT_DIR = os.path.dirname(SCRIPT_DIR)
+ROOT_DIR : str = os.path.dirname(SCRIPT_DIR)
 DF_DICT_DIR = os.path.join(ROOT_DIR, 'Dizionari_dataframes')
 os.makedirs(DF_DICT_DIR, exist_ok=True)                                                 # Si genera la cartella di destinazione dei file di salvataggio pickle con i vari dataframe
 file_database_raw = os.path.join(DF_DICT_DIR, 'Dataframe_globale.pkl')                  # File pickle di output/input contenente i dati sul dizionario globale dei dataframe generato al termine del pre-processing

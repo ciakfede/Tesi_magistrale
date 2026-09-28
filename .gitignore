@@ -2,6 +2,7 @@
 Telemetrie/
 Dizionari_dataframes/
 Risultati_analisi/
+Risultati_analisi_statistica/
 __pycache__/
 
 # Estensioni file da non considerare mai
@@ -16,6 +17,7 @@ __pycache__/
 *.synctex.gz
 *.toc
 *.pdf
+*.bbl-SAVE-ERROR
 
 # Ambiente virtuale
 venv/

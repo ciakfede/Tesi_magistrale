@@ -22,7 +22,7 @@ import pickle                                   # Libreria per la gestione del f
 import os                                       # Libreria per la gestione dell'interfaccia tra sistema operativo e script
 from sklearn.metrics import mean_squared_error  # Libreria per l'utilizzo della funzione per il calcolo dell'errore quadratico medio
 import matplotlib.pyplot as plt                 # Libreria per la gestione dell'ambiente grafico
-#import utm                                      # Libreria per la gestione della conversione di coordinate espresse in gradi (WGS84)
+import utm                                      # Libreria per la gestione della conversione di coordinate espresse in gradi (WGS84)
 
 pd.set_option('display.max_columns', None)              # Visualizza tutte le colonne (nessun limite al numero)
 pd.set_option('display.max_colwidth', None)             # Visualizza tutto il contenuto della cella (evita di troncare stringhe lunghe)
@@ -30,7 +30,6 @@ pd.set_option('display.expand_frame_repr', False)       # Evita che le colonne v
 pd.options.display.max_rows = 100                       # Imposta il numero massimo di righe visualizzabili a schermo
 
 warnings.filterwarnings('error', category=pd.errors.DtypeWarning)           # Forza i DtypeWarning a comportarsi come eccezioni
-
 
 
 class PreProcessing:
@@ -113,7 +112,7 @@ class PreProcessing:
             clean_cols = cols.astype(str).replace(r'[^-0-9.eE]', '', regex=True)
 
             # Si applica la maschera booleana alla struttura pulita --> elimina gli elementi True, che corrispondono ai valori iniziali NaN o alle celle diventate vuote dopo la sostituzione
-            clean_cols = clean_cols.mask(nan_mask | clean_cols == '')
+            clean_cols = clean_cols.mask(nan_mask | (clean_cols == ''))
 
             # Si effettua la conversione da stringa a valore numerico di ogni cella --> i valori tagliati dalla maschera booleana o quelli non convertibili diventano NaN (per effetto di coerce)
             mission_dataframe[cols_names] = clean_cols.apply(pd.to_numeric, errors='coerce')
@@ -479,6 +478,7 @@ class PreProcessing:
             resampled_dataframe = resampled_dataframe.sort_values('timestamp', ignore_index=True)
 
             # Si aggiunge il dataframe generato per la missione al dizionario complessivo
+            resampled_dataframe.drop(columns=['UTM_East [m]', 'UTM_North [m]'], inplace=True)
             self.resampled_trajectories_dataframes[trajectory][combination] = resampled_dataframe
 
         except Exception as e:
@@ -656,8 +656,8 @@ class PreProcessing:
 
                     # Si effettua un'operazione di unwrap delle grandezze angolari --> in questo modo si evitano problemi per quanto riguarda il passaggio da 0 a 360 e viceversa, che l'interpolazione non gestisce in maniera continua
                     IMU_cols = ['Roll [deg]', 'Pitch [deg]', 'Yaw [deg]']
-                    IMU_block = interpolated_dataframe[IMU_cols].dropna()
-                    interpolated_dataframe.loc[IMU_block.index, IMU_cols] = np.unwrap(IMU_block.to_numpy(), period=360, axis=0)
+                    IMU_mask = interpolated_dataframe[IMU_cols].notna().all(axis=1)
+                    interpolated_dataframe.loc[IMU_mask, IMU_cols] = np.unwrap(interpolated_dataframe.loc[IMU_mask, IMU_cols].to_numpy(), period=360, axis=0)
 
                     # Si effettua l'interpolazione lineare
                     interpolated_dataframe = interpolated_dataframe.interpolate(method='time', limit_area='inside')
@@ -1090,3 +1090,160 @@ class PreProcessing:
                 print(f'    Tensore associato alla missione {trajectory} - {combination} è stato generato con {self.warn_count}  warnings rilevati, con dimensioni: DVL = {self.pytorch_tensor[trajectory][combination]['DVL'].shape}, IMU = {self.pytorch_tensor[trajectory][combination]['IMU'].shape}, GPS = {self.pytorch_tensor[trajectory][combination]['GPS'].shape}.')
 
         return self
+
+
+class PostProcessing:
+
+    def __init__(self):
+
+        # Dizionario per i Titoli (Coerente con i titoli dei capitoli/sezioni in blupolito)
+        self.font_titolo = {
+            'family': 'serif',      # Simula il font serif di Latin Modern usato all'interno del template Latex per la tesi
+            'color': '#002E5F',     # Colore blupolito definito all'interno del template
+            'weight': 'bold',       # Grassetto per far risaltare il titolo del grafico
+            'size': 13,             # Dimensione equilibrata per il titolo del grafico
+            'style': 'normal'
+        }
+
+        # Dizionario per le Etichette degli Assi (X e Y)
+        self.font_assi = {
+            'family': 'serif',      # Simula il font serif di Latin Modern usato all'interno del template Latex per la tesi
+            'color': 'black',       # Testo nero ad alto contrasto per la massima leggibilità
+            'weight': 'normal',     # Peso normale per le etichette descrittive
+            'size': 11,             # Dimensione leggibile ma subordinata al titolo
+            'style': 'normal'
+        }
+
+        self.waypoints_dict = {}            # Dizionario che conterrà le liste di waypoints in assi NED relativi di ogni traiettoria --> nella forma {'0': [], '1': []...}
+
+    # Funzione che permette di
+    #def single_path_definition(self):
+
+    # Funzione che permette la costruzione di un dizionario contenente le liste di punti (in coordinate UTM) di ogni traiettoria utilizzata
+    def waypoints_dict_building(self, ROOT_DIR):
+
+        input_folder = os.path.join(ROOT_DIR,f'Telemetrie/Lista_punti')  # Si definisce la cartella di riferimento
+
+        for trajectory, file in enumerate(sorted(os.listdir(input_folder))):
+
+            trajectory = str(trajectory)
+
+            # Si inizializza la lista di punti associata alla traiettoria (se non presente)
+            if trajectory not in self.waypoints_dict:
+                self.waypoints_dict[trajectory] = []
+
+            file_path = os.path.join(input_folder, file)
+            with open(file_path, "r+") as txt_points:
+
+                # Si verifica che il file di testo non sia vuoto
+                if os.stat(file_path).st_size == 0:
+                    print(f"  [WARNING] Il file {file} è vuoto --> si procede senza considerarlo.")
+                    continue
+
+                # Si itera per ogni riga (trattata come stringa) presente all'interno del file di iterazione
+                for idx, line in enumerate(txt_points):
+
+                    try:
+
+                        clean_line = line.rstrip()          # Si eliminano eventuali spazi e caratteri di spaziatura (\n o \r) a fine riga
+                        values = clean_line.split(",")      # Si analizza la linea isolando i termini presenti (nome_punto, latitudine, longitudine)
+                        latitude = float(values[1])         # Si isola il valore della latitudine trasformandolo in numero decimale
+                        longitude = float(values[2])        # Si isola il valore della longitudine trasformandolo in numero decimale
+
+                        if idx == 0:
+                            continue
+                        if idx == 1:
+                            East_coord_0, North_coord_0, _, _ = utm.from_latlon(latitude, longitude)
+                            tuple_coord = (0, 0)
+                        else:
+                            East_coord, North_coord, _, _ = utm.from_latlon(float(latitude), float(longitude))
+
+                            # Si effettua la sottrazione per arrivare alle coordinate NED relative al punto iniziale --> sono quelle necessarie per definire i waypoint
+                            tuple_coord = (East_coord - East_coord_0, North_coord - North_coord_0)
+
+                        self.waypoints_dict[trajectory].append(tuple_coord)
+
+                    except Exception as e:
+                        print(f"  [WARNING] Rilevato un errore generico nella lettura delle coordinate {idx} della traiettoria {trajectory}: {e}")
+                        continue
+
+    # Funzione che riceve in input una lista di tensori (rappresentanti i valori di posizione GPS e predette) per ogni missione di test e produce in output i 3 valori di errore RMSE
+    def RMSE_estimation(self, GPS_coordinates, NN_coordinates):
+
+        # Si trasformano le liste di tensori in array numpy --> in modo da poter effettuare operazioni matematiche vettoriali
+        GPS_coordinates_array = torch.cat(GPS_coordinates, dim=0).cpu().numpy()
+        NN_coordinates_array = torch.cat(NN_coordinates, dim=0).cpu().numpy()
+        #GPS_coordinates_array = np.array([t.detach().cpu().numpy().flatten() for t in GPS_coordinates])
+        #NN_coordinates_array = np.array([t.detach().cpu().numpy().flatten() for t in NN_coordinates])
+
+        # Si calcola l'errore RMSE per gli assi East e North separatamente
+        RMSE_E = np.sqrt(mean_squared_error(GPS_coordinates_array[:, 0], NN_coordinates_array[:, 0]))
+        RMSE_N = np.sqrt(mean_squared_error(GPS_coordinates_array[:, 1], NN_coordinates_array[:, 1]))
+
+        # Si calcola l'errore RMSE complessivo sulla posizione --> si usa approccio differente per avere anche il vettore degli errori nel tempo, in modo da poterlo valutare graficamente
+        errori_tot = np.linalg.norm(GPS_coordinates_array - NN_coordinates_array, axis=1)  # Si calcola la norma di un vettore --> necessario per ottenere l'errore sulla posizione assoluta
+        RMSE_tot = np.sqrt(np.mean(errori_tot ** 2))
+
+        print(f'    RMSE sulla posizione in direzione North è pari a: {RMSE_N} m.')
+        print(f'    RMSE sulla posizione in direzione East è pari a: {RMSE_E} m.')
+        print(f'    RMSE sulla posizione complessiva è pari a: {RMSE_tot} m.')
+
+        return RMSE_tot, RMSE_E, RMSE_N
+
+    # Funzione che genera un grafico dati in input i dati target e quelli prodotti dalla rete con cui confrontarli e i nomi delle rispettive variabili
+    def plot_confronto_traiettoria(self, GPS_coordinates_list, NN_coordinates_list, mission, path_name, title):
+
+        # Si trasformano le liste di tensori in array numpy --> in modo da poter effettuare operazioni matematiche vettoriali
+        GPS_coordinates_array = torch.cat(GPS_coordinates_list, dim=0).cpu().numpy()
+        NN_coordinates_array = torch.cat(NN_coordinates_list, dim=0).cpu().numpy()
+
+        # Si scompone il vettore nelle rispettive componenti
+        GPS_East = [p[0] for p in GPS_coordinates_array]
+        GPS_North = [p[1] for p in GPS_coordinates_array]
+
+        NN_East = [p[0] for p in NN_coordinates_array]
+        NN_North = [p[1] for p in NN_coordinates_array]
+
+        waypoints = self.waypoints_dict[mission[0]]
+        waypoints_East = [p[0] for p in waypoints]
+        waypoints_North = [p[1] for p in waypoints]
+
+        plt.figure(figsize=(10, 6))
+
+        plt.plot(waypoints_East, waypoints_North, label = 'Waypoints', marker = 's', markersize = 6)
+        plt.plot(GPS_East, GPS_North, color='blue', label='Target (GPS)', linewidth=2, linestyle='--')
+        plt.plot(NN_East, NN_North, color='red', label='NavNet Prediction', linewidth=1.5, linestyle='-')
+
+        # 2. Punti di Inizio (Start)
+        plt.scatter(GPS_East[0], GPS_North[0], color='blue', s=50, edgecolors='black', zorder=5)
+        plt.text(GPS_East[0], GPS_North[0], f' Start ({GPS_East[0]:.2f}, {GPS_North[0]:.2f})', color='blue', fontsize=9, fontweight='bold', va='bottom')
+        plt.scatter(NN_East[0], NN_North[0], color='red', s=50, edgecolors='black', zorder=5)
+        plt.text(NN_East[0], NN_North[0], f' Start NavNet ({NN_East[0]:.2f}, {NN_North[0]:.2f})', color='red', fontsize=9, fontweight='bold', va='bottom')
+
+        # 3. Punti di Fine (End)
+        plt.scatter(GPS_East[-1], GPS_North[-1], color='blue', marker='X', s=80, edgecolors='black', zorder=5)
+        plt.text(GPS_East[-1], GPS_North[-1], f' End Target ({GPS_East[-1]:.2f}, {GPS_North[-1]:.2f})', color='blue', fontsize=9, fontweight='bold', va='top')
+        plt.scatter(NN_East[-1], NN_North[-1], color='red', marker='X', s=80, edgecolors='black', zorder=5)
+        plt.text(NN_East[-1], NN_North[-1], f' End NavNet ({NN_East[-1]:.2f}, {NN_North[-1]:.2f})', color='red', fontsize=9, fontweight='bold', va='bottom')
+
+        # Definizione parametri grafico
+        plt.title(title, fontdict = self.font_titolo, loc ="center", pad = 10)
+        plt.xlabel('East [m]', fontdict = self.font_assi)
+        plt.ylabel('North [m]', fontdict = self.font_assi)
+        plt.legend()
+        plt.minorticks_on()
+        plt.grid(True, linestyle=':', alpha=0.6)
+        plt.axis('equal')
+
+        # Si stampa il testo legato all'errore assoluto sulla posizione
+        Delta_N = np.abs(GPS_East[-1] - NN_East[-1])
+        Delta_E = np.abs(GPS_North[-1] - NN_North[-1])
+        print(f'\nPer la missione {mission} e la traiettoria {path_name}, si hanno i seguenti valori di Errore Assoluto sulla posizione:')
+        print(f'    Delta sulla posizione in direzione North è pari a: {Delta_N} m.')
+        print(f'    Delta sulla posizione in direzione East è pari a: {Delta_E} m.')
+
+        if not os.path.exists('Grafici'):
+            os.makedirs('Grafici')
+
+        plt.savefig(f'Grafici/Confronto_traiettorie_M{mission}_{path_name}.png', bbox_inches='tight')
+        plt.show()

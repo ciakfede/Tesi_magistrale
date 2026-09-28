@@ -43,6 +43,8 @@ class StatisticalAnalysis:
 
         self.warn_count = 0
 
+        self.files_initialized = set()
+
     # ======================================================
     #         ANALISI DI CORRELAZIONE PER MISSIONE
     # ======================================================
@@ -57,7 +59,7 @@ class StatisticalAnalysis:
             plt.title(f"Matrice di Correlazione di {correlation_method} per missione {trajectory} - {combination}", fontdict=self.font_titolo, loc="center", pad=10)
 
             # Definizione nome cartella in cui salvare i grafici
-            output_dir_path = os.path.join(ROOT_DIR, f"Risultati_analisi/Analisi_{processing_method}/Analisi_{correlation_method}/Traiettoria_{trajectory}")
+            output_dir_path = os.path.join(ROOT_DIR, f"Risultati_analisi_statistica/Analisi_{processing_method}/Analisi_{correlation_method}/Traiettoria_{trajectory}")
 
             # Verifica che la cartella non sia già stata creata in precedenza, altrimenti la genera
             if not os.path.exists(output_dir_path):
@@ -81,7 +83,7 @@ class StatisticalAnalysis:
     def correlation_matrix_to_txt(self, correlation_method, couples_list, processing_method, trajectory, combination, ROOT_DIR):
 
         # Si definisce il percorso della cartella di output
-        output_dir_path = os.path.join(ROOT_DIR, f"Risultati_analisi/Analisi_{processing_method}/Analisi_{correlation_method}/Traiettoria_{trajectory}")
+        output_dir_path = os.path.join(ROOT_DIR, f"Risultati_analisi_statistica/Analisi_{processing_method}/Analisi_{correlation_method}/Traiettoria_{trajectory}")
 
         # Si verifica che la cartella non sia già stata creata in precedenza
         if not os.path.exists(output_dir_path):
@@ -91,8 +93,13 @@ class StatisticalAnalysis:
         output_file_path = os.path.join(output_dir_path, f"Report_analisi_{correlation_method}.txt")
 
         try:
+
+            # Controllo esistenza file di output --> se è già presente nel set usa la modalità append (sono già alla seconda combinazione di una traiettoria), altrimenti usa write, in modo da eliminare le informazioni vecchie
+            mode = "a" if output_file_path in self.files_initialized else "w"
+            self.files_initialized.add(output_file_path)
+
             # Apertura file di testo in modalità append --> si vogliono aggiungere al file i nuovi dati di missione ogni volta
-            with open(output_file_path, "a", encoding="utf-8") as f:
+            with open(output_file_path, mode, encoding="utf-8") as f:
 
                 # Intestazione del file --> da fare solo alla prima apertura
                 if f.tell() == 0:
@@ -106,6 +113,8 @@ class StatisticalAnalysis:
 
                 # Si scrivono tutte le coppie con il relativo coefficiente di correlazione per la singola missione
                 for (s1, s2), value in couples_list.items():
+
+                    s1, s2 = sorted((s1, s2))
                     f.write(f"- {s1} <--> {s2}: {value:.3f}\n")
 
                 # Separatore tra missioni
@@ -116,7 +125,7 @@ class StatisticalAnalysis:
         except Exception as e:
             print(f"    [WARNING] Errore nella fase di scrittura file di testo per la missione {trajectory} - {combination}--> {e}")
             self.warn_count += 1
-            return
+            return self
 
     # Funzione interna per l'aggiornamento del dizionario
     def correlation_dict_update(self, correlation_method, couples_list, processing_method, trajectory, combination, optimum_lag):
@@ -132,6 +141,7 @@ class StatisticalAnalysis:
         # Si itera su ogni elemento della lista di correlazioni individuate
         for (s1, s2), value in couples_list.items():
 
+            s1, s2 = sorted((s1, s2))
             couple_key = f"{s1} <--> {s2}"
 
             try:
@@ -167,7 +177,7 @@ class StatisticalAnalysis:
         # Si itera su ogni metodo di processing telemetrie selezionato
         for processing_method in processing_methods:
 
-            dataframes_dict = processed_dataframes_dict[processing_method]
+            dataframes_dict = processed_dataframes_dict[processing_method].copy()
 
             # Si itera sui metodi di analisi prescelti
             for correlation_method in correlation_methods:
@@ -185,7 +195,8 @@ class StatisticalAnalysis:
                         # -----------------------------------------------------
                         try:
                             # Calcolo dei coefficienti di correlazione del metodo di iterazione --> tramite fillna sostituisco tutti i valori NaN (relazioni non trovate) con uno 0
-                            correlation_matrix = mission_dataframe.corr(method=correlation_method).fillna(0)
+                            mission_dataframe_copy = mission_dataframe.drop(columns=['timestamp'])
+                            correlation_matrix = mission_dataframe_copy.corr(method=correlation_method)
                         except Exception as e:
                             print(f"    [WARNING] Errore nel calcolo dei coefficienti di correlazione per il metodo di {correlation_method} nella missione {trajectory} - {combination} --> {e}")
                             self.warn_count += 1
@@ -318,7 +329,7 @@ class StatisticalAnalysis:
             plt.title(f"Heatmap Medie Significative ({correlation_method})\nMetodo: {processing_method}", fontdict=self.font_titolo, loc='center', pad=10)
 
             # Definizione nome cartella in cui salvare i grafici
-            output_dir_path = os.path.join(ROOT_DIR, f"Risultati_analisi/Analisi_{processing_method}/Analisi_{correlation_method}/Analisi_{correlation_method}_media")
+            output_dir_path = os.path.join(ROOT_DIR, f"Risultati_analisi_statistica/Analisi_{processing_method}/Analisi_{correlation_method}/Analisi_{correlation_method}_media")
 
             # Verifica che la cartella non sia già stata creata in precedenza, altrimenti la genera
             if not os.path.exists(output_dir_path):
@@ -380,7 +391,7 @@ class StatisticalAnalysis:
                 self.warn_count = 0
 
                 # Si richiama il nome dei file generati all'interno della funzione correlation_matrix_to_txt
-                output_dir_path = os.path.join(ROOT_DIR, f"Risultati_analisi/Analisi_{processing_method}/Analisi_{correlation_method}/Analisi_{correlation_method}_media")
+                output_dir_path = os.path.join(ROOT_DIR, f"Risultati_analisi_statistica/Analisi_{processing_method}/Analisi_{correlation_method}/Analisi_{correlation_method}_media")
 
                 # Si verifica che la cartella non sia già stata creata in precedenza
                 if not os.path.exists(output_dir_path):
@@ -391,7 +402,7 @@ class StatisticalAnalysis:
                 try:
 
                     # Si apre il file in modalità append e si genera l'intestazione della sezione dei valori medi
-                    with open(output_file_path, "a", encoding="utf-8") as f:
+                    with open(output_file_path, "w", encoding="utf-8") as f:
 
                         f.write("\n" + "=" * 80 + "\n")
                         f.write(f"RIASSUNTO MEDIE DI TUTTE LE MISSIONI CON {processing_method} - METODO: {correlation_method.upper()}\n")
