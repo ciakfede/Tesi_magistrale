@@ -305,7 +305,7 @@ class PreProcessing:
         reference_depth = 9
         for trajectory, mission_dict in dataframe_dict.items():
 
-            print(f'\n  Pulizia fase iniziale per missioni traiettoria {trajectory} in corso:')
+            print(f'\n  Eliminazione dati trasferta verso waiting point per missioni traiettoria {trajectory} in corso:')
             if not mission_dict:
                 print(f'    [WARNING] Per la traiettoria {trajectory} non risultano dataframe presenti.')
                 continue
@@ -732,7 +732,9 @@ class PreProcessing:
                 try:
 
                     # Si genera un file Excel differente per ogni traiettoria
-                    save_file_path = os.path.join(ROOT_DIR, f'Telemetrie/Telemetria_traiettoria_{trajectory}', f'Telemetria_{trajectory}_raw.xlsx')
+                    save_folder_path = os.path.join(ROOT_DIR, f'File_Excel/Traiettoria_{trajectory}')
+                    os.makedirs(save_folder_path, exist_ok=True)
+                    save_file_path = os.path.join(save_folder_path, f'Telemetria_{trajectory}_raw.xlsx')
                     with pd.ExcelWriter(save_file_path, engine='xlsxwriter') as writer:
 
                         for combination, dataframe in dataframes.items():
@@ -777,7 +779,7 @@ class PreProcessing:
                                 print(f'    [ERRORE]: mancata generazione del foglio {nome_foglio}.\n')
 
                 except Exception as e:
-                    print(f'    [WARNING] Errore nel salvataggio del database su file Excel per  {trajectory} - {combination} --> {e}\n')
+                    print(f'    [WARNING] Errore nel salvataggio del database su file Excel per  {trajectory} --> {e}\n')
 
     # Funzione che permette il salvataggio in file Excel del dataframe a seguito di pre-processing
     def save_dataframe_resampled(self, formato, ROOT_DIR):
@@ -813,7 +815,9 @@ class PreProcessing:
                 try:
 
                     # Si genera un file Excel differente per ogni traiettoria
-                    save_file_path = os.path.join(ROOT_DIR, f'Telemetrie/Telemetria_traiettoria_{trajectory}', f'Telemetria_{trajectory}_resampled.xlsx')
+                    save_folder_path = os.path.join(ROOT_DIR, f'File_Excel/Traiettoria_{trajectory}')
+                    os.makedirs(save_folder_path, exist_ok=True)
+                    save_file_path = os.path.join(save_folder_path, f'Telemetria_{trajectory}_resampled.xlsx')
                     with pd.ExcelWriter(save_file_path, engine='xlsxwriter') as writer:
 
                         for combination, dataframe in dataframes.items():
@@ -858,7 +862,7 @@ class PreProcessing:
                                 print(f'    [ERRORE]: mancata generazione del foglio {nome_foglio}.\n')
 
                 except Exception as e:
-                    print(f'    [WARNING] Errore nel salvataggio del database su file Excel per  {trajectory} - {combination} --> {e}\n')
+                    print(f'    [WARNING] Errore nel salvataggio del database su file Excel per  {trajectory} --> {e}\n')
 
     # Funzione che permette il salvataggio in file Excel del dataframe a seguito di pre-processing
     def save_dataframe_interpolated(self, formato, ROOT_DIR):
@@ -888,7 +892,9 @@ class PreProcessing:
                 try:
 
                     # Si genera un file Excel differente per ogni traiettoria
-                    save_file_path = os.path.join(ROOT_DIR, f'Telemetrie/Telemetria_traiettoria_{trajectory}', f'Telemetria_{trajectory}_interpolated.xlsx')
+                    save_folder_path = os.path.join(ROOT_DIR, f'File_Excel/Traiettoria_{trajectory}')
+                    os.makedirs(save_folder_path, exist_ok=True)
+                    save_file_path = os.path.join(save_folder_path, f'Telemetria_{trajectory}_interpolated.xlsx')
                     with pd.ExcelWriter(save_file_path, engine='xlsxwriter') as writer:
 
                         for combination, dataframe in dataframes.items():
@@ -933,7 +939,7 @@ class PreProcessing:
                                 print(f'    [ERRORE]: mancata generazione del foglio {nome_foglio}.\n')
 
                 except Exception as e:
-                    print(f'    [WARNING] Errore nel salvataggio del database su file Excel per  {trajectory} - {combination} --> {e}\n')
+                    print(f'    [WARNING] Errore nel salvataggio del database su file Excel per  {trajectory} --> {e}\n')
 
     # ======================================================
     #         TRASFORMAZIONE DATAFRAMES IN TENSORI
@@ -966,7 +972,7 @@ class PreProcessing:
 
                             # Si eliminano le colonne relative agli assi UTM e NED assoluti
                             if sensor_name == 'GPS':
-                                sensor_dataframe = sensor_dataframe.drop(columns=['UTM_North [m]', 'UTM_East [m]', 'NED_North [m]', 'NED_East [m]'])
+                                sensor_dataframe = sensor_dataframe.drop(columns=['UTM_North [m]', 'UTM_East [m]', 'NED_North [m]', 'NED_East [m]', 'X_body_ist [m]', 'Y_body_ist [m]'])
 
                             # Si aggiunge il dataframe per la missione e il nome del sensore associato a un apposito dizionario --> nella forma {'IMU': [], 'DVL': [], 'GPS': []}
                             if sensor_name not in sensor_dataframes_list:
@@ -1053,7 +1059,7 @@ class PreProcessing:
 
                         # Si eliminano le colonne con le coordinate assolute, non necessarie per il training
                         if sensor_name == 'GPS':
-                            sensor_dataframe_copy = sensor_dataframe_copy.drop(columns=['UTM_North [m]', 'UTM_East [m]', 'NED_North [m]', 'NED_East [m]'])
+                            sensor_dataframe_copy = sensor_dataframe_copy.drop(columns=['UTM_North [m]', 'UTM_East [m]', 'NED_North [m]', 'NED_East [m]', 'X_body_ist [m]', 'Y_body_ist [m]'])
 
                         # Si estraggono i valori del dataframe
                         original_values = sensor_dataframe_copy.to_numpy(dtype=np.float32)
@@ -1078,6 +1084,9 @@ class PreProcessing:
                             # Si sovrascrive il tensore di pytorch per IMU con quello combinato
                             self.pytorch_tensor[trajectory][combination]['IMU'] = combined_tensor
 
+                        if sensor_name == 'Depth' or sensor_name == 'DepthVel':
+                            continue
+
                         # Si salva il tensore nel dizionario in tutti gli altri casi
                         else:
                             self.pytorch_tensor[trajectory][combination][sensor_name] = tensor
@@ -1097,7 +1106,7 @@ class PostProcessing:
     def __init__(self):
 
         # Dizionario per i Titoli (Coerente con i titoli dei capitoli/sezioni in blupolito)
-        self.font_titolo = {
+        self.title_font = {
             'family': 'serif',      # Simula il font serif di Latin Modern usato all'interno del template Latex per la tesi
             'color': '#002E5F',     # Colore blupolito definito all'interno del template
             'weight': 'bold',       # Grassetto per far risaltare il titolo del grafico
@@ -1106,7 +1115,7 @@ class PostProcessing:
         }
 
         # Dizionario per le Etichette degli Assi (X e Y)
-        self.font_assi = {
+        self.axis_font = {
             'family': 'serif',      # Simula il font serif di Latin Modern usato all'interno del template Latex per la tesi
             'color': 'black',       # Testo nero ad alto contrasto per la massima leggibilità
             'weight': 'normal',     # Peso normale per le etichette descrittive
@@ -1119,7 +1128,7 @@ class PostProcessing:
     # Funzione che permette di
     #def single_path_definition(self):
 
-    # Funzione che permette la costruzione di un dizionario contenente le liste di punti (in coordinate UTM) di ogni traiettoria utilizzata
+    # Funzione che permette la costruzione di un dizionario contenente le liste di waypoints (in coordinate WGS84 e UTM) di ogni traiettoria utilizzata
     def waypoints_dict_building(self, ROOT_DIR):
 
         input_folder = os.path.join(ROOT_DIR,f'Telemetrie/Lista_punti')  # Si definisce la cartella di riferimento
@@ -1130,7 +1139,13 @@ class PostProcessing:
 
             # Si inizializza la lista di punti associata alla traiettoria (se non presente)
             if trajectory not in self.waypoints_dict:
-                self.waypoints_dict[trajectory] = []
+                self.waypoints_dict[trajectory] = {}
+
+            if 'WGS84' not in self.waypoints_dict[trajectory]:
+                self.waypoints_dict[trajectory]['WGS84'] = []
+
+            if 'UTM' not in self.waypoints_dict[trajectory]:
+                self.waypoints_dict[trajectory]['UTM'] = []
 
             file_path = os.path.join(input_folder, file)
             with open(file_path, "r+") as txt_points:
@@ -1149,23 +1164,111 @@ class PostProcessing:
                         values = clean_line.split(",")      # Si analizza la linea isolando i termini presenti (nome_punto, latitudine, longitudine)
                         latitude = float(values[1])         # Si isola il valore della latitudine trasformandolo in numero decimale
                         longitude = float(values[2])        # Si isola il valore della longitudine trasformandolo in numero decimale
+                        tuple_WGS84_coord = (latitude, longitude)
 
                         if idx == 0:
                             continue
                         if idx == 1:
                             East_coord_0, North_coord_0, _, _ = utm.from_latlon(latitude, longitude)
-                            tuple_coord = (0, 0)
+                            tuple_UTM_coord = (0, 0)
                         else:
                             East_coord, North_coord, _, _ = utm.from_latlon(float(latitude), float(longitude))
 
                             # Si effettua la sottrazione per arrivare alle coordinate NED relative al punto iniziale --> sono quelle necessarie per definire i waypoint
-                            tuple_coord = (East_coord - East_coord_0, North_coord - North_coord_0)
+                            tuple_UTM_coord = (East_coord - East_coord_0, North_coord - North_coord_0)
 
-                        self.waypoints_dict[trajectory].append(tuple_coord)
+                        self.waypoints_dict[trajectory]['WGS84'].append(tuple_WGS84_coord)
+                        self.waypoints_dict[trajectory]['UTM'].append(tuple_UTM_coord)
 
                     except Exception as e:
                         print(f"  [WARNING] Rilevato un errore generico nella lettura delle coordinate {idx} della traiettoria {trajectory}: {e}")
                         continue
+
+    # Funzione per la creazione dei grafici delle traiettorie ideali, partendo dal dizionario di waypoints generato
+    def ideal_trajectories_plot(self, ROOT_DIR):
+
+        # Si itera per ogni percorso contenuto all'interno del dizionario di punti
+        points_dict = self.waypoints_dict.copy()
+        for trajectory_name, trajectory_points_list in points_dict.items():
+
+            # Si itera per ogni metodo di espressione delle coordinate contenuto all'interno del dizionario
+            East_list = []
+            North_list = []
+            for coord_type, coord_list in trajectory_points_list.items():
+
+                # Si salvano i soli dati associati al metodo UTM in un nuovo dizionario
+                if coord_type == "UTM":
+
+                    # Si itera su ogni punto contenuto all'interno della lista di tuple contenenti le coordinate
+                    for (East, North) in coord_list:
+                        East_list.append(East)
+                        North_list.append(North)
+
+            # Si apre il grafico
+            plt.figure(figsize=(10, 6))
+
+            # Si richiama il plot dei punti utilizzando come input il dizionario tramite formulazione data
+            plt.plot(East_list, North_list, label='Traiettoria ideale', linewidth=2, linestyle='--', marker='s', markersize=7)
+            plt.xlabel("East [m]", fontdict=self.axis_font)
+            plt.ylabel("North [m]", fontdict=self.axis_font)
+            plt.title(f"Traiettoria del {trajectory_name}", fontdict=self.title_font, loc='center', pad=10)
+            plt.minorticks_on()
+            plt.grid(visible=True, which='both', alpha=0.5)
+            plt.legend()
+            plt.axis('equal')
+
+            OUTPUT_FOLDER_PATH = os.path.join(ROOT_DIR, 'Risultati_NN/Traiettorie_ideali')
+            os.makedirs(OUTPUT_FOLDER_PATH, exist_ok=True)
+            output_file_path = os.path.join(OUTPUT_FOLDER_PATH, f"Traiettoria_ideale_{trajectory_name}.pdf")
+            plt.savefig(output_file_path, bbox_inches='tight')
+            plt.show()
+
+    # Funzione per la scrittura di un file .txt contenente tutti i valori (originali e convertiti) dei punti delle varie traiettorie
+    def write_on_file(self, ROOT_DIR):
+
+        OUTPUT_FOLDER_PATH = os.path.join(ROOT_DIR, 'Risultati_NN/Traiettorie_ideali')
+        os.makedirs(OUTPUT_FOLDER_PATH, exist_ok=True)
+        output_file_path = os.path.join(OUTPUT_FOLDER_PATH, f"Punti_missione_UTM.txt")
+
+        try:
+
+            print(f"\nTrascrizione su file di testo della lista dei waypoints in corso:")
+
+            with open(output_file_path, "w+") as output_file:
+
+                output_file.write("=" * 100 + "\n")
+                output_file.write(" " * 18 + "ELENCO COMPLETO DEI PUNTI ASSOCIATI ALLE TRAIETTORIE DI MISSIONE\n")
+                output_file.write("=" * 100 + "\n\n\n")
+
+                # Si itera su ogni elemento del dizionario
+                points_dict = self.waypoints_dict.copy()
+                for trajectory_name, trajectory_points_list in points_dict.items():
+
+                    output_file.write("-" * 100 + "\n")
+                    output_file.write(" " * 40 + f"PERCORSO: {trajectory_name}" + "\n\n")
+
+                    coord_type_list = list(trajectory_points_list.keys())
+                    output_file.write(" " * 10 + f"Coordinate in formato: {coord_type_list[0]}" + " " * 10 + "|" + " " * 10 + f"Coordinate in formato: {coord_type_list[1]}" + "\n")
+
+                    # Si itera sul numero dei punti e si scrive una riga di testo per ognuno
+                    num_points = len(trajectory_points_list[coord_type_list[0]])
+                    for i in range(num_points):
+                        output_file.write(" " * 10 + f"({trajectory_points_list[coord_type_list[0]][i][0]:.7f}, {trajectory_points_list[coord_type_list[0]][i][1]:.7f})" + " " * 13 + " " * 13 + f"({trajectory_points_list[coord_type_list[1]][i][0]:.7f}, {trajectory_points_list[coord_type_list[1]][i][1]:.7f})""\n")
+
+                    output_file.write("-" * 100 + "\n\n")
+
+                output_file.write("=" * 100 + "\n\n")
+
+            print(f"  Processo di salvataggio concluso correttamente.")
+
+            return self
+
+        except FileNotFoundError:
+            raise FileNotFoundError(f"  [ERROR] Errore, cartella {OUTPUT_FOLDER_PATH} o file {output_file_path} non trovato") from None
+
+        except Exception as e:
+            print(f"  [WARNING] Errore nel processo di scrittura della lista di waypoints sul file {output_file_path} --> {e}")
+            return 1
 
     # Funzione che riceve in input una lista di tensori (rappresentanti i valori di posizione GPS e predette) per ogni missione di test e produce in output i 3 valori di errore RMSE
     def RMSE_estimation(self, GPS_coordinates, NN_coordinates):
@@ -1191,7 +1294,7 @@ class PostProcessing:
         return RMSE_tot, RMSE_E, RMSE_N
 
     # Funzione che genera un grafico dati in input i dati target e quelli prodotti dalla rete con cui confrontarli e i nomi delle rispettive variabili
-    def plot_confronto_traiettoria(self, GPS_coordinates_list, NN_coordinates_list, mission, path_name, title):
+    def real_trajectories_plot(self, GPS_coordinates_list, NN_coordinates_list, mission, path_name, title, ROOT_DIR):
 
         # Si trasformano le liste di tensori in array numpy --> in modo da poter effettuare operazioni matematiche vettoriali
         GPS_coordinates_array = torch.cat(GPS_coordinates_list, dim=0).cpu().numpy()
@@ -1227,9 +1330,9 @@ class PostProcessing:
         plt.text(NN_East[-1], NN_North[-1], f' End NavNet ({NN_East[-1]:.2f}, {NN_North[-1]:.2f})', color='red', fontsize=9, fontweight='bold', va='bottom')
 
         # Definizione parametri grafico
-        plt.title(title, fontdict = self.font_titolo, loc ="center", pad = 10)
-        plt.xlabel('East [m]', fontdict = self.font_assi)
-        plt.ylabel('North [m]', fontdict = self.font_assi)
+        plt.title(title, fontdict = self.title_font, loc ="center", pad = 10)
+        plt.xlabel('East [m]', fontdict = self.axis_font)
+        plt.ylabel('North [m]', fontdict = self.axis_font)
         plt.legend()
         plt.minorticks_on()
         plt.grid(True, linestyle=':', alpha=0.6)
@@ -1242,8 +1345,8 @@ class PostProcessing:
         print(f'    Delta sulla posizione in direzione North è pari a: {Delta_N} m.')
         print(f'    Delta sulla posizione in direzione East è pari a: {Delta_E} m.')
 
-        if not os.path.exists('Grafici'):
-            os.makedirs('Grafici')
-
-        plt.savefig(f'Grafici/Confronto_traiettorie_M{mission}_{path_name}.png', bbox_inches='tight')
+        OUTPUT_FOLDER_PATH = os.path.join(ROOT_DIR, f'Risultati_NN/Traiettorie_reali')
+        os.makedirs(OUTPUT_FOLDER_PATH, exist_ok=True)
+        output_file_path = os.path.join(OUTPUT_FOLDER_PATH, f'Confronto_traiettorie_M{mission}_{path_name}.pdf')
+        plt.savefig(output_file_path, bbox_inches='tight')
         plt.show()

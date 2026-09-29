@@ -9,7 +9,7 @@ L'ispirazione alla base di tali algoritmi proviene dal funzionamento del cervell
 
 A livello strutturale, quindi, l'elemento elementare risulta essere il \emph{neurone}, in grado di ricevere in input molteplici dati, elaborarli internamente tramite l'utilizzo di una funzione lineare, caratterizzata da specifici pesi e bias, e, in base alla funzione di attivazione prescelta, produrre un output. Solitamente si generano dei cosiddetti \emph{layer di neuroni}, che si interfacciano vicendevolmente. Una rete neurale, per essere definita tale, deve avere almeno due layer fondamentali: l'\emph{input layer}, che riceve direttamente i dati grezzi forniti all'algoritmo, e l'\emph{output layer}, che produce il risultato ricercato. Normalmente, tuttavia, a questi si aggiungono uno o più layer intermedi, definiti \emph{hidden layers}. Essi, infatti, sono necessari per aumentare  la capacità della rete di estrarre relazioni non lineari dai dati, pur aumentando la complessità e la potenza di calcolo associati al modello. Inoltre, in caso siano presenti almeno 3 layer complessivi, non ci si riferisce più all'ambito del semplice machine learning, bensì si entra in quello che viene definito \textbf{deep learning}.   
 
-\begin{figure}[h!]
+\begin{figure}[!htb]
     \centering
     \includegraphics[width=0.8\linewidth]{images/NN/Struttura_base_DL.png}
     \caption{Struttura tipica di un algoritmo di Deep Learning\cite{IBM_NN}}
@@ -17,6 +17,8 @@ A livello strutturale, quindi, l'elemento elementare risulta essere il \emph{neu
 \end{figure}
 
 % Qui si potrebbe aggiungere anche uno schema di funzionamento e spiegazione di forward e back propagation
+\section{Funzionamento rete}
+
 
 \section{Elementi rete neurale}
 
@@ -36,17 +38,69 @@ Un neurone, pertanto, produce un primo output $z$ effettuando una somma pesata d
 
 All'interno di questa relazione, sviluppata da Rosenblatt per il Perceptron, una delle prime reti neurali, compare un termine aggiuntivo oltre ai pesi, noto come \textit{bias}. Anch'esso viene modificato durante la fase di addestramento della rete al fine di ottimizzare il risultato del modello. 
 
-\begin{figure}[h!]
-    \centering
-    \includegraphics[width=0.5\linewidth]{images/NN/Neurone_bio_2.png}
-    \caption{Confronto tra neurone biologico\cite{jpg_neurone_bio} e artificiale}
-    \label{fig:confronto_neuroni}
-\end{figure}
+    \begin{figure}[!htb]
+        \centering
+
+        \subfloat[Neurone biologico\cite{jpg_neurone_bio}]{%
+                \includegraphics[width=0.50\linewidth]{images/NN/Neurone_bio_2.png}%
+            }\hfill
+            \subfloat[Neurone artificiale]{%
+                \includegraphics[width=0.49\linewidth]{images/NN/Neurone_artificiale_1.png}%
+            }\\[8pt]
+
+        \caption{Confronto tra tipologie di neuroni}
+        \label{fig:confronto_neuroni}
+    \end{figure}
 
 
 \subsection{Funzione di attivazione}
 
-L'output prodotto nella prima fase di analisi da parte del neurone, necessita di un ulteriore passaggio prima di essere trasmesso ai layer successivi. Occorre, infatti, normalizzare il valore ottenuto e aggiungere non linearità al modello, potendo così approssimare pattern più complessi.
+Il risultato della funzione lineare applicata alle informazioni in ingresso al neurone necessita di un ulteriore passaggio prima di essere trasmesso ai layer successivi. Occorre, infatti, normalizzarlo, in modo tale che gli output dei vari neuroni siano confrontabili tra loro. Questa operazione, eseguita grazie ad una funzione di attivazione specifica, inoltre, permette di introdurre una non linearità all'interno della rete neurale, fondamentale per renderla capace di apprendere pattern più complessi.
+
+Durante gli anni sono state proposte numerose funzioni di attivazione, via via più sofisticate, nel tentativo di incrementare l'efficacia e la velocità del processo di addestramento, oltre a migliorare le prestazioni complessive delle reti. Nel seguito si presentano alcune delle funzioni più utilizzate ed efficaci all'interno della letteratura:
+
+\begin{itemize}
+
+    \item \textbf{Threshold}: funzione estremamente semplice, che restituisce 1 se l'output lineare $z$ è maggiore di zero o 0 altrimenti:
+    
+    \begin{center}
+        \begin{math}
+            Y = \begin{cases}
+                1 \ se \ \sum_{i=1}^{n} + b  > 0 \\
+                0 \ se \ \sum_{i=1}^{n} + b  < 0
+            \end{cases} \ \ \ (2.2)
+        \end{math}
+    \end{center}
+    
+    Data la sua natura, essa risulta sufficiente per i casi in cui l'obiettivo si basa su segnali di tipo binario ma non indicata quando si cercano pattern complessi o non lineari.
+    
+    \item \textbf{Sigmoid}: un modo per superare le limitazioni della threshold function, consiste nel rendere graduale la variazione tra gli estremi dell'intervallo, che resta pari a [0, 1]. In particolare, l'output $Y$ è determinato a partire dal valore $z$ tramite la seguente relazione:
+    
+        \begin{center}
+            $Y = \sigma (z) = \displaystyle \frac{1}{1 + e^{-z}}$ \ \ \ (2.3)
+        \end{center}
+    
+    Nonostante il miglioramento prestazionale evidente, restano alcune importanti criticità. L'input, infatti, viene ancora compresso in un intervallo molto piccolo e, inoltre, la derivata della funzione risulta essere eccessivamente graduale, portando a problemi di \textit{vanishing gradient}.
+
+    % Parlare potenzialmente l'uso dell'inizializzazione ortogonale dei pesi per ottenere migliori prestazioni
+
+    \item \textbf{Hyperbolic Tangent}: tenendo conto delle criticità riscontrate nella sigmoid function, si è arrivati ad una sua evoluzione, contraddistinta da un dominio più ampio, pari a [-1, +1], ed una derivata più ripida:
+    
+        \begin{center}
+            $Y = \text{tanh}(z) = \displaystyle \frac{1}{1 + e^{-2z}} - 1$ \ \ \ (2.4)
+        \end{center}
+    
+    Ad ogni modo, neanche questa formulazione riesce a risolvere completamente i problemi riscontrati con le precedenti funzioni. 
+
+    \item \textbf{ReLu}: per ottenere significativi miglioramenti, dunque, si è reso necessario cambiare approccio al problema, giungendo in questo modo ad una funzione caratterizzata da un dominio notevolmente più grande, potendo l'output $Y$ assumere valori compresi tra [0, $+\inf$], e una derivata pari a 1 per l'intero dominio:
+    
+        \begin{center}
+            $Y = max(0, z)$ \ \ \ (2.5)
+        \end{center}
+    
+    Data l'estrema semplicità e le elevate prestazioni associate, questa funzione risulta essere la più impiegata. Nonostante ciò, non è esente da problematiche, quali il \textit{dying ReLu}. Trasformando in 0 tutti i valori negativi, infatti, si può arrivare ad un effetto a catena che porta, infine, ad avere un tasso di apprendimento nullo.
+    
+\end{itemize}
 
 % Classificazione attivazione
 

@@ -1,8 +1,6 @@
-'''           ANALISI STATISTICA
+"""           ANALISI STATISTICA
               FEDERICO CECCHINI
-            ANNO ACCADEMICO 2025/26             '''
-from datetime import date, datetime, time, timedelta
-from typing import Any
+            ANNO ACCADEMICO 2025/26             """
 
 import pandas as pd
 import seaborn as sns                   # Modulo per la generazione di una heatmap

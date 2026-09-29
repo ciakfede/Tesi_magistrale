@@ -1,6 +1,6 @@
-'''     IMPLEMENTAZIONE RETE NEURALE NAVNET
+"""     IMPLEMENTAZIONE RETE NEURALE NAVNET
               FEDERICO CECCHINI
-            ANNO ACCADEMICO 2025/26             '''
+            ANNO ACCADEMICO 2025/26             """
 
 '''All'interno del main si effettuano le seguenti operazioni in ordine:
     - pre-processing dei dati, ottenendo i tensori utili per la rete neurale --> tiene conto delle differenti frequenze dei sensori:
@@ -10,19 +10,18 @@
     - definizione delle batch di iterazione per la rete neurale --> tramite class Dataset si definisce la singola batch per ogni blocco e poi si uniscono insieme
     - esecuzione rete neurale per la stima della posizione
     - ciclo di addestramento sui dati per l'ottimizzazione dei pesi utilizzati
-    '''
+                                                                                                            '''
 
-import os                               # Libreria per l'utilizzo di Python integrato nel sistema
-import torch                            # Libreria per il Deep Learning
-from Analisi_dati import PreProcessing  # Importo il modulo per eseguire il pre-processing dei dati da utilizzare per la rete
-from Rete_neurale import Dataset        # Importo il modulo per definire le batch dei blocchi di sensore per ogni secondo di missione
-from Rete_neurale import NavNet         # Importo qui la rete neurale
-from Rete_neurale import PostProcessing # Importo il modulo per eseguire il post-processing dei dati prodotti dalla rete
-import matplotlib.pyplot as plt         # Libreria per la gestione dell'ambiente grafico
+import os                                   # Libreria per l'utilizzo di Python integrato nel sistema
+import torch                                # Libreria per il Deep Learning
+from Analisi_dati import PreProcessing      # Importo il modulo per eseguire il pre-processing dei dati da utilizzare per la rete
+from Neural_network import Dataset          # Importo il modulo per definire le batch dei blocchi di sensore per ogni secondo di missione
+from Neural_network import NavNet           # Importo qui la rete neurale
+from Analisi_dati import PostProcessing     # Importo il modulo per eseguire il post-processing dei dati prodotti dalla rete
+import matplotlib.pyplot as plt             # Libreria per la gestione dell'ambiente grafico
 import numpy as np
+import sys
 
-# Funzione che permette di effettuare la trasformazione inversa per la traiettoria
-#def
 
 def stima_trapezoidale(velocita, timestamps, pos_iniziale=0):
 
@@ -71,11 +70,13 @@ batch_size_test = 1                                                             
 num_epoch = 2                                                                           # Numero di epoche di iterazione per l'addestramento
 numero_missioni = 16                                                                    # Numero di missioni da analizzare
 test_missions = [('0', '4'), ('0', '8'), ('0', '12'), ('0' , '16')]                     # Missioni utilizzate solo nella fase di test
-sensors_frequencies = {'IMU': 5, 'DVL': 10, 'MOT': 5, 'V_ref': 5, 'GPS': 1}             # Frequenze associate ai sensori
+
+sensors_frequencies = {'IMU': 5, 'DVL': 10, 'Depth': 5, 'Depth_rate': 5, 'MOT': 5, 'V_ref': 5, 'GPS': 1}             # Frequenze associate ai sensori
 
 # File di input/output necessarie al pre-processing
-ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-DF_DICT_DIR = os.path.join(ROOT_DIR, 'Dizionari dataframes')
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR: str = os.path.dirname(SCRIPT_DIR)
+DF_DICT_DIR = os.path.join(ROOT_DIR, 'Dizionari_dataframes')
 os.makedirs(DF_DICT_DIR, exist_ok=True)                                                 # Si genera la cartella di destinazione dei file di salvataggio pickle con i vari dataframe
 file_database_raw = os.path.join(DF_DICT_DIR, 'Dataframe_globale.pkl')                  # File pickle di output/input contenente i dati sul dizionario globale dei dataframe generato al termine del pre-processing
 file_database_resampled = os.path.join(DF_DICT_DIR, 'Dataframe_resampled.pkl')          # File pickle di output/input contenente i dati sul dizionario globale dei dataframe resampled generato al termine del pre-processing
@@ -88,18 +89,27 @@ weights_save_path = os.path.join(ROOT_DIR, "NavNet_weights.pkl")
 #             PRE-PROCESSING TELEMETRIA
 # ======================================================
 
+print('\n\n===================================================')
+print('============ AVVIO PRE-PROCESSING DATI ============')
+print('===================================================')
+
 # Si richiama la classe associata al pre-processing
 pre_processing = PreProcessing()
+print(f"\nClasse di pre-processing inizializzata correttamente.")
 
 # -----------------------------------------------------
 #         ESTRAZIONE DATAFRAMES GREZZI DA CSV
 # -----------------------------------------------------
+
+print('\n\n----------------------------------------------------')
+print('---------- CARICAMENTO DATI DI TELEMETRIA ----------')
+print('----------------------------------------------------')
 while True:
 
     # Si richiede all'utente se si vuole generare un dataframe a partire dai file di telemetria
-    generate_dataframe = input(f'\nSi desidera generare un nuovo dataframe contenente i dati di telemetria (S/N)?').upper()
+    generate_new_dataframe = input(f'\nSi desidera generare un nuovo dataframe contenente i dati di telemetria (S/N/EXIT)?').upper()
 
-    if generate_dataframe == 'S':
+    if generate_new_dataframe == 'S':
 
         # Si analizzano i file .csv contenenti i dati di telemetria di ogni missione --> si genera un dizionario globale e si salva in un apposito file pickle
         pre_processing.csv_analysis(file_config, ROOT_DIR)
@@ -107,26 +117,30 @@ while True:
 
         # Gestione del salvataggio del file in formato Excel del dataframe
         while True:
-            save_excel = input(f'\nSi vuole salvare il dataframe anche in formato Excel (S/N)?').upper()
+            save_excel = input(f'\n  Si vuole salvare il dataframe anche in formato Excel (S/N)?').upper()
             if save_excel == 'S':
-                pre_processing.save_dataframe_resampled('excel', ROOT_DIR)
+                pre_processing.save_raw_dataframes('excel', DF_DICT_DIR)
                 break
             elif save_excel == 'N':
-                print(f'  Prosecuzione operazioni pre-processing dati senza salvataggio Excel.')
+                print(f'    Prosecuzione operazioni pre-processing dati senza salvataggio Excel.')
                 break
             else:
-                print(f'  Inserito input non valido. Ripetere la scelta.')
+                print(f'    Inserito input non valido. Ripetere la scelta.')
 
         break
 
-    elif generate_dataframe == 'N':
+    elif generate_new_dataframe == 'N':
 
+        # Si continua con l'analisi usando i dati raccolti in un file pickle in iterazione precedente
         if os.path.isfile(file_database_raw):
-            # Si continua con l'analisi usando i dati raccolti in un file pickle in iterazione precedente
             print(f'  Caricamento del database dal file {file_database_raw}')
             break
         else:
             print(f'  File contenente il database non trovato. Verificare o procedere con la generazione del database.')
+
+    elif generate_new_dataframe == 'EXIT':
+        print(f"  Chiusura forzata da utente del programma.")
+        sys.exit()
 
     else:
         print(f'  Input inserito non riconosciuto. Ripetere la scelta.')
@@ -135,19 +149,22 @@ while True:
 #          PROCESSING DEI DATAFRAMES GREZZI
 # -----------------------------------------------------
 
+print('\n\n---------------------------------------------------')
+print('------------- ELABORAZIONE DATAFRAMES -------------')
+print('---------------------------------------------------')
 while True:
 
-    process_dataframe = input(f"\nSi vuole generare da zero il dataframe elaborato (S/N)?").upper()
+    process_dataframe = input(f"\nSi vuole generare da zero il dataframe elaborato (S/N/EXIT)?").upper()
 
     if process_dataframe == 'S':
-        pre_processing.raw_dataframes_processing(generate_dataframe, file_database_raw, sensors_frequencies)        # Si analizzano i dati di telemetria --> si generano in output due dizionari, uno con un dataframe ricampionato per ogni missione e l'altro suddiviso anche per sensori
+        pre_processing.raw_dataframes_processing(generate_new_dataframe, file_database_raw, sensors_frequencies)        # Si analizzano i dati di telemetria --> si generano in output due dizionari, uno con un dataframe ricampionato per ogni missione e l'altro suddiviso anche per sensori
         pre_processing.save_dataframe_resampled('pickle', DF_DICT_DIR)
 
         # Gestione del salvataggio del file in formato Excel del dataframe ricampionato
         while True:
             save_excel = input(f'\n  Si vuole salvare il dataframe elaborato con resampling in formato Excel (S/N)?').upper()
             if save_excel == 'S':
-                pre_processing.save_dataframe_resampled('excel', ROOT_DIR)
+                pre_processing.save_dataframe_resampled('excel', DF_DICT_DIR)
                 break
             elif save_excel == 'N':
                 print(f'    Continuazione analisi senza salvataggio Excel.')
@@ -160,22 +177,34 @@ while True:
     elif process_dataframe == 'N':
 
         if os.path.isfile(file_database_resampled):
-            print(f'  Caricamento del dataframe resampled e interpolated dai file {file_database_resampled}')
+            print(f'  Caricamento del dataframe resampled dal file {file_database_resampled}')
             break
         else:
             print(f'  File contenenti i database non trovati. Verificare o procedere con la generazione dei database.')
+
+    elif generate_new_dataframe == 'EXIT':
+        print(f"  Chiusura forzata da utente del programma.")
+        sys.exit()
 
     else:
 
         print(f'  Inserito un input non valido. Ripetere la scelta.')
 
-pre_processing.dataframe_to_tensor(process_dataframe, test_missions, file_database_sensors)       # Si generano i tensori pytorch -->  si genera in output un dizionario in cui per ogni missione sono presenti 3 tensori, uno per ogni frequenza di misurazioni presente
+# -----------------------------------------------------
+#         TRASFORMAZIONE DATAFRAMES IN TENSORI
+# -----------------------------------------------------
+
+pre_processing.dataframe_to_tensor(process_dataframe, test_missions, file_database_sensors)       # Si generano i tensori pytorch -->  si genera in output un dizionario in cui per ogni missione sono presenti 3 tensori, uno per ogni frequenza di misurazione presente
 tensor_dict = pre_processing.pytorch_tensor                                                       # Si richiama il dizionario di tensori da usare per la rete neurale --> ogni tensore è una lista ordinata (per sensore) contenente le misurazioni di tutte missioni
 
 
 # ======================================================
 #           INIZIALIZZAZIONE RETE NEURALE
 # ======================================================
+
+print('\n\n====================================================')
+print('=========== INIZIALIZZAZIONE RETE NEURALE ==========')
+print('====================================================')
 
 # Inizializzazione del modello di rete neurale
 rete_neurale = NavNet()                                             # Si inizializza la rete principale
@@ -188,6 +217,10 @@ scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(rete_neurale.optimizer, m
 # ======================================================
 #                TRAINING RETE NEURALE
 # ======================================================
+
+print('\n\n-----------------------------------------------------')
+print('----------- FASE DI TRAINING RETE NEURALE -----------')
+print('-----------------------------------------------------')
 
 # Si richiede se si desidera fare il training della rete --> da fare al cambiamento del dataset
 do_training = input(f'\nSi desidera effettuare il training della rete (S/N)?').upper()
@@ -280,6 +313,10 @@ if do_training == 'S':
 # ======================================================
 #             ESECUZIONE RETE NEURALE
 # ======================================================
+
+print('\n\n---------------------------------------------------')
+print('------------- ESECUZIONE RETE NEURALE -------------')
+print('---------------------------------------------------')
 
 # Indipendentemente dalla scelta effettuata si entra in modalità valutazione sulle missioni scelte come test
 rete_neurale.eval()                                                     # Si imposta la rete neurale in modalità valutazione
@@ -412,7 +449,7 @@ for (trajectory, combination) in test_missions:
 
             # Si realizza il grafico associato alla singola traiettoria
             figure_title = f'Confronto tra posizione target e predette per la missione {mission}'
-            post_processing.plot_confronto_traiettoria(GPS_coordinates_list, NN_coordinates_list, mission, path_name, figure_title)
+            post_processing.real_trajectories_plot(GPS_coordinates_list, NN_coordinates_list, mission, path_name, figure_title)
 
 
 

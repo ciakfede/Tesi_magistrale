@@ -124,20 +124,27 @@ processing_choice = ''
 #             PRE-PROCESSING TELEMETRIA
 # ======================================================
 
-# Si richiama la classe legata al Pre-processing dei dati
+print('\n\n===================================================')
+print('============ AVVIO PRE-PROCESSING DATI ============')
+print('===================================================')
+
+# Si richiama la classe associata al pre-processing
 pre_processing = PreProcessing()
+print(f"\nClasse di pre-processing inizializzata correttamente.")
 
 # -----------------------------------------------------
 #         ESTRAZIONE DATAFRAMES GREZZI DA CSV
 # -----------------------------------------------------
 
-print('\n\n========== CARICAMENTO DATI DI TELEMETRIA ==========')
+print('\n\n----------------------------------------------------')
+print('---------- CARICAMENTO DATI DI TELEMETRIA ----------')
+print('----------------------------------------------------')
 while True:
 
     # Gestione dati di telemetria di origine --> si può generare nuovamente il dataframe o utilizzarne uno già creato
-    generate_dataframe = input(f'\nSi vuole generare un nuovo dataframe contenente i dati di telemetria (S/N)?').upper()
+    generate_new_dataframe = input(f'\nSi vuole generare un nuovo dataframe contenente i dati di telemetria (S/N)?').upper()
 
-    if generate_dataframe == 'S':
+    if generate_new_dataframe == 'S':
 
         # Si analizzano i file .csv contenenti i dati di telemetria di ogni missione --> si genera un dizionario globale e si salva in un apposito file pickle
         pre_processing.csv_analysis(file_config, ROOT_DIR)
@@ -145,26 +152,30 @@ while True:
 
         # Gestione del salvataggio del file in formato Excel del dataframe
         while True:
-            save_excel = input(f'\nSi vuole salvare il dataframe anche in formato Excel (S/N)?').upper()
+            save_excel = input(f'\n  Si vuole salvare il dataframe anche in formato Excel (S/N)?').upper()
             if save_excel == 'S':
-                pre_processing.save_raw_dataframes('excel', ROOT_DIR)
+                pre_processing.save_raw_dataframes('excel', DF_DICT_DIR)
                 break
             elif save_excel == 'N':
-                print(f'  Prosecuzione operazioni pre-processing dati senza salvataggio Excel.')
+                print(f'    Prosecuzione operazioni pre-processing dati senza salvataggio Excel.')
                 break
             else:
-                print(f'  Inserito input non valido. Ripetere la scelta.')
+                print(f'    Inserito input non valido. Ripetere la scelta.')
 
         break
 
-    elif generate_dataframe == 'N':
+    elif generate_new_dataframe == 'N':
 
+        # Si continua con l'analisi usando i dati raccolti in un file pickle in iterazione precedente
         if os.path.isfile(file_database_raw):
-            # Si continua con l'analisi usando i dati raccolti in un file pickle in iterazione precedente
             print(f'  Caricamento del database dal file {file_database_raw}')
             break
         else:
             print(f'  File contenente il database non trovato. Verificare o procedere con la generazione del database.')
+
+    elif generate_new_dataframe == 'EXIT':
+        print(f"  Chiusura forzata da utente del programma.")
+        sys.exit()
 
     else:
 
@@ -175,10 +186,12 @@ while True:
 #           PROCESSING DEI DATAFRAMES GREZZI
 # -----------------------------------------------------
 
-print('\n\n=========== ELABORAZIONE DATAFRAME ==========')
+print('\n\n---------------------------------------------------')
+print('------------- ELABORAZIONE DATAFRAMES -------------')
+print('---------------------------------------------------')
 while True:
 
-    process_dataframe = input(f"\nSi vuole generare da zero il dataframe elaborato (S/N)?").upper()
+    process_dataframe = input(f"\nSi vuole generare da zero il dataframe elaborato (S/N/EXIT)?").upper()
 
     if process_dataframe == 'S':
 
@@ -194,12 +207,12 @@ while True:
 
                     # Si effettua il resampling del dataframe
                     if processing_method == 'resampling':
-                        pre_processing.raw_dataframes_processing(generate_dataframe, file_database_raw, sensors_frequencies)
+                        pre_processing.raw_dataframes_processing(generate_new_dataframe, file_database_raw, sensors_frequencies)
                         pre_processing.save_dataframe_resampled('pickle', DF_DICT_DIR)
 
                     # Si effettua l'interpolazione del dataframe
                     elif processing_method == 'interpolazione':
-                        pre_processing.dataframe_interpolation(generate_dataframe, file_database_raw)
+                        pre_processing.dataframe_interpolation(generate_new_dataframe, file_database_raw)
                         pre_processing.save_dataframe_interpolated('pickle', DF_DICT_DIR)
 
                 # Gestione del salvataggio dei dataframe così generati
@@ -208,8 +221,8 @@ while True:
                     save_processed_dataframe = input(f'\n  Si vogliono salvare i dataframe generati in formato Excel (S/N)?').upper()
 
                     if save_processed_dataframe == 'S':
-                        pre_processing.save_dataframe_resampled('excel', ROOT_DIR)
-                        pre_processing.save_dataframe_interpolated('excel', ROOT_DIR)
+                        pre_processing.save_dataframe_resampled('excel', DF_DICT_DIR)
+                        pre_processing.save_dataframe_interpolated('excel', DF_DICT_DIR)
                         break
 
                     elif save_processed_dataframe == 'N':
@@ -241,12 +254,12 @@ while True:
 
                         # Si effettua il resampling del dataframe
                         if processing_choice == 'resampling':
-                            pre_processing.raw_dataframes_processing(generate_dataframe, file_database_raw, sensors_frequencies)
+                            pre_processing.raw_dataframes_processing(generate_new_dataframe, file_database_raw, sensors_frequencies)
                             pre_processing.save_dataframe_resampled('pickle', DF_DICT_DIR)
 
                         # Si effettua l'interpolazione del dataframe
                         elif processing_choice == 'interpolazione':
-                            pre_processing.dataframe_interpolation(generate_dataframe, file_database_raw)
+                            pre_processing.dataframe_interpolation(generate_new_dataframe, file_database_raw)
                             pre_processing.save_dataframe_interpolated('pickle', DF_DICT_DIR)
 
                         # Gestione del salvataggio dei dataframe così generati
@@ -290,6 +303,10 @@ while True:
         else:
             print(f'  File contenenti i database non trovati. Verificare o procedere con la generazione dei database.')
 
+    elif process_dataframe == 'EXIT':
+        print(f"  Chiusura forzata da utente del programma.")
+        sys.exit()
+
     else:
 
         # Si fa ripetere il ciclo poiché l'input utente non è valido
@@ -300,7 +317,9 @@ while True:
 #           ANALISI STATISTICA DI CORRELAZIONE
 # ======================================================
 
-print('\n\n========== ANALISI STATISTICA ==========')
+print('=====================================================')
+print('========== AVVIO FASE DI ANALISI STATISTICA =========')
+print('=====================================================')
 
 analysis = StatisticalAnalysis()
 
