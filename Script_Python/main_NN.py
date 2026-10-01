@@ -71,7 +71,7 @@ num_epoch = 2                                                                   
 numero_missioni = 16                                                                    # Numero di missioni da analizzare
 test_missions = [('0', '4'), ('0', '8'), ('0', '12'), ('0' , '16')]                     # Missioni utilizzate solo nella fase di test
 
-sensors_frequencies = {'IMU': 5, 'DVL': 10, 'Depth': 5, 'Depth_rate': 5, 'MOT': 5, 'V_ref': 5, 'GPS': 1}             # Frequenze associate ai sensori
+sensors_frequencies = {'IMU': 5, 'DVL': 10, 'Depth': 5, 'DepthVel': 5, 'MOT': 5, 'V_ref': 5, 'GPS': 1}             # Frequenze associate ai sensori
 
 # File di input/output necessarie al pre-processing
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -145,6 +145,7 @@ while True:
     else:
         print(f'  Input inserito non riconosciuto. Ripetere la scelta.')
 
+
 # -----------------------------------------------------
 #          PROCESSING DEI DATAFRAMES GREZZI
 # -----------------------------------------------------
@@ -182,7 +183,7 @@ while True:
         else:
             print(f'  File contenenti i database non trovati. Verificare o procedere con la generazione dei database.')
 
-    elif generate_new_dataframe == 'EXIT':
+    elif process_dataframe == 'EXIT':
         print(f"  Chiusura forzata da utente del programma.")
         sys.exit()
 
@@ -259,8 +260,8 @@ if do_training == 'S':
 
         for batch in training_loader:
 
-            IMU_data = batch[0]                 # Batch di dimensioni [32, 5, 9] --> contiene i 3 valori IMU, i 4 sensori MOT (FV, FL, FW1, FW2) e i 2 di velocità reference (Vxref, omega_yref)
-            DVL_data = batch[1]                 # Batch di dimensioni [32, 10, 3]
+            IMU_data = batch[1]                 # Batch di dimensioni [32, 5, 9] --> contiene i 3 valori IMU, i 4 sensori MOT (FV, FL, FW1, FW2) e i 2 di velocità reference (Vxref, omega_yref)
+            DVL_data = batch[0]                 # Batch di dimensioni [32, 10, 3]
             dati_gps = batch[2].squeeze(1)      # Batch di dimensioni [32, 1, 2] --> si vuole avere dimensione [32, 2] per congruenza con output rete neurale --> si elimina una dimensione dalla batch
 
             # Si richiama la funzione di aggiornamento pesi
@@ -281,10 +282,11 @@ if do_training == 'S':
 
         rete_neurale.eval()
         with torch.no_grad():
+            epoch_batches_number = 0
             for batch in validation_loader:
 
-                IMU_data = batch[0]
-                DVL_data = batch[1]
+                IMU_data = batch[1]
+                DVL_data = batch[0]
                 GPS_data = batch[2].squeeze(1)
 
                 NN_displacement_estimation = rete_neurale.forward(IMU_data, DVL_data)
@@ -449,7 +451,7 @@ for (trajectory, combination) in test_missions:
 
             # Si realizza il grafico associato alla singola traiettoria
             figure_title = f'Confronto tra posizione target e predette per la missione {mission}'
-            post_processing.real_trajectories_plot(GPS_coordinates_list, NN_coordinates_list, mission, path_name, figure_title)
+            post_processing.real_trajectories_plot(GPS_coordinates_list, NN_coordinates_list, mission, path_name, figure_title, ROOT_DIR)
 
 
 

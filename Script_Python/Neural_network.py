@@ -1,6 +1,6 @@
-'''     IMPLEMENTAZIONE RETE NEURALE NAVNET
+"""     IMPLEMENTAZIONE RETE NEURALE NAVNET
               FEDERICO CECCHINI
-            ANNO ACCADEMICO 2025/26             '''
+            ANNO ACCADEMICO 2025/26             """
 
 ''' La classe Dataset suddivide i tensori generati nel pre-processing in batch che tengono conto del singolo riferimento temporale considerato (1 secondo), senza avere più 
     distinzione tra le varie missioni per il training --> ciò non vale per le missioni di test prescelte che sono estratte e trattate con funzione separata, ottenendo così 
@@ -24,12 +24,9 @@ import torch                                    # Libreria per il Deep Learning
 import torch.nn as nn                           # Libreria utilizzata per le proprietà nelle reti neurali
 import torch.nn.functional as F                 # Libreria specifica per le funzioni come softmax
 import torch.optim as optim                     # Libreria per il metodo di ottimizzazione dei pesi
-import pandas as pd                             # Libreria per la gestione dei dataframe
-import re                                       #
+import pandas as pd                             # Libreria per la gestione dei dataframe                                     #
 import warnings                                 # Libreria per la gestione dei warnings come exception
 from pandas.errors import DtypeWarning          # Libreria per la gestione dei warnings di tipo misto nella lettura di un dataframe pandas
-import pickle                                   # Libreria per la gestione del formato di salvataggio pickle
-import os                                       # Libreria per la gestione dell'interfaccia tra sistema operativo e script
 
 pd.set_option('display.max_columns', None)              # Visualizza tutte le colonne (nessun limite al numero)
 pd.set_option('display.max_colwidth', None)             # Visualizza tutto il contenuto della cella (evita di troncare stringhe lunghe)
@@ -89,10 +86,14 @@ class Dataset(torch.utils.data.Dataset):
 
                         try:
 
+                            if sensor_name == 'Depth' or sensor_name == 'DepthVel':
+                                continue
+
                             # Si calcola il numero di misurazioni presenti in un secondo per il blocco di misurazioni di iterazione
-                            sensor_frequency = sensors_frequencies[sensor_name]     # Frequenza del sensore
-                            batch_start_line = second * sensor_frequency            # ad es. 0 per t0=0s, 5/10/1 per t1=1s in base al sensore...
-                            batch_end_line = (second + 1) * sensor_frequency        # ad es. 5/10/1 per t0=0s, 10/20/2 per t1=1s in base al sensore...
+                            sensor_frequency = sensors_frequencies[sensor_name]              # Frequenza del sensore
+                            offset = 1 if sensor_name == 'GPS' else 0                        # Si definisce un offset di 1 secondo per il GPS --> in questo modo il delta viene stimato in base alle misurazioni del blocco dati precedente (il delta è la prima posizione del blocco per come è generato il dataset quindi userebbe dati non ancora esistenti al momento del calcolo del delta)
+                            batch_start_line = (second + offset) * sensor_frequency          # Ad es. 0 per t0=0s, 5/10/1 per t1=1s in base al sensore...
+                            batch_end_line = (second + 1 + offset) * sensor_frequency        # Ad es. 5/10/1 per t0=0s, 10/20/2 per t1=1s in base al sensore...
 
                             # Si isola la porzione di tensore associata a quella durata di misurazioni
                             porzione_tensore = sensor_tensor[batch_start_line:batch_end_line]
@@ -154,9 +155,10 @@ class Dataset(torch.utils.data.Dataset):
                         try:
 
                             # Si calcola il numero di misurazioni presenti in un secondo per il blocco di misurazioni di iterazione
-                            sensor_frequency = sensors_frequencies[sensor_name]     # Frequenza del sensore
-                            batch_start_line = second * sensor_frequency            # ad es. 0 per t0=0s, 5/10/1 per t1=1s in base al sensore...
-                            batch_end_line = (second + 1) * sensor_frequency        # ad es. 5/10/1 per t0=0s, 10/20/2 per t1=1s in base al sensore...
+                            sensor_frequency = sensors_frequencies[sensor_name]              # Frequenza del sensore
+                            offset = 1 if sensor_name == 'GPS' else 0                        # Si definisce un offset di 1 secondo per il GPS --> in questo modo il delta viene stimato in base alle misurazioni del blocco dati precedente (il delta è la prima posizione del blocco per come è generato il dataset quindi userebbe dati non ancora esistenti al momento del calcolo del delta)
+                            batch_start_line = (second + offset) * sensor_frequency          # Ad es. 0 per t0=0s, 5/10/1 per t1=1s in base al sensore...
+                            batch_end_line = (second + 1 + offset) * sensor_frequency        # Ad es. 5/10/1 per t0=0s, 10/20/2 per t1=1s in base al sensore...
 
                             # Si isola la porzione di tensore associata a quella durata di misurazioni
                             porzione_tensore = sensor_tensor[batch_start_line:batch_end_line]

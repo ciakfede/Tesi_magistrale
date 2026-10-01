@@ -1,6 +1,6 @@
-'''       PRE-PROCESSING E ANALISI DATI
+"""       PRE-PROCESSING E ANALISI DATI
               FEDERICO CECCHINI
-            ANNO ACCADEMICO 2025/26             '''
+            ANNO ACCADEMICO 2025/26             """
 
 ''' Il pre-processing produce delle liste di liste di DataFrame (una lista contenente più dataframe, per ogni missione e per ogni blocco di sensori) --> fatto su più 
     griglie di riferimento con passo uniforme (0.100s per DVL, 0.200s per IMU e 1s per GPS) --> misurazioni asincrone spostate al decimo di secondo più vicino all'istante 
@@ -54,6 +54,15 @@ class PreProcessing:
         self.normalization_parameters = {}              # Dizionario per salvare medie e deviazioni standard --> nella forma {'IMU': {'mean':valore, 'std':valore}, 'DVL': {}...}
 
         self.warn_count = 0                             # Contatore warning --> da riinizializzare a 0 quando si cambia traiettoria o blocco di sensori
+
+        # Si definiscono i blocchi di sensori con frequenze differenti --> tuple che contengono sia le colonne che la frequenza associata oltre che la lista di destinazione associata all'attributo self
+        self.sensors_blocks = {'DVL': ['timestamp', 'DVL_Vx [m/s]', 'DVL_Vy [m/s]', 'DVL_Vz [m/s]', 'DVL_Altitude [m]'],
+                               'IMU': ['timestamp', 'Roll [deg]', 'Pitch [deg]', 'Yaw [deg]'],
+                              'Depth': ['timestamp', 'Depth [m]'],
+                              'DepthVel': ['timestamp', 'Depth_Rate [m/s]'],
+                              'MOT': ['timestamp', 'Mot_FV [%]', 'Mot_FL [%]', 'Mot_RV [%]', 'Mot_RL [%]', 'Mot_FW1 [%]', 'Mot_FW2 [%]'],
+                              'V_ref': ['timestamp', 'Ref_Vx [%]', 'Ref_Vy [%]', 'Ref_Vz [%]', 'Ref_ωx [%]', 'Ref_ωy [%]', 'Ref_ωz [%]'],
+                              'GPS': ['timestamp', 'UTM_North [m]', 'UTM_East [m]']}
 
     # ======================================================
     #            ESTRAZIONE DATI DA FILE CSV
@@ -296,45 +305,6 @@ class PreProcessing:
 
             print(f'    I dataframe globali per la traiettoria {trajectory} sono stati generati correttamente, al netto di {self.warn_count} warnings rilevati (le eccezioni sono None nel dizionario).')
 
-        # -----------------------------------------------------
-        #           PULIZIA FASE INIZIALE MISSIONE
-        # -----------------------------------------------------
-
-        # Si itera su ogni missione presente all'interno del dizionario
-        dataframe_dict = self.raw_trajectories_dataframes.copy()
-        reference_depth = 9
-        for trajectory, mission_dict in dataframe_dict.items():
-
-            print(f'\n  Eliminazione dati trasferta verso waiting point per missioni traiettoria {trajectory} in corso:')
-            if not mission_dict:
-                print(f'    [WARNING] Per la traiettoria {trajectory} non risultano dataframe presenti.')
-                continue
-
-            self.warn_count = 0
-            for combination, mission_dataframe in mission_dict.items():
-
-                if mission_dataframe.empty:
-                    self.warn_count += 1
-                    print(f'    [WARNING] Il dataframe della missione {trajectory} - {combination} risulta vuoto.')
-                    continue
-
-                try:
-
-                    # Si definisce il timestamp associato al primo superamento della profondità di soglia prescelta
-                    start_condition = mission_dataframe[mission_dataframe['Depth [m]'] >= reference_depth]
-                    start_time = start_condition['timestamp'].iloc[0]
-
-                    # Si modifica il dataframe eliminando tutti i timestamp precedenti
-                    self.raw_trajectories_dataframes[trajectory][combination] = mission_dataframe[mission_dataframe['timestamp'] >= start_time].reset_index(drop=True)
-
-                except Exception as e:
-                    self.warn_count += 1
-                    print(f'    [WARNING] Errore nel processo di pulizia della fase iniziale per la missione {trajectory} - {combination} (missione non considerata) --> {e}')
-                    self.raw_trajectories_dataframes[trajectory][combination] = None
-                    continue
-
-            print(f'    I dataframe globali per la traiettoria {trajectory} sono stati modificati correttamente, al netto di {self.warn_count} warnings rilevati (le eccezioni sono None nel dizionario).')
-
         return self
 
     # ======================================================
@@ -484,7 +454,7 @@ class PreProcessing:
         except Exception as e:
             self.warn_count += 1
             print(f"    [WARNING] Errore nel processo di resampling per la missione {trajectory} - {combination} --> {e}")
-            self.resampled_trajectories_dataframes[trajectory][combination] = None
+            self.resampled_trajectories_dataframes[trajectory][combination] = pd.DataFrame()
 
         return self
 
@@ -521,19 +491,6 @@ class PreProcessing:
             if trajectory not in self.resampled_trajectories_dataframes:
                 self.resampled_trajectories_dataframes[trajectory] = {}
 
-            # Si definiscono i blocchi di sensori con frequenze differenti --> tuple che contengono sia le colonne che la frequenza associata oltre che la lista di destinazione associata all'attributo self
-            try:
-                cols_IMU = ('IMU', ['timestamp', 'Roll [deg]', 'Pitch [deg]', 'Yaw [deg]'])
-                cols_DVL = ('DVL', ['timestamp', 'DVL_Vx [m/s]', 'DVL_Vy [m/s]', 'DVL_Vz [m/s]', 'DVL_Altitude [m]'])
-                cols_depth = ('Depth', ['timestamp', 'Depth [m]'])
-                cols_depth_rate = ('Depth_rate', ['timestamp', 'Depth_Rate [m/s]'])
-                cols_Vref = ('V_ref', ['timestamp', 'Ref_Vx [%]', 'Ref_Vy [%]', 'Ref_Vz [%]', 'Ref_ωx [%]', 'Ref_ωy [%]', 'Ref_ωz [%]'])
-                cols_MOT = ('MOT', ['timestamp', 'Mot_FV [%]', 'Mot_FL [%]', 'Mot_RV [%]', 'Mot_RL [%]', 'Mot_FW1 [%]', 'Mot_FW2 [%]'])
-                cols_GPS = ('GPS', ['timestamp', 'UTM_North [m]', 'UTM_East [m]'])
-                sensors_blocks = [cols_DVL, cols_IMU, cols_depth, cols_depth_rate, cols_MOT, cols_Vref, cols_GPS]
-            except KeyError:
-                raise KeyError(f"  [ERROR] Ci sono chiavi associate ai sensori errate per la traiettoria {trajectory}. Ricontrollare la corrispondenza dei nomi con il dataframe puro generato in precedenza.") from None
-
             self.warn_count = 0
             for combination, dataframe in mission_dict.items():
 
@@ -551,33 +508,37 @@ class PreProcessing:
                 # -----------------------------------------------------
 
                 # Si itera su ogni blocco di sensori individuato per definire istante di inizio e fine di ognuno
-                for (sensor_block_name, sensor_block_cols) in sensors_blocks:
+                try:
+                    for sensor_block_name, sensor_block_cols in self.sensors_blocks.items():
 
-                    # Si crea un sottoinsieme del dataframe completo originale che contenga solo le colonne del blocco di iterazione --> si eliminano le righe in cui sono presenti valori NaN (utile per definizione istante iniziale)
-                    dataframe_copy = dataframe[sensor_block_cols].dropna(how='any')
+                        # Si crea un sottoinsieme del dataframe completo originale che contenga solo le colonne del blocco di iterazione --> si eliminano le righe in cui sono presenti valori NaN (utile per definizione istante iniziale)
+                        dataframe_copy = dataframe[sensor_block_cols].dropna(how='any')
 
-                    # Si riordinano i valori in base al timestamp e lo si salva nella lista complessiva
-                    dataframe_copy = dataframe_copy.sort_values('timestamp')
-                    df_blocks_list.append(dataframe_copy)
+                        # Si riordinano i valori in base al timestamp e lo si salva nella lista complessiva
+                        dataframe_copy = dataframe_copy.sort_values('timestamp')
+                        df_blocks_list.append(dataframe_copy)
 
-                    # Calcolo istante iniziale e conclusivo del dataframe
-                    t_start_list.append(dataframe_copy['timestamp'].min())
-                    t_end_list.append(dataframe_copy['timestamp'].max())
+                        # Calcolo istante iniziale e conclusivo del dataframe
+                        t_start_list.append(dataframe_copy['timestamp'].min())
+                        t_end_list.append(dataframe_copy['timestamp'].max())
 
-                # Si selezionano gli istanti di inizio e fine del dataframe aggiornato
-                t_start_dataframe = max(t_start_list).round(self.freq)        # Il dataframe inizia dal valore più alto tra gli istanti iniziali dei singoli blocchi --> così non occorre ipotizzare grandezze con metodo backward
-                t_end_dataframe = min(t_end_list).round(self.freq)            # Il dataframe finisce con il valore più basso tra gli istanti finali dei singoli blocchi --> così riduco il numero di stati ipotizzati (ma solitamente è GPS a finire prima)
+                    # Si selezionano gli istanti di inizio e fine del dataframe aggiornato
+                    t_start_dataframe = max(t_start_list).round(self.freq)        # Il dataframe inizia dal valore più alto tra gli istanti iniziali dei singoli blocchi --> così non occorre ipotizzare grandezze con metodo backward
+                    t_end_dataframe = min(t_end_list).round(self.freq)            # Il dataframe finisce con il valore più basso tra gli istanti finali dei singoli blocchi --> così riduco il numero di stati ipotizzati (ma solitamente è GPS a finire prima)
 
-                # Si determina l'istante finale effettivo del GPS a seguito dell'arrotondamento con griglia --> sarà questo il riferimento per tutte le altre griglia
-                GPS_freq = sensors_frequencies['GPS']
-                t_end_GPS = pd.date_range(start=t_start_dataframe, end=t_end_dataframe, freq=f'{(1/GPS_freq)*1000}ms').max()
+                    # Si determina l'istante finale effettivo del GPS a seguito dell'arrotondamento con griglia --> sarà questo il riferimento per tutte le altre griglia
+                    GPS_freq = sensors_frequencies['GPS']
+                    t_end_GPS = pd.date_range(start=t_start_dataframe, end=t_end_dataframe, freq=f'{(1/GPS_freq)*1000}ms').max()
+
+                except KeyError:
+                    raise KeyError(f"  [ERROR] Ci sono chiavi associate ai sensori errate per la traiettoria {trajectory}. Ricontrollare la corrispondenza dei nomi con il dataframe puro generato in precedenza.") from None
 
                 # -----------------------------------------------------
                 #           MERGE SU GRIGLIA TEMPORALE COMUNE
                 # -----------------------------------------------------
 
                 # Si itera contemporaneamente sulla lista dei dataframe per sensori e sulle tuple dei blocchi per fare effettivamente il resampling
-                for sensor_block_dataframe, (sensor_block_name, sensor_block_cols) in  zip(df_blocks_list, sensors_blocks):
+                for sensor_block_dataframe, sensor_block_name, sensor_block_cols in  zip(df_blocks_list, self.sensors_blocks.items()):
 
                     try:
 
@@ -683,7 +644,7 @@ class PreProcessing:
                 except Exception as e:
                     self.warn_count += 1
                     print(f"    [WARNING] Errore nell'interpolazione della missione {trajectory} - {combination} --> {e}")
-                    self.interpolated_trajectories_dataframes[trajectory][combination] = None
+                    self.interpolated_trajectories_dataframes[trajectory][combination] = pd.DataFrame()
                     continue
 
                 # Si applicano le trasformazioni in assi NED e assi body per ottenere il dataframe completo
@@ -692,7 +653,10 @@ class PreProcessing:
 
                 # Si eliminano le colonne associate alla posizione UTM, ormai inutili
                 try:
-                    self.interpolated_trajectories_dataframes[trajectory][combination].drop(columns=['UTM_East [m]', 'UTM_North [m]'], inplace=True)
+                    if self.interpolated_trajectories_dataframes[trajectory][combination].empty:
+                        continue
+                    else:
+                        self.interpolated_trajectories_dataframes[trajectory][combination].drop(columns=['UTM_East [m]', 'UTM_North [m]'], inplace=True)
                 except KeyError:
                     raise KeyError(f"    [ERROR] Errore nel drop delle colonne non utili. Ricontrollare che non siano presenti errori.") from None
 
@@ -738,6 +702,9 @@ class PreProcessing:
                     with pd.ExcelWriter(save_file_path, engine='xlsxwriter') as writer:
 
                         for combination, dataframe in dataframes.items():
+
+                            if dataframe.empty:
+                                continue
 
                             # Si crea una copia del dataframe per evitare modifiche impattanti nel main
                             dataframe_copy = self.raw_trajectories_dataframes[trajectory][combination].copy()
@@ -822,6 +789,9 @@ class PreProcessing:
 
                         for combination, dataframe in dataframes.items():
 
+                            if dataframe.empty:
+                                continue
+
                             # Si crea una copia del dataframe per evitare modifiche impattanti nel main
                             dataframe_copy = self.resampled_trajectories_dataframes[trajectory][combination].copy()
 
@@ -899,6 +869,9 @@ class PreProcessing:
 
                         for combination, dataframe in dataframes.items():
 
+                            if dataframe.empty:
+                                continue
+
                             # Si crea una copia del dataframe per evitare modifiche impattanti nel main
                             dataframe_copy = dataframe.copy()
 
@@ -970,14 +943,25 @@ class PreProcessing:
 
                         try:
 
-                            # Si eliminano le colonne relative agli assi UTM e NED assoluti
+                            sensor_dataframe_copy = sensor_dataframe.copy()
+
+                            # Si eliminano le colonne non necessarie per il training
                             if sensor_name == 'GPS':
-                                sensor_dataframe = sensor_dataframe.drop(columns=['UTM_North [m]', 'UTM_East [m]', 'NED_North [m]', 'NED_East [m]', 'X_body_ist [m]', 'Y_body_ist [m]'])
+                                sensor_dataframe_copy = sensor_dataframe_copy.drop(columns=['UTM_North [m]', 'UTM_East [m]', 'NED_North [m]', 'NED_East [m]', 'X_body_ist [m]', 'Y_body_ist [m]'], errors='ignore')
+
+                            elif sensor_name == 'DVL':
+                                sensor_dataframe_copy = sensor_dataframe_copy.drop(columns=['DVL_Altitude [m]'], errors='ignore')
+
+                            elif sensor_name == 'V_ref':
+                                sensor_dataframe_copy = sensor_dataframe_copy.drop(columns=['Ref_Vy [%]', 'Ref_Vz [%]', 'Ref_ωx [%]', 'Ref_ωz [%]'], errors='ignore')
+
+                            elif sensor_name == 'MOT':
+                                sensor_dataframe_copy = sensor_dataframe_copy.drop(columns=['Mot_RV [%]', 'Mot_RL [%]'], errors='ignore')
 
                             # Si aggiunge il dataframe per la missione e il nome del sensore associato a un apposito dizionario --> nella forma {'IMU': [], 'DVL': [], 'GPS': []}
                             if sensor_name not in sensor_dataframes_list:
                                 sensor_dataframes_list[sensor_name] = []
-                            sensor_dataframes_list[sensor_name].append(sensor_dataframe)
+                            sensor_dataframes_list[sensor_name].append(sensor_dataframe_copy)
 
                         except Exception as e:
                             self.warn_count += 1
@@ -1057,11 +1041,20 @@ class PreProcessing:
                         # Si elimina dal dataframe del singolo sensore la colonna dei timestamp (questo crea automaticamente una copia del dataframe originale)
                         sensor_dataframe_copy = sensor_dataframe.drop(columns=['timestamp'])
 
-                        # Si eliminano le colonne con le coordinate assolute, non necessarie per il training
+                        # Si eliminano le colonne non necessarie per il training
                         if sensor_name == 'GPS':
-                            sensor_dataframe_copy = sensor_dataframe_copy.drop(columns=['UTM_North [m]', 'UTM_East [m]', 'NED_North [m]', 'NED_East [m]', 'X_body_ist [m]', 'Y_body_ist [m]'])
+                            sensor_dataframe_copy = sensor_dataframe_copy.drop(columns=['UTM_North [m]', 'UTM_East [m]', 'NED_North [m]', 'NED_East [m]', 'X_body_ist [m]', 'Y_body_ist [m]'], errors='ignore')
 
-                        # Si estraggono i valori del dataframe
+                        elif sensor_name == 'DVL':
+                            sensor_dataframe_copy = sensor_dataframe_copy.drop(columns=['DVL_Altitude [m]'], errors='ignore')
+
+                        elif sensor_name == 'V_ref':
+                            sensor_dataframe_copy = sensor_dataframe_copy.drop(columns=['Ref_Vy [%]', 'Ref_Vz [%]', 'Ref_ωx [%]', 'Ref_ωz [%]'], errors='ignore')
+
+                        elif sensor_name == 'MOT':
+                            sensor_dataframe_copy = sensor_dataframe_copy.drop(columns=['Mot_RV [%]', 'Mot_RL [%]'], errors='ignore')
+
+                        # Si estraggono i valori del dataframe in un array numpy
                         original_values = sensor_dataframe_copy.to_numpy(dtype=np.float32)
 
                         # Si modificano tali valori tenendo conto dei parametri definiti prima per la normalizzazione
@@ -1084,7 +1077,7 @@ class PreProcessing:
                             # Si sovrascrive il tensore di pytorch per IMU con quello combinato
                             self.pytorch_tensor[trajectory][combination]['IMU'] = combined_tensor
 
-                        if sensor_name == 'Depth' or sensor_name == 'DepthVel':
+                        elif sensor_name == 'Depth' or sensor_name == 'DepthVel':
                             continue
 
                         # Si salva il tensore nel dizionario in tutti gli altri casi
@@ -1307,7 +1300,7 @@ class PostProcessing:
         NN_East = [p[0] for p in NN_coordinates_array]
         NN_North = [p[1] for p in NN_coordinates_array]
 
-        waypoints = self.waypoints_dict[mission[0]]
+        waypoints = self.waypoints_dict[mission[0]]['UTM']
         waypoints_East = [p[0] for p in waypoints]
         waypoints_North = [p[1] for p in waypoints]
 
