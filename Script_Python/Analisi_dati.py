@@ -13,9 +13,8 @@
     '''
 
 import numpy as np                              # Libreria per i calcoli matematici
-import torch
+import torch                                    # Libreria per i calcoli matematici
 import pandas as pd                             # Libreria per la gestione dei dataframe
-import re                                       #
 import warnings                                 # Libreria per la gestione dei warnings come exception
 from pandas.errors import DtypeWarning          # Libreria per la gestione dei warnings di tipo misto nella lettura di un dataframe pandas
 import pickle                                   # Libreria per la gestione del formato di salvataggio pickle
@@ -23,6 +22,7 @@ import os                                       # Libreria per la gestione dell'
 from sklearn.metrics import mean_squared_error  # Libreria per l'utilizzo della funzione per il calcolo dell'errore quadratico medio
 import matplotlib.pyplot as plt                 # Libreria per la gestione dell'ambiente grafico
 import utm                                      # Libreria per la gestione della conversione di coordinate espresse in gradi (WGS84)
+import sys                                      # Libreria che permette di interagire con il Runtime di Python
 
 pd.set_option('display.max_columns', None)              # Visualizza tutte le colonne (nessun limite al numero)
 pd.set_option('display.max_colwidth', None)             # Visualizza tutto il contenuto della cella (evita di troncare stringhe lunghe)
@@ -35,34 +35,45 @@ warnings.filterwarnings('error', category=pd.errors.DtypeWarning)           # Fo
 class PreProcessing:
 
     # Si inizializza la struttura comune degli elementi appartenenti alla classe
-    def __init__(self, freq_riferimento='100ms'):
+    def __init__(self, reference_frequency='100ms'):
 
-        self.freq = freq_riferimento                    # Si assegna alla variabile interna la frequenza base della griglia
+        self.freq = reference_frequency                 # Si assegna alla variabile interna la frequenza base della griglia
 
         self.config_matrix = {}                         # Si inizializza un dizionario che conterrà, per ogni traiettoria, una lista di stringhe che individuano la combinazione scenario ambientale/scenario operativo associata ad ogni missione --> avrà forma {'traiettoria0': ['comb0', 'comb1', ...], 'traiettoria1': [], ...}
 
-        self.raw_trajectories_dataframes = {}           # Si inizializza un dizionario che una volta riempito avrà forma {'traiettoria0': {'missione1': dataframe, 'missione2': dataframe...}, 'traiettoria1'; {}, ...}
+        self.raw_database = {}                          # Si inizializza un dizionario che una volta riempito avrà forma {'traiettoria0': {'missione1': dataframe, 'missione2': dataframe...}, 'traiettoria1'; {}, ...}
 
-        self.sensor_blocks_dataframes = {}              # Si inizializza un dizionario che conterrà per ogni missione i dataframe dei singoli sensori su griglia temporale comune --> ha forma {'traiettoria0': {'missione1': {'IMU'; dataframe, 'DVL':dataframe...} , 'missione2': {'IMU'; dataframe, 'DVL':dataframe...}, ...}, 'traiettoria1': {}, ...}
+        self.sensors_divided_database = {}              # Si inizializza un dizionario che conterrà per ogni missione i dataframe dei singoli sensori su griglia temporale comune --> ha forma {'traiettoria0': {'missione1': {'IMU'; dataframe, 'DVL':dataframe...} , 'missione2': {'IMU'; dataframe, 'DVL':dataframe...}, ...}, 'traiettoria1': {}, ...}
 
-        self.resampled_trajectories_dataframes = {}     # Si inizializza un dizionario che conterrà per ogni missione il dataframe globale trattato con resampling --> ha forma {'traiettoria0': {'missione1': dataframe, 'missione2': dataframe, ...}, 'traiettoria1': {}, ...}
+        self.resampled_database = {}                    # Si inizializza un dizionario che conterrà per ogni missione il dataframe globale trattato con resampling --> ha forma {'traiettoria0': {'missione1': dataframe, 'missione2': dataframe, ...}, 'traiettoria1': {}, ...}
 
-        self.interpolated_trajectories_dataframes = {}  # Si inizializza un dizionario che conterrà per ogni missione il dataframe globale trattato con interpolazione --> ha forma {'traiettoria0': {'missione1': dataframe, 'missione2': dataframe, ...}, 'traiettoria1': {}, ...}
+        self.interpolated_database = {}                 # Si inizializza un dizionario che conterrà per ogni missione il dataframe globale trattato con interpolazione --> ha forma {'traiettoria0': {'missione1': dataframe, 'missione2': dataframe, ...}, 'traiettoria1': {}, ...}
 
-        self.pytorch_tensor = {}                        # Si inizializza un dizionario che conterrà per ogni missione i tensori di ogni blocco sensori --> ha forma {'traiettoria0': {'missione1': {'IMU'; tensore, 'DVL':tensore...}, 'missione2': {'IMU'; tensore, 'DVL':tensore...}, ...}, 'traiettoria1': {}, ...}
+        self.pytorch_tensor_dict = {}                   # Si inizializza un dizionario che conterrà per ogni missione i tensori di ogni blocco sensori --> ha forma {'traiettoria0': {'missione1': {'IMU'; tensore, 'DVL':tensore...}, 'missione2': {'IMU'; tensore, 'DVL':tensore...}, ...}, 'traiettoria1': {}, ...}
 
-        self.normalization_parameters = {}              # Dizionario per salvare medie e deviazioni standard --> nella forma {'IMU': {'mean':valore, 'std':valore}, 'DVL': {}...}
+        self.normalization_parameters_dict = {}         # Dizionario per salvare medie e deviazioni standard --> nella forma {'IMU': {'mean':valore, 'std':valore}, 'DVL': {}...}
 
         self.warn_count = 0                             # Contatore warning --> da riinizializzare a 0 quando si cambia traiettoria o blocco di sensori
 
-        # Si definiscono i blocchi di sensori con frequenze differenti --> tuple che contengono sia le colonne che la frequenza associata oltre che la lista di destinazione associata all'attributo self
-        self.sensors_blocks = {'DVL': ['timestamp', 'DVL_Vx [m/s]', 'DVL_Vy [m/s]', 'DVL_Vz [m/s]', 'DVL_Altitude [m]'],
-                               'IMU': ['timestamp', 'Roll [deg]', 'Pitch [deg]', 'Yaw [deg]'],
-                              'Depth': ['timestamp', 'Depth [m]'],
-                              'DepthVel': ['timestamp', 'Depth_Rate [m/s]'],
-                              'MOT': ['timestamp', 'Mot_FV [%]', 'Mot_FL [%]', 'Mot_RV [%]', 'Mot_RL [%]', 'Mot_FW1 [%]', 'Mot_FW2 [%]'],
-                              'V_ref': ['timestamp', 'Ref_Vx [%]', 'Ref_Vy [%]', 'Ref_Vz [%]', 'Ref_ωx [%]', 'Ref_ωy [%]', 'Ref_ωz [%]'],
-                              'GPS': ['timestamp', 'UTM_North [m]', 'UTM_East [m]']}
+        self.empty_missions_list = []                   # Lista di tuple (traiettoria, combinazione) per cui si sono verificati errori nella fase di pre-processing --> dal momento dell'errore i DataFrame associati nel dizionario sono vuoti
+
+        # Dizionario con i nomi dei sensori e i singoli valori misurati da ognuno --> necessario in csv_analysis
+        self.data_labels = {'DVL': ['DVL_Lock', 'DVL_Vx [m/s]', 'DVL_Vy [m/s]', 'DVL_Vz [m/s]', 'DVL_Altitude [m]'],
+                            'Attitude': ['Roll [deg]', 'Pitch [deg]', 'Yaw [deg]'],
+                            'Depth': ['Depth [m]'],
+                            'DepthVel': ['Depth_Rate [m/s]'],
+                            'AxisRef': ['Ref_Vx [%]', 'Ref_Vy [%]', 'Ref_Vz [%]', 'Ref_ωx [%]', 'Ref_ωy [%]', 'Ref_ωz [%]'],
+                            'MotorRef': ['Mot_FV [%]', 'Mot_FL [%]', 'Mot_RV [%]', 'Mot_RL [%]', 'Mot_FW1 [%]', 'Mot_FW2 [%]', 'Mot_FW3 [%]', 'Mot_FW4 [%]'],
+                            'UTMPos': ['UTM_North [m]', 'UTM_East [m]', 'Zone', 'Quality']}
+
+        # Si definiscono i blocchi di sensori con frequenze differenti --> tuple che contengono sia le colonne che la frequenza associata oltre che la lista di destinazione associata all'attributo self --> sono quelli usati per il processing
+        self.sensors_labels_dict = {'DVL': ['timestamp', 'DVL_Vx [m/s]', 'DVL_Vy [m/s]', 'DVL_Vz [m/s]', 'DVL_Altitude [m]'],
+                                    'IMU': ['timestamp', 'Roll [deg]', 'Pitch [deg]', 'Yaw [deg]'],
+                                    'Depth': ['timestamp', 'Depth [m]'],
+                                    'DepthVel': ['timestamp', 'Depth_Rate [m/s]'],
+                                    'MOT': ['timestamp', 'Mot_FV [%]', 'Mot_FL [%]', 'Mot_RV [%]', 'Mot_RL [%]', 'Mot_FW1 [%]', 'Mot_FW2 [%]'],
+                                    'V_ref': ['timestamp', 'Ref_Vx [%]', 'Ref_Vy [%]', 'Ref_Vz [%]', 'Ref_ωx [%]', 'Ref_ωy [%]', 'Ref_ωz [%]'],
+                                    'GPS': ['timestamp', 'UTM_North [m]', 'UTM_East [m]']}
 
     # ======================================================
     #            ESTRAZIONE DATI DA FILE CSV
@@ -144,23 +155,24 @@ class PreProcessing:
         self.config_txt_analysis(file_config)
 
         # Inizializzazione del dizionario in cui si immagazzineranno i dataframe
-        dataframe_dict = {}
+        dataframes_dict = {}
 
         # Si itera su ogni traiettoria simulata --> l'elemento config_list è una lista di stringhe contenenti la coppia configurazione ambientale/operativa del drone in simulazione
         for trajectory, config_list in self.config_matrix.items():
 
             print(f'\n  Analisi file csv per traiettoria {trajectory} in corso:')
 
-            input_folder = os.path.join(ROOT_DIR, f'Telemetrie/Telemetria_traiettoria_{trajectory}')   # Si definisce la cartella di riferimento
+            # Si definisce la cartella di riferimento
+            input_folder = os.path.join(ROOT_DIR, f'Telemetrie/Telemetria_traiettoria_{trajectory}')
 
             # Si inizializza il dizionario interno associato alla singola missione
-            if trajectory not in dataframe_dict:
-                dataframe_dict[trajectory] = {}
+            if trajectory not in dataframes_dict:
+                dataframes_dict[trajectory] = {}
 
             self.warn_count = 0
             for combination in config_list:
 
-                # Se la missione è la 0 si evita l'analisi e si procede con la traiettoria successiva --> ha già un solo file di telemetria per configurazione
+                # Se la missione è la 0 si evita l'unificazione e si procede con la traiettoria successiva --> ha già un solo file di telemetria per configurazione
                 if trajectory == "0":
 
                     telemetry_file_name = os.path.join(input_folder, f'M{combination}.csv')
@@ -168,20 +180,30 @@ class PreProcessing:
                     try:
 
                         mission_dataframe = pd.read_csv(telemetry_file_name)
-                        dataframe_dict[trajectory][combination] = mission_dataframe
+
+                        # Check di verifica sul DataFrame di missione vuoto già al momento dell'estrazione --> si segnala ma per il momento non si fa gestisce appositamente
+                        if mission_dataframe.empty:
+                            print(f"    [WARNING] Il DataFrame associato alla missione {trajectory} - {combination} risulta essere vuoto al momento dell'estrazione dati. Ricontrollare il file csv di origine.")
+                            self.warn_count += 1
+                            dataframes_dict[trajectory][combination] = pd.DataFrame()
+                            continue
+
+                        dataframes_dict[trajectory][combination] = mission_dataframe
 
                     except FileNotFoundError:
+                        dataframes_dict[trajectory][combination] = pd.DataFrame()
                         self.warn_count += 1
                         print(f'    [WANRING] File di telemetria per la missione {trajectory} - {combination} non trovato.')
                         continue
 
                     except DtypeWarning:
+                        mission_dataframe = pd.read_csv(telemetry_file_name, low_memory=False)
+                        dataframes_dict[trajectory][combination] = mission_dataframe
                         self.warn_count += 1
                         print(f'    [WARNING] Il file di telemetria per la missione {trajectory} - {combination} contiene valori di tipo misto (problema opportunamente corretto dopo).')
-                        mission_dataframe = pd.read_csv(telemetry_file_name, low_memory=False)
-                        dataframe_dict[trajectory][combination] = mission_dataframe
 
                     except Exception as e:
+                        dataframes_dict[trajectory][combination] = pd.DataFrame()
                         self.warn_count += 1
                         print(f'    [WARNING] Errore nel processo di analisi ed estrazione dati dal file di telemetria per la missione {trajectory} - {combination} --> {e}')
                         continue
@@ -202,27 +224,37 @@ class PreProcessing:
                         DVL_dataframe = pd.read_csv(DVL_csv)
                         INS_dataframe = pd.read_csv(INS_csv)
 
-                        # Si unificano i dataframe tramite concatenazione e li si ordina per timestamp crescente
-                        mission_dataframe = pd.concat([DVL_dataframe, INS_dataframe], axis=0, ignore_index=True)    # Con axis=0 si impone di impilare i dataframe e non affiancarli mentre con ignore_index=True si unifica l'indice
-                        mission_dataframe = mission_dataframe.sort_values('timestamp', ignore_index=True)            # Si resetta l'indice dopo aver eseguito il sort
+                        if DVL_dataframe.empty or INS_dataframe.empty:
+                            print(f"    [WARNING] Il DataFrame associato alla missione {trajectory} - {combination} risulta essere vuoto al momento dell'estrazione dati. Ricontrollare il file csv di origine.")
+                            self.warn_count += 1
+                            dataframes_dict[trajectory][combination] = pd.DataFrame()
+                            continue
 
-                        dataframe_dict[trajectory][combination] = mission_dataframe
+                        else:
+
+                            # Si unificano i dataframe tramite concatenazione e li si ordina per timestamp crescente
+                            mission_dataframe = pd.concat([DVL_dataframe, INS_dataframe], axis=0, ignore_index=True)        # Con axis=0 si impone di impilare i dataframe e non affiancarli mentre con ignore_index=True si unifica l'indice
+                            mission_dataframe = mission_dataframe.sort_values('timestamp', ignore_index=True)                    # Si resetta l'indice dopo aver eseguito il sort
+
+                            dataframes_dict[trajectory][combination] = mission_dataframe
 
                     except FileNotFoundError:
+                        dataframes_dict[trajectory][combination] = pd.DataFrame()
                         self.warn_count += 1
                         print(f'    [WANRING] File di telemetria per la missione {trajectory} - {combination} non trovato.')
                         continue
 
                     except DtypeWarning:
-                        self.warn_count += 1
-                        print(f'    [WARNING]: In file di telemetria della missione {trajectory} - {combination} contiene valori di tipo misto (problema opportunamente corretto dopo).')
                         DVL_dataframe = pd.read_csv(DVL_csv, low_memory=False)
                         INS_dataframe = pd.read_csv(INS_csv, low_memory=False)
                         mission_dataframe = pd.concat([DVL_dataframe, INS_dataframe], axis=0, ignore_index=True)
                         mission_dataframe = mission_dataframe.sort_values('timestamp', ignore_index=True)
-                        dataframe_dict[trajectory][combination] = mission_dataframe
+                        dataframes_dict[trajectory][combination] = mission_dataframe
+                        self.warn_count += 1
+                        print(f'    [WARNING] Il file di telemetria della missione {trajectory} - {combination} contiene valori di tipo misto (problema opportunamente corretto dopo).')
 
                     except Exception as e:
+                        dataframes_dict[trajectory][combination] = pd.DataFrame()
                         self.warn_count += 1
                         print(f'    [WARNING] Errore nel processo di unificazione e estrazione dati dai file di telemetria per la missione {trajectory} - {combination} --> {e}')
                         continue
@@ -234,49 +266,46 @@ class PreProcessing:
         # -----------------------------------------------------
 
         # Si itera su ogni missione presente all'interno del dizionario
-        for trajectory, mission_dict in dataframe_dict.items():
+        for trajectory, mission_dict in dataframes_dict.items():
 
             print(f'\n  Estrazione dati di telemetria per missioni traiettoria {trajectory} in corso:')
-            if not mission_dict:
-                print(f'    [WARNING] Per la traiettoria {trajectory} non risultano dataframe presenti.')
-                continue
+
+            # Si salva il dataframe all'interno di un dizionario assegnandola alla singola missione
+            if trajectory not in self.raw_database:
+                self.raw_database[trajectory] = {}
 
             self.warn_count = 0
             for combination, mission_dataframe in mission_dict.items():
 
+                # Check sul Dataframe --> se è vuoto c'è stato un problema nella fase di unificazione ed estrazione dei dati --> si segnala la missione nella lista di quelle non considerate
                 if mission_dataframe.empty:
-                    self.warn_count += 1
-                    print(f'    [WARNING] Il dataframe della missione {trajectory} - {combination} risulta vuoto.')
+                    self.raw_database[trajectory][combination] = pd.DataFrame()
+                    if (trajectory, combination) not in self.empty_missions_list:
+                        self.empty_missions_list.append((trajectory, combination))
                     continue
 
                 # Si ripulisce il dataframe eliminando eventuali caratteri non numerici (problema dati misti) e gli spazi associati a ogni stringa (per uniformità)
                 mission_dataframe = self.dataframe_cleaning(mission_dataframe, trajectory, combination)
 
-                # Si verifica che il dataframe sia rimasto non vuoto --> altrimenti c'è stato un problema nella pulizia del dataframe e si passa alla missione successiva
+                # Si verifica che il dataframe sia rimasto non vuoto --> altrimenti c'è stato un problema nella pulizia del dataframe e si passa alla missione successiva --> si segnala la missione nell'apposita lista
                 if mission_dataframe.empty:
+                    self.raw_database[trajectory][combination] = pd.DataFrame()
+                    if (trajectory, combination) not in self.empty_missions_list:
+                        self.empty_missions_list.append((trajectory, combination))
                     continue
                 mission_dataframe['nome'] = mission_dataframe['nome'].str.strip()
 
                 try:
 
-                    # Si converte la colonna timestamp del dataframe in tempo effettivo, con formato orario classico 12:12:12:200, tramite pandas
+                    # Si converte la colonna timestamp del DataFrame in tempo effettivo, con formato orario classico 12:12:12:200, tramite pandas
                     mission_dataframe['timestamp'] = pd.to_datetime(mission_dataframe['timestamp'], unit='s')
-
-                    # Generazione nomi per intestazione tabella
-                    nomenclatura = {'DVL': ['DVL_Lock', 'DVL_Vx [m/s]', 'DVL_Vy [m/s]', 'DVL_Vz [m/s]', 'DVL_Altitude [m]'],
-                                    'Attitude': ['Roll [deg]', 'Pitch [deg]', 'Yaw [deg]'],
-                                    'Depth': ['Depth [m]'],
-                                    'DepthVel': ['Depth_Rate [m/s]'],
-                                    'AxisRef': ['Ref_Vx [%]', 'Ref_Vy [%]', 'Ref_Vz [%]', 'Ref_ωx [%]', 'Ref_ωy [%]', 'Ref_ωz [%]'],
-                                    'MotorRef': ['Mot_FV [%]', 'Mot_FL [%]', 'Mot_RV [%]', 'Mot_RL [%]', 'Mot_FW1 [%]', 'Mot_FW2 [%]', 'Mot_FW3 [%]', 'Mot_FW4 [%]'],
-                                    'UTMPos': ['UTM_North [m]', 'UTM_East [m]', 'Zone', 'Quality']}
 
                     # Si itera su ogni elemento presente all'interno del dizionario di nomenclatura
                     parts: list[pd.DataFrame] = []
-                    for sensor, columns_name in nomenclatura.items():
+                    for sensor_name, columns_name in self.data_labels.items():
 
                         # Si crea un sottoinsieme contenente tutte le righe del file .csv in cui compare il nome del sensore di iterazione (si usa .copy() per non modificare file originale)
-                        sensor_data = mission_dataframe[mission_dataframe['nome'] == sensor].copy()
+                        sensor_data = mission_dataframe[mission_dataframe['nome'] == sensor_name].copy()
 
                         # Si sostituiscono i nomi generici originali (v1, v2...) con i nomi definiti nel dizionario per il sensore di iterazione
                         for i, new_name in enumerate(columns_name):
@@ -292,18 +321,17 @@ class PreProcessing:
                     new_mission_dataframe = pd.concat(parts, axis=0, ignore_index=True)
                     new_mission_dataframe = new_mission_dataframe.sort_values('timestamp', ignore_index=True)
 
-                    # Si salva il dataframe all'interno di un dizionario assegnandola alla singola missione
-                    if trajectory not in self.raw_trajectories_dataframes:
-                        self.raw_trajectories_dataframes[trajectory] = {}
-                    self.raw_trajectories_dataframes[trajectory][combination] = new_mission_dataframe
+                    self.raw_database[trajectory][combination] = new_mission_dataframe
 
                 except Exception as e:
+                    self.raw_database[trajectory][combination] = pd.DataFrame()
+                    if (trajectory, combination) not in self.empty_missions_list:
+                        self.empty_missions_list.append((trajectory, combination))
                     self.warn_count += 1
-                    print(f'    [ERROR] Errore nel processo di formattazione del dataframe per la missione {trajectory} - {combination} (missione non considerata) --> {e}')
-                    self.raw_trajectories_dataframes[trajectory][combination] = None
+                    print(f'    [WARNING] Errore nel processo di formattazione del dataframe per la missione {trajectory} - {combination} (missione non considerata) --> {e}')
                     continue
 
-            print(f'    I dataframe globali per la traiettoria {trajectory} sono stati generati correttamente, al netto di {self.warn_count} warnings rilevati (le eccezioni sono None nel dizionario).')
+            print(f'    I dataframe globali per la traiettoria {trajectory} sono stati generati correttamente, al netto di {self.warn_count} nuovi warnings rilevati (le eccezioni corrispondono a DataFrame vuoti nel dizionario).')
 
         return self
 
@@ -316,15 +344,19 @@ class PreProcessing:
 
         try:
 
+            # Se il sotto-dizionario associato alla missione risulta vuoto (problemi nelle fasi precedenti) si salva il DataFrame resampled come vuoto e si esce subito dalla funzione (si potrebbe eliminare avendo il salto di missione nella funzione principale)
+            if not self.sensors_divided_database[trajectory][combination]:
+                return self
+
             # Si definisce il dataframe di iterazione partendo da quello contenuto all'interno del dizionario globale (per semplicità di notazione)
             dataframe_GPS = pd.DataFrame()
             dataframe_IMU = pd.DataFrame()
             if processing_method == 'resampling':
-                dataframe_GPS = self.sensor_blocks_dataframes[trajectory][combination]['GPS'].copy()
-                dataframe_IMU = self.sensor_blocks_dataframes[trajectory][combination]['IMU'].copy()
+                dataframe_GPS = self.sensors_divided_database[trajectory][combination]['GPS'].copy()
+                dataframe_IMU = self.sensors_divided_database[trajectory][combination]['IMU'].copy()
             elif processing_method == 'interpolazione':
-                dataframe_GPS = self.interpolated_trajectories_dataframes[trajectory][combination].copy()
-                dataframe_IMU = self.interpolated_trajectories_dataframes[trajectory][combination][['Pitch [deg]', 'Yaw [deg]']].copy()
+                dataframe_GPS = self.interpolated_database[trajectory][combination].copy()
+                dataframe_IMU = self.interpolated_database[trajectory][combination][['Pitch [deg]', 'Yaw [deg]']].copy()
 
             if not dataframe_GPS.empty and not dataframe_IMU.empty:
 
@@ -347,9 +379,9 @@ class PreProcessing:
 
                         # Si salvano le modifiche all'interno del dataframe originale
                         if processing_method == 'resampling':
-                            self.sensor_blocks_dataframes[trajectory][combination]['GPS'] = dataframe_GPS
+                            self.sensors_divided_database[trajectory][combination]['GPS'] = dataframe_GPS
                         elif processing_method == 'interpolazione':
-                            self.interpolated_trajectories_dataframes[trajectory][combination] = dataframe_GPS
+                            self.interpolated_database[trajectory][combination] = dataframe_GPS
 
                     else:
                         self.warn_count += 1
@@ -364,8 +396,7 @@ class PreProcessing:
                 print(f"    [WARNING]  Il dataframe della missione {trajectory} - {combination} risulta vuoto.")
 
         except KeyError:
-            raise KeyError(f"    [ERROR] Errore nella conversione delle coordinate NED -> Body per la missione {trajectory} - {combination}.") from None
-            return 1
+            raise KeyError(f"    [ERROR] Errore nella conversione delle coordinate NED -> Body per la missione {trajectory} - {combination}. Ricontrollare la corrispondenza delle etichette usate.") from None
 
         except Exception as e:
             self.warn_count += 1
@@ -381,9 +412,12 @@ class PreProcessing:
             # Si definisce il dataframe da modificare in base al metodo di processing del dataframe utilizzato
             dataframe = pd.DataFrame()
             if processing_method == 'resampling':
-                dataframe = self.sensor_blocks_dataframes[trajectory][combination]['GPS'].copy()
+                # Se il sotto-dizionario associato alla missione risulta vuoto (problemi nelle fasi precedenti) si salva il DataFrame resampled come vuoto e si esce subito dalla funzione (si potrebbe eliminare avendo il salto di missione nella funzione principale)
+                if not self.sensors_divided_database[trajectory][combination]:
+                    return self
+                dataframe = self.sensors_divided_database[trajectory][combination]['GPS'].copy()
             elif processing_method == 'interpolazione':
-                dataframe = self.interpolated_trajectories_dataframes[trajectory][combination].copy()
+                dataframe = self.interpolated_database[trajectory][combination].copy()
 
             if not dataframe.empty:
 
@@ -412,9 +446,9 @@ class PreProcessing:
 
                     # Si salvano le modifiche all'interno del dataframe originale
                     if processing_method == 'resampling':
-                        self.sensor_blocks_dataframes[trajectory][combination]['GPS'] = dataframe
+                        self.sensors_divided_database[trajectory][combination]['GPS'] = dataframe
                     elif processing_method == 'interpolazione':
-                        self.interpolated_trajectories_dataframes[trajectory][combination] = dataframe
+                        self.interpolated_database[trajectory][combination] = dataframe
 
                 else:
                     self.warn_count += 1
@@ -423,6 +457,9 @@ class PreProcessing:
             else:
                 self.warn_count += 1
                 print(f"    [WARNING] Il dataframe per la missione {trajectory} - {combination} risulta vuoto.")
+
+        except KeyError:
+            raise KeyError(f"    [ERROR] Errore nella conversione delle coordinate NED -> Body per la missione {trajectory} - {combination}. Ricontrollare la corrispondenza delle etichette usate.")
 
         except Exception as e:
             self.warn_count += 1
@@ -435,31 +472,41 @@ class PreProcessing:
 
         try:
 
-            # Si inizializza il dataframe di output (comune a tutti i sensori) come il dataframe legato al solo DVL --> questo fornisce il riferimento temporale, avendo la frequenza maggiore
-            resampled_dataframe = self.sensor_blocks_dataframes[trajectory][combination]['DVL']
+            # Se il sotto-dizionario associato alla missione risulta vuoto (problemi nelle fasi precedenti) si salva il DataFrame resampled come vuoto e si esce subito dalla funzione (si potrebbe eliminare avendo il salto di missione nella funzione principale)
+            if not self.sensors_divided_database[trajectory][combination]:
+                self.resampled_database[trajectory][combination] = pd.DataFrame()
+                return self
 
-            # Si itera su ogni sensore presente all'interno del dizionario prodotto in precedenza
-            for sensor_name, sensor_dataframe in self.sensor_blocks_dataframes[trajectory][combination].items():
+            # Si inizializza il dataframe di output (comune a tutti i sensori) come il dataframe legato al solo DVL --> questo fornisce il riferimento temporale, avendo la frequenza di aggiornamento maggiore
+            resampled_dataframe = self.sensors_divided_database[trajectory][combination]['DVL']
 
+            # Si itera su ogni sensore presente all'interno del dizionario prodotto in precedenza --> se anche il dizionario fosse vuoto lo salterebbe non avendo items()
+            for sensor_name, sensor_dataframe in self.sensors_divided_database[trajectory][combination].items():
+
+                # Si effettua l'operazione di merge basata sui timestamp dei vari blocchi creati --> si impostano a NaN i valori delle righe che non hanno corrispondenza nel DataFrame di base (primo argomento funzione)
                 if sensor_name != 'DVL':
                     resampled_dataframe = pd.merge(resampled_dataframe, sensor_dataframe, on='timestamp', how='outer')
 
-            # Si riordina il dataframe prodotto secondo il timestamp per maggiore sicurezza
+            # Si riordina il dataframe prodotto secondo il timestamp, per maggiore sicurezza, creando anche un nuovo indice
             resampled_dataframe = resampled_dataframe.sort_values('timestamp', ignore_index=True)
 
-            # Si aggiunge il dataframe generato per la missione al dizionario complessivo
+            # Si aggiunge il dataframe generato per la missione al dizionario complessivo, eliminando le righe associate alla posizione UTM che sono superflue dopo le trasformazioni di coordinata
             resampled_dataframe.drop(columns=['UTM_East [m]', 'UTM_North [m]'], inplace=True)
-            self.resampled_trajectories_dataframes[trajectory][combination] = resampled_dataframe
+            self.resampled_database[trajectory][combination] = resampled_dataframe
 
         except Exception as e:
             self.warn_count += 1
             print(f"    [WARNING] Errore nel processo di resampling per la missione {trajectory} - {combination} --> {e}")
-            self.resampled_trajectories_dataframes[trajectory][combination] = pd.DataFrame()
+            self.resampled_database[trajectory][combination] = pd.DataFrame()
 
         return self
 
     # Funzione incaricata di analizzare i dataframe di tutte le missioni per generare dei dataframe contenenti solo le colonne di ogni blocco di sensori da usare per addestramento
     def raw_dataframes_processing(self, generate_dataframe, save_file_path, sensors_frequencies):
+
+        # -----------------------------------------------------
+        #             CARICAMENTO DATABASE GLOBALE
+        # -----------------------------------------------------
 
         # Se la scelta dell'utente è no, il dataframe globale si prende dal file pickle
         if generate_dataframe == 'N':
@@ -476,23 +523,33 @@ class PreProcessing:
         elif generate_dataframe == 'S':
 
             # Si crea una copia del dizionario contenente il dataframe globale --> in modo da non modificare quello originale per errore
-            dataframe_globale = self.raw_trajectories_dataframes.copy()
+            dataframe_globale = self.raw_database.copy()
+
+        # -----------------------------------------------------
+        #             INIZIO PROCESSING DATABASE
+        # -----------------------------------------------------
 
         # Si itera per ogni elemento contenuto nel dizionario separando il nome del foglio (= nome_missione) e il dataframe associato
-        for trajectory, mission_dict in dataframe_globale.items():
+        for trajectory, combinations_dict in dataframe_globale.items():
 
             print(f'\n  Analisi dei dataframe associati alla traiettoria {trajectory} in corso:')
 
             # Si crea il dizionario associato alla singola traiettoria all'interno del dizionario globale, che contiene tutti i dataframe trattati (se non presente)
-            if trajectory not in self.sensor_blocks_dataframes:
-                self.sensor_blocks_dataframes[trajectory] = {}
+            if trajectory not in self.sensors_divided_database:
+                self.sensors_divided_database[trajectory] = {}
 
             # Si crea il dizionario associato alla singola traiettoria all'interno del dizionario globale, che contiene tutti i dataframe trattati (se non presente)
-            if trajectory not in self.resampled_trajectories_dataframes:
-                self.resampled_trajectories_dataframes[trajectory] = {}
+            if trajectory not in self.resampled_database:
+                self.resampled_database[trajectory] = {}
 
             self.warn_count = 0
-            for combination, dataframe in mission_dict.items():
+            for combination, mission_dataframe in combinations_dict.items():
+
+                # Se c'è stato un problema nella csv_analysis si salta l'analisi della missione e si inizializzano a dizionario nullo e Dataframe vuoto gli elementi associati nei rispettivi dizionari
+                if mission_dataframe.empty:
+                    self.sensors_divided_database[trajectory][combination] = {}
+                    self.resampled_database[trajectory][combination] = pd.DataFrame()
+                    continue
 
                 # Si inizializzano le liste necessarie al trattamento del dataframe di missione
                 df_blocks_list = []                 # Lista che conterrà il dataframe di missione ridotto ai soli parametri necessari e suddiviso in blocchi (uno per sensore)
@@ -500,8 +557,8 @@ class PreProcessing:
                 t_end_list = []                     # Lista che conterrà i timestamp di fine misurazioni di ogni sensore
 
                 # Si crea il dizionario interno associato alla singola missione all'interno del dizionario globale, che contiene tutti i dataframe trattati (se non presente)
-                if combination not in self.sensor_blocks_dataframes[trajectory]:
-                    self.sensor_blocks_dataframes[trajectory][combination] = {}
+                if combination not in self.sensors_divided_database[trajectory]:
+                    self.sensors_divided_database[trajectory][combination] = {}
 
                 # -----------------------------------------------------
                 #        DEFINIZIONE LIMITI TEMPORALI DATAFRAMES
@@ -509,10 +566,10 @@ class PreProcessing:
 
                 # Si itera su ogni blocco di sensori individuato per definire istante di inizio e fine di ognuno
                 try:
-                    for sensor_block_name, sensor_block_cols in self.sensors_blocks.items():
+                    for sensor_block_name, sensor_block_cols in self.sensors_labels_dict.items():
 
                         # Si crea un sottoinsieme del dataframe completo originale che contenga solo le colonne del blocco di iterazione --> si eliminano le righe in cui sono presenti valori NaN (utile per definizione istante iniziale)
-                        dataframe_copy = dataframe[sensor_block_cols].dropna(how='any')
+                        dataframe_copy = mission_dataframe[sensor_block_cols].dropna(how='any')
 
                         # Si riordinano i valori in base al timestamp e lo si salva nella lista complessiva
                         dataframe_copy = dataframe_copy.sort_values('timestamp')
@@ -522,41 +579,58 @@ class PreProcessing:
                         t_start_list.append(dataframe_copy['timestamp'].min())
                         t_end_list.append(dataframe_copy['timestamp'].max())
 
-                    # Si selezionano gli istanti di inizio e fine del dataframe aggiornato
-                    t_start_dataframe = max(t_start_list).round(self.freq)        # Il dataframe inizia dal valore più alto tra gli istanti iniziali dei singoli blocchi --> così non occorre ipotizzare grandezze con metodo backward
-                    t_end_dataframe = min(t_end_list).round(self.freq)            # Il dataframe finisce con il valore più basso tra gli istanti finali dei singoli blocchi --> così riduco il numero di stati ipotizzati (ma solitamente è GPS a finire prima)
+                    # Si selezionano gli istanti di inizio e fine del dataframe aggiornato --> usati ceil e floor per arrotondare in modo tale da ridurre i NaN all'inizio (se l'approssimazione prendesse ad esempio un .800 per un .834 di misurazione)
+                    t_start_dataframe = max(t_start_list).ceil(self.freq)        # Il dataframe inizia dal valore più alto tra gli istanti iniziali dei singoli blocchi --> così non occorre ipotizzare grandezze con metodo backward
+                    t_end_dataframe = min(t_end_list).floor(self.freq)           # Il dataframe finisce con il valore più basso tra gli istanti finali dei singoli blocchi --> così riduco il numero di stati ipotizzati (ma solitamente è GPS a finire prima)
 
                     # Si determina l'istante finale effettivo del GPS a seguito dell'arrotondamento con griglia --> sarà questo il riferimento per tutte le altre griglia
                     GPS_freq = sensors_frequencies['GPS']
                     t_end_GPS = pd.date_range(start=t_start_dataframe, end=t_end_dataframe, freq=f'{(1/GPS_freq)*1000}ms').max()
 
                 except KeyError:
-                    raise KeyError(f"  [ERROR] Ci sono chiavi associate ai sensori errate per la traiettoria {trajectory}. Ricontrollare la corrispondenza dei nomi con il dataframe puro generato in precedenza.") from None
+                    raise KeyError(f"    [ERROR] Ci sono chiavi associate ai sensori errate per la traiettoria {trajectory}. Ricontrollare la corrispondenza delle etichette usate.") from None
 
                 # -----------------------------------------------------
                 #           MERGE SU GRIGLIA TEMPORALE COMUNE
                 # -----------------------------------------------------
 
                 # Si itera contemporaneamente sulla lista dei dataframe per sensori e sulle tuple dei blocchi per fare effettivamente il resampling
-                for sensor_block_dataframe, sensor_block_name, sensor_block_cols in  zip(df_blocks_list, self.sensors_blocks.items()):
+                sensors_dataframes = {}
+                mission_failed = False
+                for sensor_block_dataframe, (sensor_block_name, sensor_block_cols) in  zip(df_blocks_list, self.sensors_labels_dict.items()):
 
                     try:
+
+                        # Check sulla variabile booleana --> se c'è già stato un errore per un sensore è inutile analizzare anche gli altri che verranno scartati ugualmente
+                        if mission_failed:
+                            continue
 
                         frequenza = sensors_frequencies[sensor_block_name]
 
                         # Si genera la griglia temporale con passo uniforme associata al blocco di sensori --> segue la frequenza dei dati
                         griglia_uniforme = pd.DataFrame({'timestamp': pd.date_range(start=t_start_dataframe, end=t_end_GPS, freq=f'{(1/frequenza)*1000}ms')})
 
-                        # Si effettua il merge tra le misurazioni del sensore considerato e la griglia temporale --> usato metodo nearest per garantire che una misurazione leggermente successiva al timestamp di riferimento non venga ignorata
+                        # Si effettua il merge tra le misurazioni del sensore considerato e la griglia temporale --> usato metodo backward per garantire una maggiore attinenza con misurazioni real-time sul drone
                         sensor_block_dataframe = pd.merge_asof(griglia_uniforme, sensor_block_dataframe, on='timestamp', direction='backward')
 
-                        # Si aggiunge il dataframe relativo al singolo blocco di sensori considerati al dizionario generato appositamente --> suddividendo per
-                        self.sensor_blocks_dataframes[trajectory][combination][sensor_block_name] = sensor_block_dataframe
+                        # Si aggiunge il dataframe relativo al singolo blocco di sensori considerati al dizionario locale
+                        sensors_dataframes[sensor_block_name] = sensor_block_dataframe
 
                     except Exception as e:
                         self.warn_count += 1
-                        print(f'    [WARNING] Errore nella fase di unificazione griglia temporale per il blocco sensori {sensor_block_name} nella missione {trajectory} - {combination} --> {e}')
+                        mission_failed = True
+                        print(f"    [WARNING] Errore nella fase di unificazione griglia temporale per il blocco sensori {sensor_block_name} nella missione {trajectory} - {combination} (l'intera missione verrà scartata)--> {e}")
                         continue
+
+                # Si aggiorna il dizionario scomposto globale unicamente se tutti i sensori presenti sono stati analizzati correttamente --> altrimenti nascerebbero problemi di dimensionalità delle batch con la rete neurale --> si effettua, inoltre, un continue passando immediatamente alla missione successiva
+                if mission_failed:
+                    self.sensors_divided_database[trajectory][combination] = {}
+                    self.resampled_database[trajectory][combination] = pd.DataFrame()
+                    if (trajectory, combination) not in self.empty_missions_list:
+                        self.empty_missions_list.append((trajectory, combination))
+                    continue
+                else:
+                    self.sensors_divided_database[trajectory][combination] = sensors_dataframes
 
                 # -----------------------------------------------------
                 #              CONVERSIONE COORDINATE UTM
@@ -571,22 +645,23 @@ class PreProcessing:
 
                 self.dataframe_resampling(trajectory, combination)
 
-                if self.resampled_trajectories_dataframes[trajectory][combination] is None:
-                    continue
-
-            print(f'    Analisi delle missioni associate alla {trajectory} completata con {self.warn_count} warnings rilevati.')
+            print(f'    Analisi delle missioni associate alla {trajectory} completata con {self.warn_count} nuovi warnings rilevati.')
 
         return self
 
     # Funzione incaricata di generare il dizionario dei dataframe per ogni missione con dati trattati tramite interpolazione --> parte dal dataframe puro
     def dataframe_interpolation(self, generate_dataframe, save_file_path):
 
+        # -----------------------------------------------------
+        #             CARICAMENTO DATABASE GLOBALE
+        # -----------------------------------------------------
+
         # Se la scelta dell'utente è no, il dataframe globale si prende dal file pickle
         if generate_dataframe == 'N':
 
             try:
                 with open(save_file_path, 'rb') as f:
-                    dataframe_globale = pickle.load(f)
+                    raw_database = pickle.load(f)
 
             except Exception as e:
                 print(f" [WARNING] Errore nell'apertura del file pickle per l'elaborazione dei dataframe --> {e}")
@@ -596,21 +671,30 @@ class PreProcessing:
         elif generate_dataframe == 'S':
 
             # Si crea una copia del dizionario contenente il dataframe globale --> in modo da non modificare quello originale per errore
-            dataframe_globale = self.raw_trajectories_dataframes.copy()
+            raw_database = self.raw_database.copy()
+
+        # -----------------------------------------------------
+        #             INIZIO PROCESSING DATABASE
+        # -----------------------------------------------------
 
         # Si itera per ogni elemento contenuto nel dizionario separando il nome del foglio (= nome_missione) e il dataframe associato
-        for trajectory, mission_dict in dataframe_globale.items():
+        for trajectory, combinations_dict in raw_database.items():
 
             print(f'\n  Interpolazione dei dataframe associati alla traiettoria {trajectory} in corso:')
 
             # Si crea il dizionario associato alla singola traiettoria all'interno del dizionario globale, che contiene tutti i dataframe trattati (se non presente)
-            if trajectory not in self.interpolated_trajectories_dataframes:
-                self.interpolated_trajectories_dataframes[trajectory] = {}
+            if trajectory not in self.interpolated_database:
+                self.interpolated_database[trajectory] = {}
 
             self.warn_count = 0
-            for combination, mission_dataframe in mission_dict.items():
+            for combination, mission_dataframe in combinations_dict.items():
 
                 try:
+
+                    # Se il DataFrame globale risulta vuoto (problema nella csv_analysis) si salta l'analisi e si impone la presenza di un DataFrame interpolato vuoto --> non si aggiorna il counter del warning perché non è un vero problema di interpolazione
+                    if mission_dataframe.empty:
+                        self.interpolated_database[trajectory][combination] = pd.DataFrame()
+                        continue
 
                     # Si inizializza una copia del dataframe originale e si imposta come indice la colonna dei timestamp --> utile poiché usando il metodo di interpolazione lineare si tiene conto anche di misurazioni non equispaziate
                     interpolated_dataframe = mission_dataframe.set_index('timestamp')
@@ -636,15 +720,15 @@ class PreProcessing:
                     interpolated_dataframe.drop(columns=['DVL_Lock', 'Mot_FW3 [%]', 'Mot_FW4 [%]', 'Zone', 'Quality'], inplace=True)
 
                     # Si aggiunge il dataframe creato al dizionario complessivo
-                    self.interpolated_trajectories_dataframes[trajectory][combination] = interpolated_dataframe
+                    self.interpolated_database[trajectory][combination] = interpolated_dataframe
 
                 except KeyError:
-                    raise KeyError(f"    [ERROR] Errore nel drop delle colonne non utili. Ricontrollare che non siano presenti errori.") from None
+                    raise KeyError(f"    [ERROR] Errore nel drop delle colonne non utili. Ricontrollare la corrispondenza delle etichette usate.") from None
 
                 except Exception as e:
+                    self.interpolated_database[trajectory][combination] = pd.DataFrame()
                     self.warn_count += 1
                     print(f"    [WARNING] Errore nell'interpolazione della missione {trajectory} - {combination} --> {e}")
-                    self.interpolated_trajectories_dataframes[trajectory][combination] = pd.DataFrame()
                     continue
 
                 # Si applicano le trasformazioni in assi NED e assi body per ottenere il dataframe completo
@@ -653,14 +737,16 @@ class PreProcessing:
 
                 # Si eliminano le colonne associate alla posizione UTM, ormai inutili
                 try:
-                    if self.interpolated_trajectories_dataframes[trajectory][combination].empty:
+                    if self.interpolated_database[trajectory][combination].empty:
+                        if (trajectory, combination) not in self.empty_missions_list:
+                            self.empty_missions_list.append((trajectory, combination))
                         continue
                     else:
-                        self.interpolated_trajectories_dataframes[trajectory][combination].drop(columns=['UTM_East [m]', 'UTM_North [m]'], inplace=True)
+                        self.interpolated_database[trajectory][combination].drop(columns=['UTM_East [m]', 'UTM_North [m]'], inplace=True)
                 except KeyError:
-                    raise KeyError(f"    [ERROR] Errore nel drop delle colonne non utili. Ricontrollare che non siano presenti errori.") from None
+                    raise KeyError(f"    [ERROR] Errore nel drop delle colonne non utili. Ricontrollare la corrispondenza delle etichette usate.") from None
 
-            print(f"    Interpolazione dataframes associati alla traiettoria {trajectory} effettuata con {self.warn_count} warnings rilevati.")
+            print(f"    Interpolazione dataframes associati alla traiettoria {trajectory} effettuata con {self.warn_count} nuovi warnings rilevati.")
 
         return self
 
@@ -680,7 +766,7 @@ class PreProcessing:
 
                 save_file_path = os.path.join(ROOT_DIR, 'Dataframe_globale.pkl')
                 with open(save_file_path, 'wb') as f:
-                    pickle.dump(self.raw_trajectories_dataframes, f)
+                    pickle.dump(self.raw_database, f)
 
                     print(f'    Salvataggio del dataframe in file {save_file_path} eseguito correttamente.')
 
@@ -689,7 +775,7 @@ class PreProcessing:
 
         elif formato == 'excel':
 
-            for trajectory, dataframes in self.raw_trajectories_dataframes.items():
+            for trajectory, dataframes in self.raw_database.items():
 
                 print(f'  Salvataggio del file in formato Excel per le missioni della traiettoria {trajectory} in corso:')
 
@@ -707,7 +793,7 @@ class PreProcessing:
                                 continue
 
                             # Si crea una copia del dataframe per evitare modifiche impattanti nel main
-                            dataframe_copy = self.raw_trajectories_dataframes[trajectory][combination].copy()
+                            dataframe_copy = self.raw_database[trajectory][combination].copy()
 
                             # Formattazione per file Excel --> necessario creare una nuova colonna con i tempi per sostituire quella originale, che approssima male gli istanti di tempo rendendo l'analisi incomprensibile
                             dataframe_copy['timestamp'] = dataframe_copy['timestamp'].dt.strftime('%H:%M:%S.%f').str[:-3]
@@ -760,13 +846,13 @@ class PreProcessing:
 
                 save_file_path = os.path.join(ROOT_DIR, 'Dataframe_resampled.pkl')
                 with open(save_file_path, 'wb') as f:
-                    pickle.dump(self.resampled_trajectories_dataframes, f)
+                    pickle.dump(self.resampled_database, f)
 
                     print(f'    Salvataggio del dataframe resampled in file {save_file_path} eseguito correttamente.')
 
                 save_file_path = os.path.join(ROOT_DIR, 'Dataframe_resampled_blocchi.pkl')
                 with open(save_file_path, 'wb') as f:
-                    pickle.dump(self.sensor_blocks_dataframes, f)
+                    pickle.dump(self.sensors_divided_database, f)
 
                     print(f'    Salvataggio del dataframe suddiviso per sensore in file {save_file_path} eseguito correttamente.')
 
@@ -775,7 +861,7 @@ class PreProcessing:
 
         elif formato == 'excel':
 
-            for trajectory, dataframes in self.resampled_trajectories_dataframes.items():
+            for trajectory, dataframes in self.resampled_database.items():
 
                 print(f'\n  Salvataggio del file in formato Excel per le missioni della traiettoria {trajectory} trattate con resampling in corso:')
 
@@ -793,7 +879,7 @@ class PreProcessing:
                                 continue
 
                             # Si crea una copia del dataframe per evitare modifiche impattanti nel main
-                            dataframe_copy = self.resampled_trajectories_dataframes[trajectory][combination].copy()
+                            dataframe_copy = self.resampled_database[trajectory][combination].copy()
 
                             # Formattazione per file Excel --> necessario creare una nuova colonna con i tempi per sostituire quella originale, che approssima male gli istanti di tempo rendendo l'analisi incomprensibile
                             dataframe_copy['timestamp'] = dataframe_copy['timestamp'].dt.strftime('%H:%M:%S.%f').str[:-3]
@@ -846,7 +932,7 @@ class PreProcessing:
 
                 save_file_path = os.path.join(ROOT_DIR, 'Dataframe_interpolated.pkl')
                 with open(save_file_path, 'wb') as f:
-                    pickle.dump(self.interpolated_trajectories_dataframes, f)
+                    pickle.dump(self.interpolated_database, f)
 
                     print(f'    Salvataggio del dataframe in file {save_file_path} eseguito correttamente.')
 
@@ -855,7 +941,7 @@ class PreProcessing:
 
         elif formato == 'excel':
 
-            for trajectory, dataframes in self.interpolated_trajectories_dataframes.items():
+            for trajectory, dataframes in self.interpolated_database.items():
 
                 print(f'\n  Salvataggio del file in formato Excel per le missioni della traiettoria {trajectory} trattate con interpolazione in corso:')
 
@@ -922,7 +1008,7 @@ class PreProcessing:
     def compute_normalization_parameters(self, sensor_blocks_dataframes, missioni_test):
 
         # -----------------------------------------------------
-        #          UNIFICAZIONE DATAFRAME PER SENSORE
+        #         UNIFICAZIONE DATAFRAMES PER SENSORE
         # -----------------------------------------------------
 
         # Si itera su ogni elemento del dizionario di dataframe generato per i blocchi --> obiettivo è creare un dizionario che contiene una lista delle sezioni di dataframe di tutte le missioni per ogni sensore
@@ -931,6 +1017,10 @@ class PreProcessing:
 
             self.warn_count = 0
             for combination, sensors_dict in mission_dict.items():
+
+                # Check sulla presenza di un sotto-dizionario non vuoto associato alla missione --> altrimenti c'è stato un errore all'interno del processing --> si genera un tensore vuoto e si passa oltre senza gestirlo al momento
+                if not sensors_dict:
+                    continue
 
                 # Si utilizza la missione per la definizione dei valori di normalizzazione solo per le missioni di training --> poi si applicano direttamente a quelle di test per garantire che la rete non abbia in alcun modo informazioni sulle misurazioni future nella fase di test
                 if (trajectory, combination) not in missioni_test:
@@ -966,7 +1056,6 @@ class PreProcessing:
                         except Exception as e:
                             self.warn_count += 1
                             print(f"    [WARNING] Errore nell'unificazione dei dataframe per sensore {sensor_name} --> {e}")
-                            sensor_dataframes_list[sensor_name] = None
                             continue
 
 
@@ -989,14 +1078,15 @@ class PreProcessing:
                     std = dataframe.std().to_numpy(dtype=np.float32)                   # Si usa .std() per la deviazione, .values per convertire il tutto in valori numerici (array numpy)
 
                     # Si aggiorna il dizionario aggiungendo al blocco del sensore i valori trovati
-                    self.normalization_parameters[sensor_name] = {'media': mean_value, 'deviazione standard': std}
+                    self.normalization_parameters_dict[sensor_name] = {'media': mean_value, 'deviazione standard': std}
 
                     # Si modifica un eventuale valore di deviazione standard pari a 0 con un 1 --> per evitare errori matematici durante l'esecuzione della normalizzazione
-                    sigma = self.normalization_parameters[sensor_name]['deviazione standard']
+                    sigma = self.normalization_parameters_dict[sensor_name]['deviazione standard']
                     sigma[sigma == 0] = 1.0
 
                 except Exception as e:
-                    print(f"    [WARNING] Errore nel calcolo dei parametri e dei dataframe per sensore {sensor_name} --> {e}")
+                    print(f"    [ERROR] Errore nel calcolo dei parametri e dei dataframe per sensore {sensor_name} --> {e} --> Impossibile continuare con l'analisi")
+                    sys.exit()
 
         return self
 
@@ -1005,7 +1095,7 @@ class PreProcessing:
 
         sensors_blocks_dataframes = {}
         if process_dataframe == 'S':
-            sensors_blocks_dataframes = self.sensor_blocks_dataframes.copy()
+            sensors_blocks_dataframes = self.sensors_divided_database.copy()
 
         elif process_dataframe == 'N':
             try:
@@ -1019,19 +1109,24 @@ class PreProcessing:
         # Si richiama la funzione per generare i valori di media e deviazione standard per ogni blocco di missione --> salvati in un dizionario
         self.compute_normalization_parameters(sensors_blocks_dataframes, missioni_test)
 
-        for trajectory, mission_dict in sensors_blocks_dataframes.items():
+        for trajectory, combinations_dict in sensors_blocks_dataframes.items():
 
             # Si inizializza il dizionario interno associato a ogni traiettoria
-            if trajectory not in self.pytorch_tensor:
-                self.pytorch_tensor[trajectory] = {}
+            if trajectory not in self.pytorch_tensor_dict:
+                self.pytorch_tensor_dict[trajectory] = {}
 
             print(f'\n  Creazione tensori pytorch per le missioni associate alla traiettoria {trajectory} in corso:')
 
-            for combination, sensors_dict in mission_dict.items():
+            for combination, sensors_dict in combinations_dict.items():
 
                 # Si inizializza il dizionario interno associato a ogni singola missione
-                if combination not in self.pytorch_tensor[trajectory]:
-                    self.pytorch_tensor[trajectory][combination] = {}
+                if combination not in self.pytorch_tensor_dict[trajectory]:
+                    self.pytorch_tensor_dict[trajectory][combination] = {}
+
+                # Check sulla presenza di un sotto-dizionario non vuoto associato alla missione --> altrimenti c'è stato un errore all'interno del processing --> si genera un tensore vuoto e si passa oltre senza gestirlo al momento
+                if not sensors_dict:
+                    self.pytorch_tensor_dict[trajectory][combination] = {}
+                    continue
 
                 self.warn_count = 0
                 for sensor_name, sensor_dataframe in sensors_dict.items():
@@ -1058,8 +1153,8 @@ class PreProcessing:
                         original_values = sensor_dataframe_copy.to_numpy(dtype=np.float32)
 
                         # Si modificano tali valori tenendo conto dei parametri definiti prima per la normalizzazione
-                        sensor_mean = self.normalization_parameters[sensor_name]['media']
-                        sensor_std = self.normalization_parameters[sensor_name]['deviazione standard']
+                        sensor_mean = self.normalization_parameters_dict[sensor_name]['media']
+                        sensor_std = self.normalization_parameters_dict[sensor_name]['deviazione standard']
                         normalized_values = (original_values - sensor_mean) / sensor_std
 
                         # Si genera ora il tensore pytorch
@@ -1069,27 +1164,28 @@ class PreProcessing:
                         if sensor_name == 'MOT' or sensor_name == 'V_ref':
 
                             # Si richiama il tensore generato in precedenza per il blocco IMU
-                            IMU_tensor = self.pytorch_tensor[trajectory][combination]['IMU']
+                            IMU_tensor = self.pytorch_tensor_dict[trajectory][combination]['IMU']
 
                             # Si calcola il tensore combinato, concatenando ogni riga in direzione orizzontale (si affiancano i valori)
                             combined_tensor = torch.concat([IMU_tensor, tensor], dim=1)
 
                             # Si sovrascrive il tensore di pytorch per IMU con quello combinato
-                            self.pytorch_tensor[trajectory][combination]['IMU'] = combined_tensor
+                            self.pytorch_tensor_dict[trajectory][combination]['IMU'] = combined_tensor
 
                         elif sensor_name == 'Depth' or sensor_name == 'DepthVel':
                             continue
 
                         # Si salva il tensore nel dizionario in tutti gli altri casi
                         else:
-                            self.pytorch_tensor[trajectory][combination][sensor_name] = tensor
+                            self.pytorch_tensor_dict[trajectory][combination][sensor_name] = tensor
 
                     except Exception as e:
+                        self.pytorch_tensor_dict[trajectory][combination] = {}
                         self.warn_count += 1
                         print(f"    [WARNING] Errore nella creazione del tensore associato al sensore {sensor_name} --> {e}")
                         continue
 
-                print(f'    Tensore associato alla missione {trajectory} - {combination} è stato generato con {self.warn_count}  warnings rilevati, con dimensioni: DVL = {self.pytorch_tensor[trajectory][combination]['DVL'].shape}, IMU = {self.pytorch_tensor[trajectory][combination]['IMU'].shape}, GPS = {self.pytorch_tensor[trajectory][combination]['GPS'].shape}.')
+                print(f'    Tensore associato alla missione {trajectory} - {combination} è stato generato con {self.warn_count} nuovi warnings rilevati, con dimensioni: DVL = {self.pytorch_tensor_dict[trajectory][combination]['DVL'].shape}, IMU = {self.pytorch_tensor_dict[trajectory][combination]['IMU'].shape}, GPS = {self.pytorch_tensor_dict[trajectory][combination]['GPS'].shape}.')
 
         return self
 
@@ -1124,7 +1220,7 @@ class PostProcessing:
     # Funzione che permette la costruzione di un dizionario contenente le liste di waypoints (in coordinate WGS84 e UTM) di ogni traiettoria utilizzata
     def waypoints_dict_building(self, ROOT_DIR):
 
-        input_folder = os.path.join(ROOT_DIR,f'Telemetrie/Lista_punti')  # Si definisce la cartella di riferimento
+        input_folder = os.path.join(ROOT_DIR, f'Telemetrie/Lista_punti')  # Si definisce la cartella di riferimento
 
         for trajectory, file in enumerate(sorted(os.listdir(input_folder))):
 
@@ -1159,11 +1255,13 @@ class PostProcessing:
                         longitude = float(values[2])        # Si isola il valore della longitudine trasformandolo in numero decimale
                         tuple_WGS84_coord = (latitude, longitude)
 
+                        # Si gestiscono i vari casi --> se l'indice è 0 si ha il waiting_point, che viene salvato e utilizzato una volta definite le coordinate (0,0) al punto 1
                         if idx == 0:
-                            continue
-                        if idx == 1:
+                            East_coord, North_coord, _, _ = utm.from_latlon(float(latitude), float(longitude))
+                            wait_point_coord = (East_coord, North_coord)
+                        elif idx == 1:
                             East_coord_0, North_coord_0, _, _ = utm.from_latlon(latitude, longitude)
-                            tuple_UTM_coord = (0, 0)
+                            tuple_UTM_coord = [(wait_point_coord[0] - East_coord_0, wait_point_coord[1] - North_coord_0), (0, 0)]
                         else:
                             East_coord, North_coord, _, _ = utm.from_latlon(float(latitude), float(longitude))
 
@@ -1198,6 +1296,7 @@ class PostProcessing:
                         North_list.append(North)
 
             # Si apre il grafico
+            # noinspection PyTypeChecker
             plt.figure(figsize=(10, 6))
 
             # Si richiama il plot dei punti utilizzando come input il dizionario tramite formulazione data
@@ -1304,6 +1403,7 @@ class PostProcessing:
         waypoints_East = [p[0] for p in waypoints]
         waypoints_North = [p[1] for p in waypoints]
 
+        # noinspection PyTypeChecker
         plt.figure(figsize=(10, 6))
 
         plt.plot(waypoints_East, waypoints_North, label = 'Waypoints', marker = 's', markersize = 6)
@@ -1332,8 +1432,8 @@ class PostProcessing:
         plt.axis('equal')
 
         # Si stampa il testo legato all'errore assoluto sulla posizione
-        Delta_N = np.abs(GPS_East[-1] - NN_East[-1])
-        Delta_E = np.abs(GPS_North[-1] - NN_North[-1])
+        Delta_E = np.abs(GPS_East[-1] - NN_East[-1])
+        Delta_N = np.abs(GPS_North[-1] - NN_North[-1])
         print(f'\nPer la missione {mission} e la traiettoria {path_name}, si hanno i seguenti valori di Errore Assoluto sulla posizione:')
         print(f'    Delta sulla posizione in direzione North è pari a: {Delta_N} m.')
         print(f'    Delta sulla posizione in direzione East è pari a: {Delta_E} m.')
@@ -1341,5 +1441,33 @@ class PostProcessing:
         OUTPUT_FOLDER_PATH = os.path.join(ROOT_DIR, f'Risultati_NN/Traiettorie_reali')
         os.makedirs(OUTPUT_FOLDER_PATH, exist_ok=True)
         output_file_path = os.path.join(OUTPUT_FOLDER_PATH, f'Confronto_traiettorie_M{mission}_{path_name}.pdf')
+        plt.savefig(output_file_path, bbox_inches='tight')
+        plt.show()
+
+    # Funzione che permette di stampare il grafico relativo alla loss function durante il training
+    def plot_loss_function(self, loss_train, loss_val, epoche, ROOT_DIR, titolo='Evoluzione della Loss function'):
+
+        # Si crea un vettore con un numero di elementi equispaziati per le epoche di iterazione
+        vettore_epoche = list(range(epoche))
+
+        # noinspection PyTypeChecker
+        plt.figure(figsize=(10, 6))
+
+        # Disegniamo la traiettoria reale
+        plt.plot(vettore_epoche, loss_train, color='blue', label='Training loss', linewidth=2)
+        plt.plot(vettore_epoche, loss_val, color = 'red', label='Validation loss', linewidth=2)
+
+        # Abbellimento grafico
+        plt.title(titolo, fontdict=self.title_font)
+        plt.xlabel('Epoche di addestramento', fontdict=self.axis_font)
+        plt.ylabel('Loss function', fontdict=self.axis_font)
+        plt.legend()
+        plt.grid(True, linestyle=':', alpha=0.6)
+
+        OUTPUT_FOLDER_PATH = os.path.join(ROOT_DIR, 'Risultati_NN/Grafici')
+        if not os.path.exists(OUTPUT_FOLDER_PATH):
+            os.makedirs(OUTPUT_FOLDER_PATH)
+        output_file_path = os.path.join(OUTPUT_FOLDER_PATH, 'Loss_function.pdf')
+
         plt.savefig(output_file_path, bbox_inches='tight')
         plt.show()

@@ -334,15 +334,15 @@ if process_dataframe == 'S':
 
     if processing_methods_choice == 'S':
 
-        resampled_dataframes_dict = pre_processing.resampled_trajectories_dataframes.copy()
-        interpolated_dataframes_dict = pre_processing.interpolated_trajectories_dataframes.copy()
+        resampled_dataframes_dict = pre_processing.resampled_database.copy()
+        interpolated_dataframes_dict = pre_processing.interpolated_database.copy()
 
     elif processing_methods_choice == 'N':
 
         # Se il metodo è resampling si carica il solo dizionario associato e si aggiorna la lista per il ciclo for di aggregazione --> se il dizionario dovesse essere vuoto si esce dal programma
         if processing_methods_choice == 'resampling':
 
-            resampled_dataframes_dict = pre_processing.resampled_trajectories_dataframes.copy()
+            resampled_dataframes_dict = pre_processing.resampled_database.copy()
             processing_methods = ['resampling']
             if not resampled_dataframes_dict:
                 print(f"  [ERRORE] Il dataset elaborato con resampling non risulta caricato correttamente (è vuoto).")
@@ -351,7 +351,7 @@ if process_dataframe == 'S':
         # Se il metodo è interpolazione si carica il solo dizionario associato e si aggiorna la lista per il ciclo for di aggregazione --> se il dizionario dovesse essere vuoto si esce dal programma
         elif processing_choice == 'interpolazione':
 
-            interpolated_dataframes_dict = pre_processing.interpolated_trajectories_dataframes.copy()
+            interpolated_dataframes_dict = pre_processing.interpolated_database.copy()
             processing_methods = ['interpolazione']
             if not interpolated_dataframes_dict:
                 print(f"  [ERRORE] Il dataset elaborato con interpolazione non risulta caricato correttamente (è vuoto).")

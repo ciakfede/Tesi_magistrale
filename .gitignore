@@ -3,7 +3,9 @@ Telemetrie/
 Dizionari_dataframes/
 Risultati_analisi/
 Risultati_analisi_statistica/
+Risultati_NN/
 __pycache__/
+.idea/
 
 # Estensioni file da non considerare mai
 *.aux
@@ -23,4 +25,5 @@ __pycache__/
 venv/
 .venv/
 
-
+# File specifici
+NavNet_weights.pkl

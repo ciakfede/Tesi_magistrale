@@ -66,6 +66,11 @@ class Dataset(torch.utils.data.Dataset):
 
             for combination, sensors_dict in mission_dict.items():
 
+                # Se c'è stato un errore nella fase di creazione del tensore si salta la missione anche qui
+                if not sensors_dict:
+
+                    continue
+
                 # Si definisce la durata di missione [s] --> si prende come riferimento la colonna di GPS che ha 1 misura al secondo
                 mission_time = len(sensors_dict['GPS'])-1
 
@@ -128,6 +133,9 @@ class Dataset(torch.utils.data.Dataset):
             print(f"\nScomposizione del tensore per le missioni di test associate alla traiettoria {trajectory} in corso:")
 
             for combination, sensors_dict in mission_dict.items():
+
+                if not sensors_dict:
+                    continue
 
                 # Si definisce la durata di missione [s] --> si prende come riferimento la colonna di GPS che ha 1 misura al secondo
                 mission_time = len(sensors_dict['GPS'])-1

@@ -18,12 +18,12 @@ from Analisi_dati import PreProcessing      # Importo il modulo per eseguire il 
 from Neural_network import Dataset          # Importo il modulo per definire le batch dei blocchi di sensore per ogni secondo di missione
 from Neural_network import NavNet           # Importo qui la rete neurale
 from Analisi_dati import PostProcessing     # Importo il modulo per eseguire il post-processing dei dati prodotti dalla rete
-import matplotlib.pyplot as plt             # Libreria per la gestione dell'ambiente grafico
-import numpy as np
-import sys
+import numpy as np                          # Libreria per i calcoli matematici
+import sys                                  # Libreria che permette di interagire con il Runtime di Python
+import pickle                               # Libreria per la gestione del formato di salvataggio pickle
 
 
-def stima_trapezoidale(velocita, timestamps, pos_iniziale=0):
+def stima_trapezoidale(velocita, timestamps, ROOT_DIR, pos_iniziale=0):
 
     pos = [pos_iniziale]
     for i in range(len(velocita) - 1):
@@ -32,32 +32,6 @@ def stima_trapezoidale(velocita, timestamps, pos_iniziale=0):
         spostamento = 0.5 * (velocita[i] + velocita[i+1]) * dt
         pos.append(pos[-1] + spostamento)
     return np.array(pos)
-
-
-# Funzione che permette di stampare il grafico relativo alla loss function durante il training
-def plot_loss_function(loss_train, loss_val, epoche, titolo='Evoluzione della Loss function'):
-
-    # Si crea un vettore con un numero di elementi equispaziati per le epoche di iterazione
-    vettore_epoche = list(range(epoche))
-
-    plt.figure(figsize=(10, 6))
-
-    # Disegniamo la traiettoria reale
-    plt.plot(vettore_epoche, loss_train, color='blue', label='Training loss', linewidth=2)
-    plt.plot(vettore_epoche, loss_val, color = 'red', label='Validation loss', linewidth=2)
-
-    # Abbellimento grafico
-    plt.title(titolo, fontsize=14)
-    plt.xlabel('Epoche di addestramento', fontsize=12)
-    plt.ylabel('Loss function', fontsize=12)
-    plt.legend()  # Mostra la legenda opportuna
-    plt.grid(True, linestyle=':', alpha=0.6)
-
-    if not os.path.exists('Grafici'):
-        os.makedirs('Grafici')
-
-    plt.savefig('Grafici/Loss_function.png', bbox_inches='tight')
-    plt.show()
 
 
 # ======================================================
@@ -159,7 +133,8 @@ while True:
 
     if process_dataframe == 'S':
         pre_processing.raw_dataframes_processing(generate_new_dataframe, file_database_raw, sensors_frequencies)        # Si analizzano i dati di telemetria --> si generano in output due dizionari, uno con un dataframe ricampionato per ogni missione e l'altro suddiviso anche per sensori
-        pre_processing.save_dataframe_resampled('pickle', DF_DICT_DIR)
+        pre_processing.save_dataframe_resampled('pickle', DF_DICT_DIR)                                          # Si salva automaticamente in formato pickle per successive iterazioni
+        resampled_database = pre_processing.resampled_database                                                          # Si salva il database completo all'interno di una variabile locale (utile per la rete neurale)
 
         # Gestione del salvataggio del file in formato Excel del dataframe ricampionato
         while True:
@@ -179,6 +154,12 @@ while True:
 
         if os.path.isfile(file_database_resampled):
             print(f'  Caricamento del dataframe resampled dal file {file_database_resampled}')
+            try:
+                with open(file_database_resampled, 'rb') as f:
+                    resampled_database = pickle.load(f)
+            except Exception as e:
+                print(f" [WARNING] Errore nell'apertura del file pickle per l'elaborazione dei dataframe --> {e}")
+                raise
             break
         else:
             print(f'  File contenenti i database non trovati. Verificare o procedere con la generazione dei database.')
@@ -191,12 +172,17 @@ while True:
 
         print(f'  Inserito un input non valido. Ripetere la scelta.')
 
+
 # -----------------------------------------------------
 #         TRASFORMAZIONE DATAFRAMES IN TENSORI
 # -----------------------------------------------------
 
-pre_processing.dataframe_to_tensor(process_dataframe, test_missions, file_database_sensors)       # Si generano i tensori pytorch -->  si genera in output un dizionario in cui per ogni missione sono presenti 3 tensori, uno per ogni frequenza di misurazione presente
-tensor_dict = pre_processing.pytorch_tensor                                                       # Si richiama il dizionario di tensori da usare per la rete neurale --> ogni tensore è una lista ordinata (per sensore) contenente le misurazioni di tutte missioni
+pre_processing.dataframe_to_tensor(process_dataframe, test_missions, file_database_sensors)         # Si generano i tensori pytorch -->  si genera in output un dizionario in cui per ogni missione sono presenti 3 tensori, uno per ogni frequenza di misurazione presente
+tensor_dict = pre_processing.pytorch_tensor_dict                                                    # Si richiama il dizionario di tensori da usare per la rete neurale --> ogni tensore è una lista ordinata (per sensore) contenente le misurazioni di tutte missioni
+
+# Si stampa un resoconto del pre-processing con le missioni ritenute non valide e non utilizzate per l'analisi
+print(f"\n\nFase di pre-processing delle telemetrie conclusa. Le seguenti missioni sono state escluse dai database prodotti:")
+print(f"  {pre_processing.empty_missions_list}")
 
 
 # ======================================================
@@ -210,6 +196,7 @@ print('====================================================')
 # Inizializzazione del modello di rete neurale
 rete_neurale = NavNet()                                             # Si inizializza la rete principale
 rete_neurale.initialize_weights()                                   # Si inizializzano i pesi tramite funzione definita
+post_processing = PostProcessing()
 
 # Scheduler --> dimezza il learning rate se la Val_Loss non scende per 5 epoche
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(rete_neurale.optimizer, mode='min', factor=0.5, patience=3)
@@ -260,8 +247,8 @@ if do_training == 'S':
 
         for batch in training_loader:
 
-            IMU_data = batch[1]                 # Batch di dimensioni [32, 5, 9] --> contiene i 3 valori IMU, i 4 sensori MOT (FV, FL, FW1, FW2) e i 2 di velocità reference (Vxref, omega_yref)
             DVL_data = batch[0]                 # Batch di dimensioni [32, 10, 3]
+            IMU_data = batch[1]                 # Batch di dimensioni [32, 5, 9] --> contiene i 3 valori IMU, i 4 sensori MOT (FV, FL, FW1, FW2) e i 2 di velocità reference (Vxref, omega_yref)
             dati_gps = batch[2].squeeze(1)      # Batch di dimensioni [32, 1, 2] --> si vuole avere dimensione [32, 2] per congruenza con output rete neurale --> si elimina una dimensione dalla batch
 
             # Si richiama la funzione di aggiornamento pesi
@@ -285,8 +272,8 @@ if do_training == 'S':
             epoch_batches_number = 0
             for batch in validation_loader:
 
-                IMU_data = batch[1]
                 DVL_data = batch[0]
+                IMU_data = batch[1]
                 GPS_data = batch[2].squeeze(1)
 
                 NN_displacement_estimation = rete_neurale.forward(IMU_data, DVL_data)
@@ -294,6 +281,7 @@ if do_training == 'S':
                 # Calcolo della loss function
                 validation_batch_loss = rete_neurale.loss_criterion(NN_displacement_estimation, GPS_data)
                 validation_epoch_loss += validation_batch_loss
+                epoch_batches_number += 1
 
             # Calcolo della loss media sulla singola epoca
             loss_epoca_validazione = validation_epoch_loss / epoch_batches_number
@@ -306,7 +294,7 @@ if do_training == 'S':
         scheduler.step(loss_epoca_validazione)
 
     # Si realizza il grafico complessivo
-    plot_loss_function(loss_train, loss_val, num_epoch)
+    post_processing.plot_loss_function(loss_train, loss_val, num_epoch, ROOT_DIR)
 
     # Si salvano i pesi aggiornati alla fine dell'addestramento in un dizionario pytorch apposito
     torch.save(rete_neurale.state_dict(), weights_save_path)
@@ -336,10 +324,8 @@ test_dataset = Dataset(tensor_dict, sensors_frequencies, test_missions, mode='te
 # -----------------------------------------------------
 
 # Si recuperano le statistiche del GPS salvate nel pre-processing --> trasformandole in tensori per compatibilità con output rete neurale
-GPS_mean = torch.tensor(pre_processing.normalization_parameters['GPS']['media'])
-GPS_std = torch.tensor(pre_processing.normalization_parameters['GPS']['deviazione standard'])
-
-post_processing = PostProcessing()
+GPS_mean = torch.tensor(pre_processing.normalization_parameters_dict['GPS']['media'])
+GPS_std = torch.tensor(pre_processing.normalization_parameters_dict['GPS']['deviazione standard'])
 
 # Raccolta di tutte le traiettorie complete individuate per ogni missione
 single_path_intervals = {('0', '4'): [(177, 414), (635, 980), (1262, 2366), (2630, 3402)],
@@ -380,7 +366,7 @@ for (trajectory, combination) in test_missions:
         # -----------------------------------------------------
 
         # Si itera per ogni batch del test_loader (sono batch_size secondi)
-        GPS_starting_coordinates = pre_processing.resampled_trajectories_dataframes[trajectory][combination][['NED_North [m]', 'NED_East [m]']].iloc[0].to_numpy(dtype=np.float32)      # Definizione della posizione iniziale dal dataframe pandas ricampionato
+        GPS_starting_coordinates = resampled_database[trajectory][combination][['NED_East [m]', 'NED_North [m]']].iloc[0].to_numpy(dtype=np.float32)      # Definizione della posizione iniziale dal dataframe pandas ricampionato
         GPS_NED_coordinates = torch.tensor(GPS_starting_coordinates, dtype=torch.float32).unsqueeze(0)                                                                                  # Trasformazione del vettore posizione in un tensore pytorch --> con unsqueeze si rende compatibile con le dimensioni della batch [1,2]
         NN_NED_coordinates = {}                                                                                                                                                         # Inizializzazione dizionario per l'immagazzinamento dei valori di posizione per ogni traiettoria della missione --> ha forma {'Traiettoria1': [], 'Traiettoria2': [],....}
 
@@ -391,8 +377,8 @@ for (trajectory, combination) in test_missions:
         t_iteration = 0
         for batch in test_loader:
 
-            IMU_data = batch[0]
-            DVL_data = batch[1]
+            DVL_data = batch[0]
+            IMU_data = batch[1]
             GPS_data = batch[2].squeeze(1)
 
             NN_displacement_estimation = rete_neurale.forward(IMU_data, DVL_data)
@@ -445,7 +431,7 @@ for (trajectory, combination) in test_missions:
             GPS_coordinates_list = GPS_displacements_dict[mission][path_name]
 
             # Si calcola l'errore RMSE sui vettori prodotti
-            RMSE_NN_tot, RMSE_NN_N, RMSE_NN_E = post_processing.RMSE_estimation(GPS_coordinates_list, NN_coordinates_list)
+            RMSE_NN_tot, RMSE_NN_E, RMSE_NN_N = post_processing.RMSE_estimation(GPS_coordinates_list, NN_coordinates_list)
             #RMSE_NN.append(RMSE_NN_tot)
             print(f'\nPer la missione {trajectory} - {combination} e il percorso {path_name}, si hanno i seguenti valori di Root Mean Squared Error:')
 
