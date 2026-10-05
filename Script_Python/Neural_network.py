@@ -24,14 +24,14 @@ import torch                                    # Libreria per il Deep Learning
 import torch.nn as nn                           # Libreria utilizzata per le proprietà nelle reti neurali
 import torch.nn.functional as F                 # Libreria specifica per le funzioni come softmax
 import torch.optim as optim                     # Libreria per il metodo di ottimizzazione dei pesi
-import pandas as pd                             # Libreria per la gestione dei dataframe                                     #
+import pandas as pd                             # Libreria per la gestione dei dataframe
 import warnings                                 # Libreria per la gestione dei warnings come exception
 from pandas.errors import DtypeWarning          # Libreria per la gestione dei warnings di tipo misto nella lettura di un dataframe pandas
 
 pd.set_option('display.max_columns', None)              # Visualizza tutte le colonne (nessun limite al numero)
 pd.set_option('display.max_colwidth', None)             # Visualizza tutto il contenuto della cella (evita di troncare stringhe lunghe)
 pd.set_option('display.expand_frame_repr', False)       # Evita che le colonne vadano a capo su più righe nel terminale
-pd.options.display.max_rows = 100                       # Imposta il numero massimo di righe visualizzabili a schermo
+pd.options.display.max_rows = 100                             # Imposta il numero massimo di righe visualizzabili a schermo
 
 warnings.filterwarnings('error', category=pd.errors.DtypeWarning)           # Forza i DtypeWarning a comportarsi come eccezioni
 
@@ -46,15 +46,22 @@ class Dataset(torch.utils.data.Dataset):
 
         self.mode = mode
 
+        self.validation_missions_dict = {('0', '2'), ('1', '8H'), ('2', '11G'), ('3', '16C'), ('4', '12H'), ('5', '5A')}
+
         # Si richiama la funzione opportuna in base alla modalità prescelta --> si ottiene la lista delle batch unitarie
         if mode == 'train':
 
-            self.training_batches_list = []                                                             # Nella forma [[tensor(5_IMU), tensor(10_DVL), tensor(1_GPS)], [...], ....] --> struttura ripetuta per tutti i secondi di ogni missione
+            self.training_batches_list = []                                                             # Nella forma [[tensor(5_IMU), tensor(10_DVL), tensor(1_GPS)], [...], ...] --> struttura ripetuta per tutti i secondi di ogni missione
+            self.training_unitary_batches_building(tensor_dict, sensor_frequencies, test_missions)
+
+        elif mode == 'validazione':
+
+            self.validation_batches_list = []                                                           # Nella forma [[tensor(5_IMU), tensor(10_DVL), tensor(1_GPS)], [...], ...] --> struttura ripetuta per tutti i secondi di ogni missione
             self.training_unitary_batches_building(tensor_dict, sensor_frequencies, test_missions)
 
         elif mode == 'test':
 
-            self.test_batches_dict = {}                                                                 # Nella forma {'Missione1': [[tensor(5_IMU), tensor(10_DVL), tensor(1_GPS)],...], 'Missione2': []...} --> struttura ripetuta all'interno di ogni missione per tutti i secondi della missione e per tutte le missioni
+            self.test_batches_dict = {}                                                                 # Nella forma {'Missione1': [[tensor(5_IMU), tensor(10_DVL), tensor(1_GPS)], ...], 'Missione2': []...} --> struttura ripetuta all'interno di ogni missione per tutti i secondi della missione e per tutte le missioni
             self.test_unitary_batches_building(tensor_dict, sensor_frequencies, test_missions)
 
     # Funzione che permette di ricevere in input il dizionario dei tensori prodotto e restituire una lista di liste, con le misurazioni normalizzate ricevute per singolo secondo di missione
@@ -62,13 +69,12 @@ class Dataset(torch.utils.data.Dataset):
 
         for trajectory, mission_dict in tensor_dict.items():
 
-            print(f"\n  Scomposizione del tensore per le missioni associate alla traiettoria {trajectory} in corso:")
+            print(f"\n  Scomposizione del tensore per {self.mode} per le missioni associate alla traiettoria {trajectory} in corso:")
 
             for combination, sensors_dict in mission_dict.items():
 
                 # Se c'è stato un errore nella fase di creazione del tensore si salta la missione anche qui
                 if not sensors_dict:
-
                     continue
 
                 # Si definisce la durata di missione [s] --> si prende come riferimento la colonna di GPS che ha 1 misura al secondo
@@ -77,6 +83,8 @@ class Dataset(torch.utils.data.Dataset):
                 # Verifica della missione --> se il numero di missione è nella lista fornita in input si salta il resto del ciclo passando alla missione dopo
                 if (trajectory, combination) in test_missions:
                     continue
+
+                # Verifica della missione e della modalità --> si saltano le missioni di validazione se si è in modalità train e le missioni
 
                 for second in range(mission_time):
 
@@ -118,8 +126,12 @@ class Dataset(torch.utils.data.Dataset):
                             continue
 
                     # Si aggiunge alla lista completa delle batch la sottolista contenente i dati dei sensori per il secondo di iterazione se le dimensioni singole sono corrette
-                    if batch_is_valid:
+                    if batch_is_valid and (trajectory, combination) not in self.validation_missions_dict and self.mode == 'train':
                         self.training_batches_list.append(single_second_batches_list)
+                    elif batch_is_valid and (trajectory, combination) in self.validation_missions_dict and self.mode == 'validazione':
+                        self.validation_batches_list.append(single_second_batches_list)
+                    else:
+                        continue
 
                 print(f'  Batch unitarie per la missione {trajectory} - {combination} definite correttamente.')
 
@@ -198,16 +210,24 @@ class Dataset(torch.utils.data.Dataset):
 
         if self.mode == "train":
             return len(self.training_batches_list)
-        else:
+        elif self.mode == "validazione":
+            return len(self.validation_batches_list)
+        elif self.mode == 'test':
             return len(self.test_batches_dict)
+        else:
+            return 1
 
     # Funzione che gestisce la chiamata di una specifica batch unitaria del dataset --> necessaria per usare dataset[] e per il dataloader
-    def __getitem__(self, idx):
+    def __getitem__(self, index):
 
         if self.mode == "train":
-            return self.training_batches_list[idx]
+            return self.training_batches_list[index]
+        elif self.mode == "validazione":
+            return self.validation_batches_list[index]
+        elif self.mode == "test":
+            return self.test_batches_dict[index]
         else:
-            return self.test_batches_dict[idx]
+            return 1
 
 
 # Si definisce la classe utilizzata per il Simplified Attention Mechanism --> trattata come classe per non appesantire troppo il codice della NavNet --> prodotto in output un vettore dim(hidden_layer)*1
@@ -242,29 +262,37 @@ class SimplifiedAttentionMechanism(nn.Module):
 class NavNet(nn.Module):
 
     # Si inizializza la rete neurale --> permette di salvare i layer prodotti all'interno della funzione in modo permanente nella variabile del main x = NavNet()
-    def __init__(self):
+    def __init__(self, network_config, hidden_size):
 
         # Si inizializzano i meccanismi interni legati a pytorch
         super(NavNet, self).__init__()
 
-        ## Si definiscono le caratteristiche dei layer utilizzati dalla rete neurale, andando a salvare all'interno di variabile self tutti i parametri a essi legati ##
+        # Si inizializzano i blocchi della rete neurale
+        self.LSTMS = nn.ModuleDict()
+        self.SAMS = nn.ModuleDict()
+
+        # Si itera su ogni ramo da calcolare, applicando LSTM e attention layer
+        for branch_name, branch_size in network_config.items():
+
+            self.LSTMS[branch_name] = nn.LSTM(input_size=branch_size, hidden_size=hidden_size, batch_first=True)
+            self.SAMS[branch_name] = SimplifiedAttentionMechanism(hidden_size=hidden_size)
+
+        # Si applicano i Fully connected layers --> ricevono in input il vettore c concatenato --> devo arrivare a 2 output, che rappresentano gli spostamenti nei due assi (possibile automatizzare aggiungendo più strati)
+        input_size_FC = hidden_size * len(network_config)
+        self.FC = nn.Sequential(
+            nn.Linear(input_size_FC, input_size_FC//2),
+            nn.ReLU(),
+            nn.Linear(input_size_FC//2, 2))
 
         # Rete ricorsiva --> due LSTM da 100 hidden states l'uno posti in serie --> prodotti per ogni unità temporale vettori da freq(input)*100
-        self.LSTM_IMU = nn.LSTM(input_size=9, hidden_size=100, num_layers=2, batch_first=True)
-        self.LSTM_DVL = nn.LSTM(input_size=3, hidden_size=100, num_layers=2, batch_first=True)
+        #self.LSTM_IMU = nn.LSTM(input_size=10, hidden_size=100, num_layers=2, batch_first=True)
+        #self.LSTM_DVL = nn.LSTM(input_size=3, hidden_size=100, num_layers=2, batch_first=True)
         #self.LSTM_REF = nn.LSTM(input_size=7, hidden_size=100, num_layers=2, batch_first=True)
 
-        # Simplified attention mechanism --> trattato come classe separata --> riceve in input i vettori dati dall'LSTM e produce in output un vettore 100*1
-        self.SAM_IMU = SimplifiedAttentionMechanism(hidden_size=self.LSTM_IMU.hidden_size)
-        self.SAM_DVL = SimplifiedAttentionMechanism(hidden_size=self.LSTM_DVL.hidden_size)
+        # Simplified attention mechanism --> trattato come classe separata --> riceve in input i vettori dati dall LSTM e produce in output un vettore 100*1
+        #self.SAM_IMU = SimplifiedAttentionMechanism(hidden_size=self.LSTM_IMU.hidden_size)
+        #self.SAM_DVL = SimplifiedAttentionMechanism(hidden_size=self.LSTM_DVL.hidden_size)
         #self.SAM_REF = SimplifiedAttentionMechanism(hidden_size=self.LSTM_REF.hidden_size)
-
-        # Fully connected layers --> in input ricevono il vettore c concatenato --> passano da dim(c) a 100 e poi 2 valori (output di spostamento su East e North)
-        input_size_FC = 200
-        self.FC = nn.Sequential(
-            nn.Linear(input_size_FC, 100),
-            nn.ReLU(),
-            nn.Linear(100, 2))
 
         # Definizione struttura funzione di costo --> si sceglie una Euclidean Loss per restare coerenti con il paper
         self.loss_criterion = nn.MSELoss()
@@ -279,14 +307,16 @@ class NavNet(nn.Module):
     # Si crea ora la funzione che gestisce la forward propagation della rete neurale
     def forward(self, dati_IMU, dati_DVL):
 
+        # Si itera su ogni elemento presente nel dizionario
+
         # 1. Passaggio negli LSTM
-        LSTM_outputs_IMU, _ = self.LSTM_IMU(dati_IMU)
-        LSTM_outputs_DVL, _ = self.LSTM_DVL(dati_DVL)
+        LSTM_outputs_IMU, _ = self.LSTMS['INS'](dati_IMU)
+        LSTM_outputs_DVL, _ = self.LSTMS['DVL'](dati_DVL)
         #LSTM_outputs_REF, _ = self.LSTM_REF(dati_ref)
 
         # 2. Passaggio al meccanismo di attenzione semplificato
-        Context_vector_IMU = self.SAM_IMU(LSTM_outputs_IMU)
-        Context_vector_DVL = self.SAM_DVL(LSTM_outputs_DVL)
+        Context_vector_IMU = self.SAMS['INS'](LSTM_outputs_IMU)
+        Context_vector_DVL = self.SAMS['DVL'](LSTM_outputs_DVL)
         #Context_vector_REF = self.SAM_REF(LSTM_outputs_REF)
 
         # 3. Concatenazione dei vettori di contesto

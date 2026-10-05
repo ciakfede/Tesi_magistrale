@@ -6,6 +6,7 @@ Risultati_analisi_statistica/
 Risultati_NN/
 __pycache__/
 .idea/
+Dizionari_datasets/
 
 # Estensioni file da non considerare mai
 *.aux

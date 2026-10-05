@@ -27,7 +27,7 @@ import sys                                      # Libreria che permette di inter
 pd.set_option('display.max_columns', None)              # Visualizza tutte le colonne (nessun limite al numero)
 pd.set_option('display.max_colwidth', None)             # Visualizza tutto il contenuto della cella (evita di troncare stringhe lunghe)
 pd.set_option('display.expand_frame_repr', False)       # Evita che le colonne vadano a capo su più righe nel terminale
-pd.options.display.max_rows = 100                       # Imposta il numero massimo di righe visualizzabili a schermo
+pd.options.display.max_rows = 100                             # Imposta il numero massimo di righe visualizzabili a schermo
 
 warnings.filterwarnings('error', category=pd.errors.DtypeWarning)           # Forza i DtypeWarning a comportarsi come eccezioni
 
@@ -39,7 +39,7 @@ class PreProcessing:
 
         self.freq = reference_frequency                 # Si assegna alla variabile interna la frequenza base della griglia
 
-        self.config_matrix = {}                         # Si inizializza un dizionario che conterrà, per ogni traiettoria, una lista di stringhe che individuano la combinazione scenario ambientale/scenario operativo associata ad ogni missione --> avrà forma {'traiettoria0': ['comb0', 'comb1', ...], 'traiettoria1': [], ...}
+        self.config_matrix = {}                         # Si inizializza un dizionario che conterrà, per ogni traiettoria, una lista di stringhe che individuano la combinazione scenario ambientale/scenario operativo associata a ogni missione --> avrà forma {'traiettoria0': ['comb0', 'comb1', ...], 'traiettoria1': [], ...}
 
         self.raw_database = {}                          # Si inizializza un dizionario che una volta riempito avrà forma {'traiettoria0': {'missione1': dataframe, 'missione2': dataframe...}, 'traiettoria1'; {}, ...}
 
@@ -75,6 +75,8 @@ class PreProcessing:
                                     'V_ref': ['timestamp', 'Ref_Vx [%]', 'Ref_Vy [%]', 'Ref_Vz [%]', 'Ref_ωx [%]', 'Ref_ωy [%]', 'Ref_ωz [%]'],
                                     'GPS': ['timestamp', 'UTM_North [m]', 'UTM_East [m]']}
 
+        self.min_std = 0.01                         # Soglia minima di deviazione standard per i vari parametri
+
     # ======================================================
     #            ESTRAZIONE DATI DA FILE CSV
     # ======================================================
@@ -92,7 +94,7 @@ class PreProcessing:
 
                     line = line.strip(": \n")   # Si eliminano tutti gli spazi, il carattere ":" (dove presente) e l'invio al termine della linea analizzata
                     line = line.lstrip(" - ")   # Si eliminano gli spazi e il segno "-" all'inizio della linea analizzata
-                    line = line.split(" ")      # Si fa in modo di trasformare il testo di ogni linea in una lista di stringhe --> separatore " " per le intestazioni del tipo "Traiettoria 1:"
+                    line = line.split(" ")      # Si fa in modo di trasformare il testo di ogni linea in una lista di stringhe --> separatore "spazio" per le intestazioni del tipo "Traiettoria 1:"
 
                     # Se il primo elemento della linea è la parola traiettoria si sta cambiando missione, altrimenti si sta analizzando una specifica configurazione
                     if line[0] == "Traiettoria":
@@ -179,6 +181,7 @@ class PreProcessing:
 
                     try:
 
+                        # noinspection argument-list
                         mission_dataframe = pd.read_csv(telemetry_file_name)
 
                         # Check di verifica sul DataFrame di missione vuoto già al momento dell'estrazione --> si segnala ma per il momento non si fa gestisce appositamente
@@ -344,14 +347,13 @@ class PreProcessing:
 
         try:
 
-            # Se il sotto-dizionario associato alla missione risulta vuoto (problemi nelle fasi precedenti) si salva il DataFrame resampled come vuoto e si esce subito dalla funzione (si potrebbe eliminare avendo il salto di missione nella funzione principale)
-            if not self.sensors_divided_database[trajectory][combination]:
-                return self
-
             # Si definisce il dataframe di iterazione partendo da quello contenuto all'interno del dizionario globale (per semplicità di notazione)
             dataframe_GPS = pd.DataFrame()
             dataframe_IMU = pd.DataFrame()
             if processing_method == 'resampling':
+                # Se il sotto-dizionario associato alla missione risulta vuoto (problemi nelle fasi precedenti) si salva il DataFrame resampled come vuoto e si esce subito dalla funzione (si potrebbe eliminare avendo il salto di missione nella funzione principale)
+                if not self.sensors_divided_database[trajectory][combination]:
+                    return self
                 dataframe_GPS = self.sensors_divided_database[trajectory][combination]['GPS'].copy()
                 dataframe_IMU = self.sensors_divided_database[trajectory][combination]['IMU'].copy()
             elif processing_method == 'interpolazione':
@@ -490,8 +492,7 @@ class PreProcessing:
             # Si riordina il dataframe prodotto secondo il timestamp, per maggiore sicurezza, creando anche un nuovo indice
             resampled_dataframe = resampled_dataframe.sort_values('timestamp', ignore_index=True)
 
-            # Si aggiunge il dataframe generato per la missione al dizionario complessivo, eliminando le righe associate alla posizione UTM che sono superflue dopo le trasformazioni di coordinata
-            resampled_dataframe.drop(columns=['UTM_East [m]', 'UTM_North [m]'], inplace=True)
+            # Si aggiunge il dataframe generato per la missione al dizionario complessivo
             self.resampled_database[trajectory][combination] = resampled_dataframe
 
         except Exception as e:
@@ -519,7 +520,7 @@ class PreProcessing:
                 print(f" [WARNING] Errore nell'apertura del file pickle per l'elaborazione dei dataframe --> {e}")
                 raise
 
-        # Se la scelta è si il dataframe globale si prende direttamente da quello generaato con la lettura dei file csv
+        # Se la scelta è si il dataframe globale si prende direttamente da quello generato con la lettura dei file csv
         elif generate_dataframe == 'S':
 
             # Si crea una copia del dizionario contenente il dataframe globale --> in modo da non modificare quello originale per errore
@@ -611,7 +612,10 @@ class PreProcessing:
                         griglia_uniforme = pd.DataFrame({'timestamp': pd.date_range(start=t_start_dataframe, end=t_end_GPS, freq=f'{(1/frequenza)*1000}ms')})
 
                         # Si effettua il merge tra le misurazioni del sensore considerato e la griglia temporale --> usato metodo backward per garantire una maggiore attinenza con misurazioni real-time sul drone
-                        sensor_block_dataframe = pd.merge_asof(griglia_uniforme, sensor_block_dataframe, on='timestamp', direction='backward')
+                        if sensor_block_name == 'GPS':
+                            sensor_block_dataframe = pd.merge_asof(griglia_uniforme, sensor_block_dataframe, on='timestamp', direction='nearest')
+                        else:
+                            sensor_block_dataframe = pd.merge_asof(griglia_uniforme, sensor_block_dataframe, on='timestamp', direction='backward')
 
                         # Si aggiunge il dataframe relativo al singolo blocco di sensori considerati al dizionario locale
                         sensors_dataframes[sensor_block_name] = sensor_block_dataframe
@@ -667,7 +671,7 @@ class PreProcessing:
                 print(f" [WARNING] Errore nell'apertura del file pickle per l'elaborazione dei dataframe --> {e}")
                 raise
 
-        # Se la scelta è si il dataframe globale si prende direttamente da quello generaato con la lettura dei file csv
+        # Se la scelta è si il dataframe globale si prende direttamente da quello generato con la lettura dei file csv
         elif generate_dataframe == 'S':
 
             # Si crea una copia del dizionario contenente il dataframe globale --> in modo da non modificare quello originale per errore
@@ -707,7 +711,7 @@ class PreProcessing:
                     # Si effettua l'interpolazione lineare
                     interpolated_dataframe = interpolated_dataframe.interpolate(method='time', limit_area='inside')
 
-                    # Si scalano le misurazioni angolari per stare nell0intervallo 0-360 classico --> si applica solo allo yaw perché rollio e pitch hanno anche valori negativi, quindi quest'operazione potrebbe corrompere i normali vslori
+                    # Si scalano le misurazioni angolari per stare nell0intervallo 0-360 classico --> si applica solo allo yaw perché rollio e pitch hanno anche valori negativi, quindi quest'operazione potrebbe corrompere i normali valori
                     interpolated_dataframe['Yaw [deg]'] = interpolated_dataframe['Yaw [deg]'] % 360
 
                     # Si eliminano le righe della tabella in cui non sono presenti i dati di tutti i sensori contemporaneamente --> di solito gli ultimi ad avviarsi sono axisref e motorref
@@ -741,8 +745,8 @@ class PreProcessing:
                         if (trajectory, combination) not in self.empty_missions_list:
                             self.empty_missions_list.append((trajectory, combination))
                         continue
-                    else:
-                        self.interpolated_database[trajectory][combination].drop(columns=['UTM_East [m]', 'UTM_North [m]'], inplace=True)
+                    #else:
+                        #self.interpolated_database[trajectory][combination].drop(columns=['UTM_East [m]', 'UTM_North [m]'], inplace=True)
                 except KeyError:
                     raise KeyError(f"    [ERROR] Errore nel drop delle colonne non utili. Ricontrollare la corrispondenza delle etichette usate.") from None
 
@@ -764,7 +768,7 @@ class PreProcessing:
 
             try:
 
-                save_file_path = os.path.join(ROOT_DIR, 'Dataframe_globale.pkl')
+                save_file_path = os.path.join(ROOT_DIR, 'Dataset_globale.pkl')
                 with open(save_file_path, 'wb') as f:
                     pickle.dump(self.raw_database, f)
 
@@ -844,13 +848,13 @@ class PreProcessing:
 
             try:
 
-                save_file_path = os.path.join(ROOT_DIR, 'Dataframe_resampled.pkl')
+                save_file_path = os.path.join(ROOT_DIR, 'Dataset_resampled.pkl')
                 with open(save_file_path, 'wb') as f:
                     pickle.dump(self.resampled_database, f)
 
                     print(f'    Salvataggio del dataframe resampled in file {save_file_path} eseguito correttamente.')
 
-                save_file_path = os.path.join(ROOT_DIR, 'Dataframe_resampled_blocchi.pkl')
+                save_file_path = os.path.join(ROOT_DIR, 'Dataset_resampled_blocchi.pkl')
                 with open(save_file_path, 'wb') as f:
                     pickle.dump(self.sensors_divided_database, f)
 
@@ -879,7 +883,7 @@ class PreProcessing:
                                 continue
 
                             # Si crea una copia del dataframe per evitare modifiche impattanti nel main
-                            dataframe_copy = self.resampled_database[trajectory][combination].copy()
+                            dataframe_copy = self.resampled_database[trajectory][combination].drop(columns=['UTM_East [m]', 'UTM_North [m]'])
 
                             # Formattazione per file Excel --> necessario creare una nuova colonna con i tempi per sostituire quella originale, che approssima male gli istanti di tempo rendendo l'analisi incomprensibile
                             dataframe_copy['timestamp'] = dataframe_copy['timestamp'].dt.strftime('%H:%M:%S.%f').str[:-3]
@@ -907,9 +911,9 @@ class PreProcessing:
                             worksheet.set_column('F:H', 17, formato_att)    # Blocco misure attitude
                             worksheet.set_column('I:J', 17, formato_dep)    # Blocco misura profondità e rateo di discesa
                             #worksheet.set_column('K:L', 17, formato_check)  # Blocco misure sensori di controllo come alt e pressione interna
-                            worksheet.set_column('M:R', 17, formato_axis)   # Blocco misure axis_ref
-                            worksheet.set_column('S:X', 17, formato_mot)    # Blocchi misure dei motor_ref
-                            worksheet.set_column('Y:AD', 19, formato_GPS)   # Blocchi misure del GPS
+                            worksheet.set_column('K:P', 17, formato_mot)    # Blocchi misure dei motor_ref
+                            worksheet.set_column('Q:V', 17, formato_axis)   # Blocco misure axis_ref
+                            worksheet.set_column('W:AB', 19, formato_GPS)   # Blocchi misure del GPS
 
                             # Verifica della corretta scrittura della telemetria della missione analizzata
                             if nome_foglio in writer.sheets and len(dataframe_copy) > 0:
@@ -930,7 +934,7 @@ class PreProcessing:
 
             try:
 
-                save_file_path = os.path.join(ROOT_DIR, 'Dataframe_interpolated.pkl')
+                save_file_path = os.path.join(ROOT_DIR, 'Dataset_interpolated.pkl')
                 with open(save_file_path, 'wb') as f:
                     pickle.dump(self.interpolated_database, f)
 
@@ -959,7 +963,7 @@ class PreProcessing:
                                 continue
 
                             # Si crea una copia del dataframe per evitare modifiche impattanti nel main
-                            dataframe_copy = dataframe.copy()
+                            dataframe_copy = dataframe.drop(columns=['UTM_East [m]', 'UTM_North [m]'])
 
                             # Formattazione per file Excel --> necessario creare una nuova colonna con i tempi per sostituire quella originale, che approssima male gli istanti di tempo rendendo l'analisi incomprensibile
                             dataframe_copy['timestamp'] = dataframe_copy['timestamp'].dt.strftime('%H:%M:%S.%f').str[:-3]
@@ -1004,6 +1008,33 @@ class PreProcessing:
     #         TRASFORMAZIONE DATAFRAMES IN TENSORI
     # ======================================================
 
+    # Funzione interna che permette di gestire l'eliminazione delle colonne dal database in vista dell'uso sulla rete neurale
+    @staticmethod
+    def drop_columns(sensor_name, sensor_dataframe):
+
+        sensor_dataframe = sensor_dataframe.drop(columns=['timestamp'], errors='ignore')
+
+        # Si eliminano le colonne non necessarie per il training
+        if sensor_name == 'GPS':
+            sensor_dataframe = sensor_dataframe.drop(columns=['UTM_North [m]', 'UTM_East [m]', 'NED_North [m]', 'NED_East [m]', 'X_body_ist [m]', 'Y_body_ist [m]'], errors='ignore')
+
+        elif sensor_name == 'DVL':
+            sensor_dataframe = sensor_dataframe.drop(columns=['DVL_Altitude [m]'], errors='ignore')
+
+        elif sensor_name == 'V_ref':
+            sensor_dataframe = sensor_dataframe.drop(columns=['Ref_Vy [%]', 'Ref_Vz [%]', 'Ref_ωx [%]', 'Ref_ωz [%]'], errors='ignore')
+
+        elif sensor_name == 'MOT':
+            sensor_dataframe = sensor_dataframe.drop(columns=['Mot_RV [%]', 'Mot_RL [%]'], errors='ignore')
+
+        elif sensor_name == 'IMU':
+            yaw_rad = np.radians(sensor_dataframe['Yaw [deg]'])
+            sensor_dataframe = sensor_dataframe.drop(columns=['Yaw [deg]'], errors='ignore')
+            sensor_dataframe['Yaw_sin'] = np.sin(yaw_rad)
+            sensor_dataframe['Yaw_cos'] = np.cos(yaw_rad)
+
+        return sensor_dataframe
+
     # Funzione interna incaricata di calcolare il valore medio e la deviazione standard per ogni colonna appartenente a un blocco di sensori
     def compute_normalization_parameters(self, sensor_blocks_dataframes, missioni_test):
 
@@ -1033,20 +1064,7 @@ class PreProcessing:
 
                         try:
 
-                            sensor_dataframe_copy = sensor_dataframe.copy()
-
-                            # Si eliminano le colonne non necessarie per il training
-                            if sensor_name == 'GPS':
-                                sensor_dataframe_copy = sensor_dataframe_copy.drop(columns=['UTM_North [m]', 'UTM_East [m]', 'NED_North [m]', 'NED_East [m]', 'X_body_ist [m]', 'Y_body_ist [m]'], errors='ignore')
-
-                            elif sensor_name == 'DVL':
-                                sensor_dataframe_copy = sensor_dataframe_copy.drop(columns=['DVL_Altitude [m]'], errors='ignore')
-
-                            elif sensor_name == 'V_ref':
-                                sensor_dataframe_copy = sensor_dataframe_copy.drop(columns=['Ref_Vy [%]', 'Ref_Vz [%]', 'Ref_ωx [%]', 'Ref_ωz [%]'], errors='ignore')
-
-                            elif sensor_name == 'MOT':
-                                sensor_dataframe_copy = sensor_dataframe_copy.drop(columns=['Mot_RV [%]', 'Mot_RL [%]'], errors='ignore')
+                            sensor_dataframe_copy = self.drop_columns(sensor_name, sensor_dataframe)
 
                             # Si aggiunge il dataframe per la missione e il nome del sensore associato a un apposito dizionario --> nella forma {'IMU': [], 'DVL': [], 'GPS': []}
                             if sensor_name not in sensor_dataframes_list:
@@ -1071,18 +1089,29 @@ class PreProcessing:
                 try:
 
                     # Si genera un dataframe unico unendo quelli di tutte le missioni contenuti nella lista senza la colonna 'timestamp' (non necessaria)
-                    dataframe = pd.concat(dataframes_list).drop(columns=['timestamp'])
+                    dataframe = pd.concat(dataframes_list)
 
                     # Si calcola il valore della media e della deviazione standard sulla totalità delle missioni considerate
                     mean_value = dataframe.mean().to_numpy(dtype=np.float32)           # Si usa .means() per la media, .values per convertire il tutto in valori numerici (array numpy)
                     std = dataframe.std().to_numpy(dtype=np.float32)                   # Si usa .std() per la deviazione, .values per convertire il tutto in valori numerici (array numpy)
 
+                    # Si gestiscono separatamente le colonne con seno e coseno dello yaw --> non vanno normalizzate
+                    for col_idx, col_name in enumerate(dataframe.columns):
+                        if col_name in ['Yaw_sin', 'Yaw_cos']:
+                            mean_value[col_idx] = 0.0
+                            std[col_idx] = 1.0
+
                     # Si aggiorna il dizionario aggiungendo al blocco del sensore i valori trovati
                     self.normalization_parameters_dict[sensor_name] = {'media': mean_value, 'deviazione standard': std}
 
-                    # Si modifica un eventuale valore di deviazione standard pari a 0 con un 1 --> per evitare errori matematici durante l'esecuzione della normalizzazione
+                    # Si estrae il valore di deviazione standard per verificare sia una misura valida
                     sigma = self.normalization_parameters_dict[sensor_name]['deviazione standard']
-                    sigma[sigma == 0] = 1.0
+
+                    # Se la colonna del sensore dovesse avere problemi (std nulla o inferiore a una soglia minima) si genererebbero valori normalizzati enormi --> si impone quindi il valore di std = 1 (colonna rimane costante e non disturba la rete) --> utile soprattutto per il Roll che varia pochissimo in tutta la missione
+                    degenerate_cols = ~np.isfinite(sigma) | (sigma < self.min_std)
+                    if degenerate_cols.any():
+                        print(f"    [WARNING] Blocco {sensor_name}: std inferiore a {self.min_std} per le colonne {list(dataframe.columns[degenerate_cols])} (valori: {sigma[degenerate_cols]}) --> usato sigma = 1 per queste colonne.")
+                    sigma[degenerate_cols] = 1.0
 
                 except Exception as e:
                     print(f"    [ERROR] Errore nel calcolo dei parametri e dei dataframe per sensore {sensor_name} --> {e} --> Impossibile continuare con l'analisi")
@@ -1129,25 +1158,17 @@ class PreProcessing:
                     continue
 
                 self.warn_count = 0
+                mission_failed = False
                 for sensor_name, sensor_dataframe in sensors_dict.items():
 
                     try:
 
+                        # Se c'è stato un problema per un sensore si ignorano tutti gli altri in modo tale da avere il sotto-dizionario vuoto per quella missione
+                        if mission_failed:
+                            continue
+
                         # Si elimina dal dataframe del singolo sensore la colonna dei timestamp (questo crea automaticamente una copia del dataframe originale)
-                        sensor_dataframe_copy = sensor_dataframe.drop(columns=['timestamp'])
-
-                        # Si eliminano le colonne non necessarie per il training
-                        if sensor_name == 'GPS':
-                            sensor_dataframe_copy = sensor_dataframe_copy.drop(columns=['UTM_North [m]', 'UTM_East [m]', 'NED_North [m]', 'NED_East [m]', 'X_body_ist [m]', 'Y_body_ist [m]'], errors='ignore')
-
-                        elif sensor_name == 'DVL':
-                            sensor_dataframe_copy = sensor_dataframe_copy.drop(columns=['DVL_Altitude [m]'], errors='ignore')
-
-                        elif sensor_name == 'V_ref':
-                            sensor_dataframe_copy = sensor_dataframe_copy.drop(columns=['Ref_Vy [%]', 'Ref_Vz [%]', 'Ref_ωx [%]', 'Ref_ωz [%]'], errors='ignore')
-
-                        elif sensor_name == 'MOT':
-                            sensor_dataframe_copy = sensor_dataframe_copy.drop(columns=['Mot_RV [%]', 'Mot_RL [%]'], errors='ignore')
+                        sensor_dataframe_copy = self.drop_columns(sensor_name, sensor_dataframe)
 
                         # Si estraggono i valori del dataframe in un array numpy
                         original_values = sensor_dataframe_copy.to_numpy(dtype=np.float32)
@@ -1181,6 +1202,7 @@ class PreProcessing:
 
                     except Exception as e:
                         self.pytorch_tensor_dict[trajectory][combination] = {}
+                        mission_failed = True
                         self.warn_count += 1
                         print(f"    [WARNING] Errore nella creazione del tensore associato al sensore {sensor_name} --> {e}")
                         continue
@@ -1214,17 +1236,43 @@ class PostProcessing:
 
         self.waypoints_dict = {}            # Dizionario che conterrà le liste di waypoints in assi NED relativi di ogni traiettoria --> nella forma {'0': [], '1': []...}
 
-    # Funzione che permette di
-    #def single_path_definition(self):
+        self.test_missions_dict = {}        # Dizionario che conterrà le liste dei range temporali associati alle singole traiettorie di ogni missione prescelta per il test --> nella forma {('0', '4'): [(), (), (), ()], ('0', '8'): [...], ...}
+
+        self.warn_count = 0
+
+        self.RMSE_E = None
+
+        self.RMSE_N = None
+
+        self.RMSE_tot = None
+
+        self.first_mission = True           # Variabile booleana per l'intestazione del file di testo sull'errore RMSE
+
+    # ======================================================
+    #       DEFINIZIONE WAYPOINTS E TRAIETTORIE IDEALI
+    # ======================================================
 
     # Funzione che permette la costruzione di un dizionario contenente le liste di waypoints (in coordinate WGS84 e UTM) di ogni traiettoria utilizzata
     def waypoints_dict_building(self, ROOT_DIR):
 
-        input_folder = os.path.join(ROOT_DIR, f'Telemetrie/Lista_punti')  # Si definisce la cartella di riferimento
+        # Si definisce la cartella di riferimento
+        INPUT_FOLDER_PATH = os.path.join(ROOT_DIR, f'Telemetrie/Lista_punti')
+        os.makedirs(INPUT_FOLDER_PATH, exist_ok=True)
 
-        for trajectory, file in enumerate(sorted(os.listdir(input_folder))):
+        # Si definisce il percorso del file di output generato con il salvataggio
+        OUTPUT_FOLDER_PATH = os.path.join(ROOT_DIR, f"Dizionari_datasets")
+        os.makedirs(OUTPUT_FOLDER_PATH, exist_ok=True)
+        output_file_path = os.path.join(OUTPUT_FOLDER_PATH, "Waypoints_dict.pkl")
 
-            trajectory = str(trajectory)
+        print(f"\nInizio lettura waypoints dai file presenti in {INPUT_FOLDER_PATH}")
+
+        for i, file in enumerate(sorted(os.listdir(INPUT_FOLDER_PATH))):
+
+            # Si estrae il nome/numero della traiettoria a partire dal nome del file --> oltre alla sesta traiettoria il nome cambia e occorre usare due lettere
+            if i <= 5:
+                trajectory = file[-5:-4]
+            else:
+                trajectory = file[-6:-4]
 
             # Si inizializza la lista di punti associata alla traiettoria (se non presente)
             if trajectory not in self.waypoints_dict:
@@ -1236,15 +1284,19 @@ class PostProcessing:
             if 'UTM' not in self.waypoints_dict[trajectory]:
                 self.waypoints_dict[trajectory]['UTM'] = []
 
-            file_path = os.path.join(input_folder, file)
-            with open(file_path, "r+") as txt_points:
+            if 'UTM_abs' not in self.waypoints_dict[trajectory]:
+                self.waypoints_dict[trajectory]['UTM_abs'] = []
+
+            input_file_path = os.path.join(INPUT_FOLDER_PATH, file)
+            with open(input_file_path, "r+") as txt_points:
 
                 # Si verifica che il file di testo non sia vuoto
-                if os.stat(file_path).st_size == 0:
+                if os.stat(input_file_path).st_size == 0:
                     print(f"  [WARNING] Il file {file} è vuoto --> si procede senza considerarlo.")
                     continue
 
                 # Si itera per ogni riga (trattata come stringa) presente all'interno del file di iterazione
+                not_valid_lines = 0
                 for idx, line in enumerate(txt_points):
 
                     try:
@@ -1253,7 +1305,10 @@ class PostProcessing:
                         values = clean_line.split(",")      # Si analizza la linea isolando i termini presenti (nome_punto, latitudine, longitudine)
                         latitude = float(values[1])         # Si isola il valore della latitudine trasformandolo in numero decimale
                         longitude = float(values[2])        # Si isola il valore della longitudine trasformandolo in numero decimale
+
+                        # Si aggiorna il dizionario con le coordinate latitude/longitudine
                         tuple_WGS84_coord = (latitude, longitude)
+                        self.waypoints_dict[trajectory]['WGS84'].append(tuple_WGS84_coord)
 
                         # Si gestiscono i vari casi --> se l'indice è 0 si ha il waiting_point, che viene salvato e utilizzato una volta definite le coordinate (0,0) al punto 1
                         if idx == 0:
@@ -1261,66 +1316,95 @@ class PostProcessing:
                             wait_point_coord = (East_coord, North_coord)
                         elif idx == 1:
                             East_coord_0, North_coord_0, _, _ = utm.from_latlon(latitude, longitude)
-                            tuple_UTM_coord = [(wait_point_coord[0] - East_coord_0, wait_point_coord[1] - North_coord_0), (0, 0)]
+                            tuple_UTM_coord_0 = (wait_point_coord[0] - East_coord_0, wait_point_coord[1] - North_coord_0)
+                            tuple_UTM_coord = (0, 0)
+                            self.waypoints_dict[trajectory]['UTM'].append(tuple_UTM_coord_0)
+                            self.waypoints_dict[trajectory]['UTM'].append(tuple_UTM_coord)
                         else:
                             East_coord, North_coord, _, _ = utm.from_latlon(float(latitude), float(longitude))
-
-                            # Si effettua la sottrazione per arrivare alle coordinate NED relative al punto iniziale --> sono quelle necessarie per definire i waypoint
                             tuple_UTM_coord = (East_coord - East_coord_0, North_coord - North_coord_0)
+                            self.waypoints_dict[trajectory]['UTM'].append(tuple_UTM_coord)
 
-                        self.waypoints_dict[trajectory]['WGS84'].append(tuple_WGS84_coord)
-                        self.waypoints_dict[trajectory]['UTM'].append(tuple_UTM_coord)
+                        # Si aggiorna il dizionario con le coordinate UTM assolute
+                        tuple_UTM_abs_coord = (East_coord, North_coord)
+                        self.waypoints_dict[trajectory]['UTM_abs'].append(tuple_UTM_abs_coord)
 
                     except Exception as e:
+                        not_valid_lines += 1
                         print(f"  [WARNING] Rilevato un errore generico nella lettura delle coordinate {idx} della traiettoria {trajectory}: {e}")
                         continue
+
+            print(f"  Lettura waypoints per la traiettoria {trajectory} eseguita con {not_valid_lines} punti non validi.")
+
+        # Salvataggio del dizionario dei waypoints in formato pickle
+        try:
+
+            with open(output_file_path, 'wb') as f:
+                pickle.dump(self.waypoints_dict, f)
+
+        except Exception as e:
+            print(f"  [WARNING] Errore nel salvataggio del database dei waypoints in formato pickle --> {e}")
+
+        return self
 
     # Funzione per la creazione dei grafici delle traiettorie ideali, partendo dal dizionario di waypoints generato
     def ideal_trajectories_plot(self, ROOT_DIR):
 
+        print("\nDefinizione delle traiettorie ideali basate sui waypoints definiti:")
+
         # Si itera per ogni percorso contenuto all'interno del dizionario di punti
         points_dict = self.waypoints_dict.copy()
+        warn_counts = 0
         for trajectory_name, trajectory_points_list in points_dict.items():
 
-            # Si itera per ogni metodo di espressione delle coordinate contenuto all'interno del dizionario
-            East_list = []
-            North_list = []
-            for coord_type, coord_list in trajectory_points_list.items():
+            try:
 
-                # Si salvano i soli dati associati al metodo UTM in un nuovo dizionario
-                if coord_type == "UTM":
+                # Si itera per ogni metodo di espressione delle coordinate contenuto all'interno del dizionario --> per estrarre una lista con le sole coordinate East e una con quelle North
+                East_list = []
+                North_list = []
+                for coord_type, coord_list in trajectory_points_list.items():
 
-                    # Si itera su ogni punto contenuto all'interno della lista di tuple contenenti le coordinate
-                    for (East, North) in coord_list:
-                        East_list.append(East)
-                        North_list.append(North)
+                    # Si salvano i soli dati associati al metodo UTM in un nuovo dizionario
+                    if coord_type == "UTM":
 
-            # Si apre il grafico
-            # noinspection PyTypeChecker
-            plt.figure(figsize=(10, 6))
+                        # Si itera su ogni punto contenuto all'interno della lista di tuple contenenti le coordinate
+                        for (East, North) in coord_list:
+                            East_list.append(East)
+                            North_list.append(North)
 
-            # Si richiama il plot dei punti utilizzando come input il dizionario tramite formulazione data
-            plt.plot(East_list, North_list, label='Traiettoria ideale', linewidth=2, linestyle='--', marker='s', markersize=7)
-            plt.xlabel("East [m]", fontdict=self.axis_font)
-            plt.ylabel("North [m]", fontdict=self.axis_font)
-            plt.title(f"Traiettoria del {trajectory_name}", fontdict=self.title_font, loc='center', pad=10)
-            plt.minorticks_on()
-            plt.grid(visible=True, which='both', alpha=0.5)
-            plt.legend()
-            plt.axis('equal')
+                # noinspection PyTypeChecker
+                plt.figure(figsize=(10, 6))
 
-            OUTPUT_FOLDER_PATH = os.path.join(ROOT_DIR, 'Risultati_NN/Traiettorie_ideali')
-            os.makedirs(OUTPUT_FOLDER_PATH, exist_ok=True)
-            output_file_path = os.path.join(OUTPUT_FOLDER_PATH, f"Traiettoria_ideale_{trajectory_name}.pdf")
-            plt.savefig(output_file_path, bbox_inches='tight')
-            plt.show()
+                # Si richiama il plot dei punti utilizzando come input il dizionario tramite formulazione data
+                plt.plot(East_list, North_list, label='Traiettoria ideale', linewidth=2, linestyle='--', marker='s', markersize=7)
+                plt.xlabel("East [m]", fontdict=self.axis_font)
+                plt.ylabel("North [m]", fontdict=self.axis_font)
+                plt.title(f"Traiettoria del {trajectory_name}", fontdict=self.title_font, loc='center', pad=10)
+                plt.minorticks_on()
+                plt.grid(visible=True, which='both', alpha=0.5)
+                plt.legend()
+                plt.axis('equal')
+
+                OUTPUT_FOLDER_PATH = os.path.join(ROOT_DIR, 'Risultati_NN/Traiettorie_ideali')
+                os.makedirs(OUTPUT_FOLDER_PATH, exist_ok=True)
+                output_file_path = os.path.join(OUTPUT_FOLDER_PATH, f"Traiettoria_ideale_{trajectory_name}.pdf")
+                plt.savefig(output_file_path, bbox_inches='tight')
+                #plt.show()
+                plt.close()
+
+            except Exception as e:
+                warn_counts += 1
+                print(f"  [WARNING] Errore nella generazione dei grafici ideali per la traiettoria {trajectory_name}--> {e}")
+                continue
+
+        print(f"  Traiettorie generate e salvate con {warn_counts} warnings (ogni warning è una figura non salvata).")
 
     # Funzione per la scrittura di un file .txt contenente tutti i valori (originali e convertiti) dei punti delle varie traiettorie
     def write_on_file(self, ROOT_DIR):
 
         OUTPUT_FOLDER_PATH = os.path.join(ROOT_DIR, 'Risultati_NN/Traiettorie_ideali')
         os.makedirs(OUTPUT_FOLDER_PATH, exist_ok=True)
-        output_file_path = os.path.join(OUTPUT_FOLDER_PATH, f"Punti_missione_UTM.txt")
+        output_file_path = os.path.join(OUTPUT_FOLDER_PATH, f"Punti_missione.txt")
 
         try:
 
@@ -1362,8 +1446,195 @@ class PostProcessing:
             print(f"  [WARNING] Errore nel processo di scrittura della lista di waypoints sul file {output_file_path} --> {e}")
             return 1
 
+    # ======================================================
+    #            SCOMPOSIZIONE MISSIONI DI TEST
+    # ======================================================
+
+    # Funzione interna che permette di costruire un dizionario
+    def single_path_definition(self, resampled_database):
+
+        trajectory_0_intervals = {('0', '4'): [(177, 414), (635, 980), (1262, 2366), (2630, 3402)],
+                                 ('0', '8'): [(268, 611), (891, 1201), (1367, 1848), (2010, 2525)],
+                                 ('0', '12'): [(199, 693), (832, 1176), (1465, 2440), (2659, 3469)],
+                                 ('0', '16'): [(0, 697), (875, 1151), (1334, 1808), (1985, 2223)]}
+
+        trajectory_T_intervals = {('T1', 'A'): [(99, 410)], ('T1', 'B'): [(72, 582)], ('T1', 'C'): [(108, 493)], ('T1', 'D'): [(97, 610)],
+                                  ('T2', 'A'): [(131, 1449)], ('T2', 'B'): [(88, 1096)], ('T2', 'C'): [(96, 1364)], ('T2', 'D'): [(84, 1256)],
+                                  ('T3', 'A'): [(98, 852)], ('T3', 'B'): [(52, 922)], ('T3', 'C'): [(132, 1389)], ('T3', 'D'): [(104, 963)],
+                                  ('T4', 'A'): [(107, 598)], ('T4', 'B'): [(463, 1345)], ('T4', 'C'): [(409, 888)], ('T4', 'D'): [(298, 1010)]}
+
+        for (trajectory, combination) in self.test_missions_dict:
+
+            # Si verifica che la lista di waypoints per la traiettoria di iterazione non sia vuota --> altrimenti c'è stato un problema
+            if not self.waypoints_dict[trajectory]['UTM']:
+                print(f"  [ERROR] Per la traiettoria {trajectory} la lista di waypoints risulta vuota. Impossibile proseguire l'analisi per questa traiettoria.")
+                continue
+
+            # Se la missione è una di quelle di test (T...) l'analisi è inutile e se è una di quelle della traiettoria 0 si sono definiti gli intervalli autonomamente
+            if trajectory == '0':
+                self.test_missions_dict[(trajectory, combination)] = trajectory_0_intervals[(trajectory, combination)]
+                continue
+            elif trajectory in ['T1', 'T2', 'T3', 'T4']:
+                self.test_missions_dict[(trajectory, combination)] = trajectory_T_intervals[(trajectory, combination)]
+                continue
+
+            # Si verifica che il DataFrame non sia vuoto --> altrimenti si salta la missione
+            resampled_dataframe = resampled_database[trajectory][combination]
+            if resampled_dataframe.empty:
+                continue
+
+            # Si definisce il timestamp iniziale del DataFrame come riferimento
+            t0 = resampled_dataframe["timestamp"].iloc[0]
+
+            # Si itera su ogni riga di ogni DataFrame presente nella lista delle missioni prescelte èer il test --> occorre gestire separatamente le T1, T2, T3 e T4
+            start_found = False
+            end_found = False
+            rep_counter = 0
+            start_time = None
+            end_time = None
+            for idx, line in resampled_dataframe.dropna().iterrows():
+
+                # Si estraggono i valori di profondità del drone
+                depth = line['Depth [m]']
+
+                # Si converte il timestamp in secondi trascorsi dal timestamp di riferimento e si definisce il minimo delta temporale tra due percorsi
+                t_s = (line['timestamp'] - t0).total_seconds()
+                minimum_delta_time = 200
+
+                # Si impone una condizione per verificare che sia stata completata una riemersione dopo essere arrivati alla fine --> altrimenti scatterebbe subito la condizione di start traiettoria
+                if rep_counter >= 1:
+                    if t_s - end_time <= 150:
+                        continue
+
+                # Si verifica che il drone sia nell'intorno del punto di attesa (il punto 0 del waypoints_dict) --> deve essere in un raggio di 1.5 metri
+                if depth > 0.5 and not start_found:
+                    start_time = t_s
+                    start_found = True
+
+                # Si definisce l'istante per cui il drone ha superato la quota di 6 metri (se sono nelle prime due ripetizioni) o 16 metri (se sono nelle ultime due) --> il check sul minimo delta_time è per essere sicuri che sia già una risalita e non ancora la prima discesa
+                if start_found and (t_s - start_time) >= minimum_delta_time:
+
+                    if rep_counter < 2:
+                        min_valid_depth = 6
+                    else:
+                        min_valid_depth = 16
+
+                    if depth <= min_valid_depth and not end_found:
+                        end_time = t_s
+                        end_found = True
+
+                # Si aggiorna il contatore di traiettorie complete trovate e si salva la tupla con gli estremi di tempo della singola traiettoria
+                if start_found and end_found:
+                    rep_counter += 1
+                    self.test_missions_dict[(trajectory, combination)].append((start_time, end_time))
+                    start_found = False
+                    end_found = False
+                else:
+                    continue
+
+        return self
+
+    # Funzione utile a inizializzare le chiavi del dizionario delle missioni di test tramite la lettura di un file di testo di input
+    def test_missions_definition(self, resampled_database, ROOT_DIR):
+
+        # Si inizializza il percorso del file di testo che contiene l'elenco delle missioni prescelte per il test
+        INPUT_FOLDER_PATH = os.path.join(ROOT_DIR, 'Telemetrie')
+        os.makedirs(INPUT_FOLDER_PATH, exist_ok=True)
+        input_file_path = os.path.join(INPUT_FOLDER_PATH, f"Missioni_test.txt")
+
+        # Si inizializza il percorso del file pickle contenente il dizionario delle missioni di test
+        OUTPUT_FOLDER_PATH = os.path.join(ROOT_DIR, 'Dizionari_datasets')
+        os.makedirs(OUTPUT_FOLDER_PATH, exist_ok=True)
+        output_file_path = os.path.join(OUTPUT_FOLDER_PATH, f"Test_missions_dict.pkl")
+
+        print(f"\nDefinizione missioni di test e scomposizione in singole traiettorie in corso:")
+
+        try:
+
+            self.warn_count = 0
+            with open(input_file_path, "r") as t:
+
+                # Si analizza il file riga per riga estraendo le tuple traiettoria-combinazione
+                for line in t:
+
+                    try:
+
+                        clean_line = line.lstrip().rstrip()
+                        values = clean_line.split(", ")
+                        trajectory = values[0]
+                        combination = values[1]
+                        mission = (trajectory, combination)
+
+                        # Si inizializza la chiave all'interno del dizionario
+                        if mission not in self.test_missions_dict:
+                            self.test_missions_dict[(trajectory, combination)] = []
+
+                    except Exception as e:
+                        self.warn_count += 1
+                        print(f"  [WARNING] Errore nella fase di lettura e salvataggio del contenuto del file --> {e}")
+                        continue
+
+        except FileNotFoundError:
+            raise FileNotFoundError(f"  [ERROR] Errore nel processo di estrazione dati dei waypoints. Ricontrollare esistenza del file {input_file_path}") from None
+
+        # Si richiama la funzione per scomporre la missione nelle quattro ripetizioni della traiettoria
+        self.single_path_definition(resampled_database)
+
+        # Si effettua il salvataggio del dizionario sul file pickle opportuno
+        try:
+
+            with open(output_file_path, 'wb') as f:
+                pickle.dump(self.test_missions_dict, f)
+
+        except Exception as e:
+            self.warn_count += 1
+            print(f'    [WARNING] Errore nel salvataggio del dizionario contenente tutti i dataframe in formato pickle --> {e}')
+
+        print(f"  Dizionario delle missioni di test generato con {self.warn_count} warnings. Il dizionario è stato salvato all'interno del file {output_file_path} ")
+
+        return self
+
+    # ======================================================
+    #       CALCOLO PARAMETRI E GRAFICI RETE NEURALE
+    # ======================================================
+
+    # Funzione interna che riceve in input i valori di RMSE della traiettoria e li trascrive su un file di testo riassuntivo
+    def write_RMSE_on_txt(self, ROOT_DIR, mission):
+
+        # Si definisce il percorso di output del file
+        OUTPUT_FOLDER_PATH = os.path.join(ROOT_DIR, 'Risultati_NN')
+        os.makedirs(OUTPUT_FOLDER_PATH, exist_ok=True)
+        output_file_path = os.path.join(OUTPUT_FOLDER_PATH, f"RMSE_info.txt")
+
+        try:
+
+            print("\n  Salvataggio valori di RMSE in corso:")
+
+            with open(output_file_path, "a") as output_file:
+
+                if self.first_mission:
+                    output_file.write("=" * 100 + "\n")
+                    output_file.write(" " * 18 + "RIASSUNTO VALORI DI RMSE (TEST x)\n")
+                    output_file.write("=" * 100 + "\n\n\n")
+
+                output_file.write("-" * 100 + "\n")
+                output_file.write(f"\nValori di Root Mean Square Error per la missione {mission}:\n")
+
+                output_file.write(f"  RMSE in direzione East: {self.RMSE_E} m\n")
+                output_file.write(f"  RMSE in direzione North: {self.RMSE_N} m\n")
+                output_file.write(f"  RMSE complessivo: {self.RMSE_tot} m\n")
+
+        except FileNotFoundError:
+            raise FileNotFoundError(f"  [ERROR] Errore, cartella {OUTPUT_FOLDER_PATH} o file {output_file_path} non trovato") from None
+
+        except Exception as e:
+            print(f"    [WARNING] Errore nel processo di salvataggio su file dei dati --> {e}")
+            return 1
+
+        return self
+
     # Funzione che riceve in input una lista di tensori (rappresentanti i valori di posizione GPS e predette) per ogni missione di test e produce in output i 3 valori di errore RMSE
-    def RMSE_estimation(self, GPS_coordinates, NN_coordinates):
+    def RMSE_estimation(self, GPS_coordinates, NN_coordinates, ROOT_DIR, mission):
 
         # Si trasformano le liste di tensori in array numpy --> in modo da poter effettuare operazioni matematiche vettoriali
         GPS_coordinates_array = torch.cat(GPS_coordinates, dim=0).cpu().numpy()
@@ -1372,21 +1643,29 @@ class PostProcessing:
         #NN_coordinates_array = np.array([t.detach().cpu().numpy().flatten() for t in NN_coordinates])
 
         # Si calcola l'errore RMSE per gli assi East e North separatamente
-        RMSE_E = np.sqrt(mean_squared_error(GPS_coordinates_array[:, 0], NN_coordinates_array[:, 0]))
-        RMSE_N = np.sqrt(mean_squared_error(GPS_coordinates_array[:, 1], NN_coordinates_array[:, 1]))
+        self.RMSE_E = np.sqrt(mean_squared_error(GPS_coordinates_array[:, 0], NN_coordinates_array[:, 0]))
+        self.RMSE_N = np.sqrt(mean_squared_error(GPS_coordinates_array[:, 1], NN_coordinates_array[:, 1]))
 
         # Si calcola l'errore RMSE complessivo sulla posizione --> si usa approccio differente per avere anche il vettore degli errori nel tempo, in modo da poterlo valutare graficamente
         errori_tot = np.linalg.norm(GPS_coordinates_array - NN_coordinates_array, axis=1)  # Si calcola la norma di un vettore --> necessario per ottenere l'errore sulla posizione assoluta
-        RMSE_tot = np.sqrt(np.mean(errori_tot ** 2))
+        self.RMSE_tot = np.sqrt(np.mean(errori_tot ** 2))
 
-        print(f'    RMSE sulla posizione in direzione North è pari a: {RMSE_N} m.')
-        print(f'    RMSE sulla posizione in direzione East è pari a: {RMSE_E} m.')
-        print(f'    RMSE sulla posizione complessiva è pari a: {RMSE_tot} m.')
+        print(f'    RMSE sulla posizione in direzione North è pari a: {self.RMSE_N} m.')
+        print(f'    RMSE sulla posizione in direzione East è pari a: {self.RMSE_E} m.')
+        print(f'    RMSE sulla posizione complessiva è pari a: {self.RMSE_tot} m.')
 
-        return RMSE_tot, RMSE_E, RMSE_N
+        # Si richiama la funzione per trascrivere le informazioni calcolate su file di testo
+        self.write_RMSE_on_txt(ROOT_DIR, mission)
+
+        return self
 
     # Funzione che genera un grafico dati in input i dati target e quelli prodotti dalla rete con cui confrontarli e i nomi delle rispettive variabili
-    def real_trajectories_plot(self, GPS_coordinates_list, NN_coordinates_list, mission, path_name, title, ROOT_DIR):
+    def real_trajectories_plot(self, GPS_coordinates_list, NN_coordinates_list, GPS_origin, mission, path_name, title, ROOT_DIR):
+
+        # Si inizializza il percorso del file di output che verrà generato
+        OUTPUT_FOLDER_PATH = os.path.join(ROOT_DIR, f'Risultati_NN/Traiettorie_reali')
+        os.makedirs(OUTPUT_FOLDER_PATH, exist_ok=True)
+        output_file_path = os.path.join(OUTPUT_FOLDER_PATH, f'Confronto_traiettorie_M{mission}_{path_name}.pdf')
 
         # Si trasformano le liste di tensori in array numpy --> in modo da poter effettuare operazioni matematiche vettoriali
         GPS_coordinates_array = torch.cat(GPS_coordinates_list, dim=0).cpu().numpy()
@@ -1399,14 +1678,15 @@ class PostProcessing:
         NN_East = [p[0] for p in NN_coordinates_array]
         NN_North = [p[1] for p in NN_coordinates_array]
 
-        waypoints = self.waypoints_dict[mission[0]]['UTM']
-        waypoints_East = [p[0] for p in waypoints]
-        waypoints_North = [p[1] for p in waypoints]
+        waypoints = self.waypoints_dict[mission[0]]['UTM_abs']
+        (east0, north0) = GPS_origin[0], GPS_origin[1]
+        waypoints_East = [p[0]-east0 for p in waypoints]
+        waypoints_North = [p[1]-north0 for p in waypoints]
 
         # noinspection PyTypeChecker
         plt.figure(figsize=(10, 6))
 
-        plt.plot(waypoints_East, waypoints_North, label = 'Waypoints', marker = 's', markersize = 6)
+        #plt.plot(waypoints_East, waypoints_North, label = 'Waypoints', marker = 's', markersize = 6)
         plt.plot(GPS_East, GPS_North, color='blue', label='Target (GPS)', linewidth=2, linestyle='--')
         plt.plot(NN_East, NN_North, color='red', label='NavNet Prediction', linewidth=1.5, linestyle='-')
 
@@ -1438,24 +1718,22 @@ class PostProcessing:
         print(f'    Delta sulla posizione in direzione North è pari a: {Delta_N} m.')
         print(f'    Delta sulla posizione in direzione East è pari a: {Delta_E} m.')
 
-        OUTPUT_FOLDER_PATH = os.path.join(ROOT_DIR, f'Risultati_NN/Traiettorie_reali')
-        os.makedirs(OUTPUT_FOLDER_PATH, exist_ok=True)
-        output_file_path = os.path.join(OUTPUT_FOLDER_PATH, f'Confronto_traiettorie_M{mission}_{path_name}.pdf')
         plt.savefig(output_file_path, bbox_inches='tight')
-        plt.show()
+        #plt.show()
+        plt.close()
 
     # Funzione che permette di stampare il grafico relativo alla loss function durante il training
     def plot_loss_function(self, loss_train, loss_val, epoche, ROOT_DIR, titolo='Evoluzione della Loss function'):
 
         # Si crea un vettore con un numero di elementi equispaziati per le epoche di iterazione
-        vettore_epoche = list(range(epoche))
+        epoch_vector = list(range(epoche))
 
         # noinspection PyTypeChecker
         plt.figure(figsize=(10, 6))
 
         # Disegniamo la traiettoria reale
-        plt.plot(vettore_epoche, loss_train, color='blue', label='Training loss', linewidth=2)
-        plt.plot(vettore_epoche, loss_val, color = 'red', label='Validation loss', linewidth=2)
+        plt.plot(epoch_vector, loss_train, color='blue', label='Training loss', linewidth=2)
+        plt.plot(epoch_vector, loss_val, color = 'red', label='Validation loss', linewidth=2)
 
         # Abbellimento grafico
         plt.title(titolo, fontdict=self.title_font)
@@ -1464,10 +1742,11 @@ class PostProcessing:
         plt.legend()
         plt.grid(True, linestyle=':', alpha=0.6)
 
-        OUTPUT_FOLDER_PATH = os.path.join(ROOT_DIR, 'Risultati_NN/Grafici')
+        OUTPUT_FOLDER_PATH = os.path.join(ROOT_DIR, 'Risultati_NN')
         if not os.path.exists(OUTPUT_FOLDER_PATH):
             os.makedirs(OUTPUT_FOLDER_PATH)
         output_file_path = os.path.join(OUTPUT_FOLDER_PATH, 'Loss_function.pdf')
 
         plt.savefig(output_file_path, bbox_inches='tight')
-        plt.show()
+        #plt.show()
+        plt.close()
