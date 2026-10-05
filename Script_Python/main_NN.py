@@ -41,8 +41,7 @@ def stima_trapezoidale(velocita, timestamps, ROOT_DIR, pos_iniziale=0):
 # Variabili legate alla rete neurale
 batch_size = 32                                                                         # Numero di secondi di missione forniti contemporaneamente alla rete
 batch_size_test = 1                                                                     # Per il test si usa una batch size di 1s --> si ottiene la stima della posizione per ogni secondo di navigazione (coincidenza perfetta con batch GPS)
-num_epoch = 2                                                                           # Numero di epoche di iterazione per l'addestramento
-numero_missioni = 16                                                                    # Numero di missioni da analizzare
+num_epoch = 80                                                                          # Numero di epoche di iterazione per l'addestramento
 network_config = {'DVL': 3, 'INS': 10}
 hidden_size = 100
 
