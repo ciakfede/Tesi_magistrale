@@ -295,7 +295,7 @@ class NavNet(nn.Module):
         #self.SAM_REF = SimplifiedAttentionMechanism(hidden_size=self.LSTM_REF.hidden_size)
 
         # Definizione struttura funzione di costo --> si sceglie una Euclidean Loss per restare coerenti con il paper
-        self.loss_criterion = nn.MSELoss()
+        self.loss_criterion = nn.L1Loss()
 
         # Definizione ottimizzatore per la backward propagation --> qui si usa il metodo Adams
         self.optimizer = optim.Adam(self.parameters(), lr=0.001, betas=(0.9, 0.999))
@@ -343,6 +343,7 @@ class NavNet(nn.Module):
 
     # Si crea una funzione per l'inizializzazione corretta dei pesi
     def initialize_weights(self):
+
         for m in self.modules():
             # Per i livelli lineari (FC e Attention)
             if isinstance(m, nn.Linear):
