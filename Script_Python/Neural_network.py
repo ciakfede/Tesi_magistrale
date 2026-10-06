@@ -220,16 +220,6 @@ class NavNet(nn.Module):
             nn.ReLU(),
             nn.Linear(input_size_FC//2, 2))
 
-        # Rete ricorsiva --> due LSTM da 100 hidden states l'uno posti in serie --> prodotti per ogni unità temporale vettori da freq(input)*100
-        #self.LSTM_IMU = nn.LSTM(input_size=10, hidden_size=100, num_layers=2, batch_first=True)
-        #self.LSTM_DVL = nn.LSTM(input_size=3, hidden_size=100, num_layers=2, batch_first=True)
-        #self.LSTM_REF = nn.LSTM(input_size=7, hidden_size=100, num_layers=2, batch_first=True)
-
-        # Simplified attention mechanism --> trattato come classe separata --> riceve in input i vettori dati dall LSTM e produce in output un vettore 100*1
-        #self.SAM_IMU = SimplifiedAttentionMechanism(hidden_size=self.LSTM_IMU.hidden_size)
-        #self.SAM_DVL = SimplifiedAttentionMechanism(hidden_size=self.LSTM_DVL.hidden_size)
-        #self.SAM_REF = SimplifiedAttentionMechanism(hidden_size=self.LSTM_REF.hidden_size)
-
         # Definizione struttura funzione di costo --> si sceglie una Euclidean Loss per restare coerenti con il paper
         self.loss_criterion = nn.MSELoss()
 
@@ -268,19 +258,6 @@ class NavNet(nn.Module):
 
         # 4. Passaggio dai fully connected layers
         predicted_displacement = self.FC(c)
-
-        # 1. Passaggio negli LSTM
-        #LSTM_outputs_IMU, _ = self.LSTMS['INS'](dati_IMU)
-        #LSTM_outputs_DVL, _ = self.LSTMS['DVL'](dati_DVL)
-        #LSTM_outputs_REF, _ = self.LSTM_REF(dati_ref)
-
-        # 2. Passaggio al meccanismo di attenzione semplificato
-        #Context_vector_IMU = self.SAMS['INS'](LSTM_outputs_IMU)
-        #Context_vector_DVL = self.SAMS['DVL'](LSTM_outputs_DVL)
-        #Context_vector_REF = self.SAM_REF(LSTM_outputs_REF)
-
-        # 3. Concatenazione dei vettori di contesto
-        #c = torch.cat((Context_vector_IMU, Context_vector_DVL), dim=1)
 
         return predicted_displacement
 
