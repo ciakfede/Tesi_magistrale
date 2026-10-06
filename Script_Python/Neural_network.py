@@ -106,8 +106,8 @@ class Dataset(torch.utils.data.Dataset):
                             # Si calcola il numero di misurazioni presenti in un secondo per il blocco di misurazioni di iterazione
                             sensor_frequency = sensors_frequencies[sensor_name]              # Frequenza del sensore
                             offset = 1 if sensor_name == 'GPS' else 0                        # Si definisce un offset di 1 secondo per il GPS --> in questo modo il delta viene stimato in base alle misurazioni del blocco dati precedente (il delta è la prima posizione del blocco per come è generato il dataset quindi userebbe dati non ancora esistenti al momento del calcolo del delta)
-                            batch_start_line = (second + offset) * sensor_frequency          # Ad es. 0 per t0=0s, 5/10/1 per t1=1s in base al sensore...
-                            batch_end_line = (second + 1 + offset) * sensor_frequency        # Ad es. 5/10/1 per t0=0s, 10/20/2 per t1=1s in base al sensore...
+                            batch_start_line = (second + offset) * sensor_frequency          # Ad es. 0 per t0=0s, 5/10/1 per t1=1s in base al sensore
+                            batch_end_line = (second + 1 + offset) * sensor_frequency        # Ad es. 5/10/1 per t0=0s, 10/20/2 per t1=1s in base al sensore
 
                             # Si isola la porzione di tensore associata a quella durata di misurazioni
                             porzione_tensore = sensor_tensor[batch_start_line:batch_end_line]
