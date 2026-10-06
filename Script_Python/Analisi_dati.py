@@ -1609,7 +1609,7 @@ class PostProcessing:
             with open(output_file_path, "a") as output_file:
 
                 if self.first_mission:
-                    output_file.write("\n=" * 100 + "\n")
+                    output_file.write("\n\n" + "=" * 100 + "\n")
                     output_file.write(" " * 26 + "RIASSUNTO VALORI DI RMSE (TEST vx)\n")
                     output_file.write("=" * 100 + "\n\n")
 

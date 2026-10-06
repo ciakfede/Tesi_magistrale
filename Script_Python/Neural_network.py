@@ -52,24 +52,25 @@ class Dataset(torch.utils.data.Dataset):
         if mode == 'train':
 
             self.training_batches_list = []                                                             # Nella forma [[tensor(5_IMU), tensor(10_DVL), tensor(1_GPS)], [...], ...] --> struttura ripetuta per tutti i secondi di ogni missione
-            self.training_unitary_batches_building(tensor_dict, sensor_frequencies, test_missions)
+            self.unitary_batches_building(tensor_dict, sensor_frequencies, test_missions)
 
         elif mode == 'validazione':
 
             self.validation_batches_list = []                                                           # Nella forma [[tensor(5_IMU), tensor(10_DVL), tensor(1_GPS)], [...], ...] --> struttura ripetuta per tutti i secondi di ogni missione
-            self.training_unitary_batches_building(tensor_dict, sensor_frequencies, test_missions)
+            self.unitary_batches_building(tensor_dict, sensor_frequencies, test_missions)
 
         elif mode == 'test':
 
             self.test_batches_dict = {}                                                                 # Nella forma {'Missione1': [[tensor(5_IMU), tensor(10_DVL), tensor(1_GPS)], ...], 'Missione2': []...} --> struttura ripetuta all'interno di ogni missione per tutti i secondi della missione e per tutte le missioni
-            self.training_unitary_batches_building(tensor_dict, sensor_frequencies, test_missions)
+            self.unitary_batches_building(tensor_dict, sensor_frequencies, test_missions)
 
     # Funzione che permette di ricevere in input il dizionario dei tensori prodotto e restituire una lista di liste, con le misurazioni normalizzate ricevute per singolo secondo di missione
-    def training_unitary_batches_building(self, tensor_dict, sensors_frequencies, test_missions):
+    def unitary_batches_building(self, tensor_dict, sensors_frequencies, test_missions):
 
         for trajectory, mission_dict in tensor_dict.items():
 
-            print(f"\n  Scomposizione del tensore per {self.mode} per le missioni associate alla traiettoria {trajectory} in corso:")
+            print(
+                f"\n  Scomposizione del tensore per {self.mode} per le missioni associate alla traiettoria {trajectory} in corso:")
 
             for combination, sensors_dict in mission_dict.items():
 
@@ -78,15 +79,15 @@ class Dataset(torch.utils.data.Dataset):
                     continue
 
                 # Si definisce la durata di missione [s] --> si prende come riferimento la colonna di GPS che ha 1 misura al secondo
-                mission_time = len(sensors_dict['GPS'])-1
+                mission_time = len(sensors_dict['GPS']) - 1
 
                 # Verifica della missione --> se il numero di missione è nella lista fornita in input si salta il resto del ciclo passando alla missione dopo
-                if (trajectory, combination) in test_missions:
+                if (trajectory, combination) in test_missions and self.mode == 'test':
                     if (trajectory, combination) not in self.test_batches_dict:
                         self.test_batches_dict[(trajectory, combination)] = []
-                    #continue
-
-                # Verifica della missione e della modalità --> si saltano le missioni di validazione se si è in modalità train e le missioni
+                elif (trajectory, combination) in test_missions and (
+                        self.mode == 'train' or self.mode == 'validazione'):
+                    continue
 
                 for second in range(mission_time):
 
@@ -105,10 +106,10 @@ class Dataset(torch.utils.data.Dataset):
                                 continue
 
                             # Si calcola il numero di misurazioni presenti in un secondo per il blocco di misurazioni di iterazione
-                            sensor_frequency = sensors_frequencies[sensor_name]              # Frequenza del sensore
-                            offset = 1 if sensor_name == 'GPS' else 0                        # Si definisce un offset di 1 secondo per il GPS --> in questo modo il delta viene stimato in base alle misurazioni del blocco dati precedente (il delta è la prima posizione del blocco per come è generato il dataset quindi userebbe dati non ancora esistenti al momento del calcolo del delta)
-                            batch_start_line = (second + offset) * sensor_frequency          # Ad es. 0 per t0=0s, 5/10/1 per t1=1s in base al sensore...
-                            batch_end_line = (second + 1 + offset) * sensor_frequency        # Ad es. 5/10/1 per t0=0s, 10/20/2 per t1=1s in base al sensore...
+                            sensor_frequency = sensors_frequencies[sensor_name]             # Frequenza del sensore
+                            offset = 1 if sensor_name == 'GPS' else 0                       # Si definisce un offset di 1 secondo per il GPS --> in questo modo il delta viene stimato in base alle misurazioni del blocco dati precedente (il delta è la prima posizione del blocco per come è generato il dataset quindi userebbe dati non ancora esistenti al momento del calcolo del delta)
+                            batch_start_line = (second + offset) * sensor_frequency         # Ad es. 0 per t0=0s, 5/10/1 per t1=1s in base al sensore...second + 1 + offset) * sensor_frequency
+                            batch_end_line = (second + 1 + offset) * sensor_frequency       # Ad es. 5/10/1 per t0=0s, 10/20/2 per t1=1s in base al sensore...
 
                             # Si isola la porzione di tensore associata a quella durata di misurazioni
                             porzione_tensore = sensor_tensor[batch_start_line:batch_end_line]
@@ -123,7 +124,8 @@ class Dataset(torch.utils.data.Dataset):
                             single_second_batches_list.append(porzione_tensore)
 
                         except Exception as e:
-                            print(f"    [WARNING] Errore nella fase di creazione del gruppo di batch unitarie per il secondo {second} --> {e}")
+                            print(
+                                f"    [WARNING] Errore nella fase di creazione del gruppo di batch unitarie per il secondo {second} --> {e}")
                             batch_is_valid = False
                             continue
 
