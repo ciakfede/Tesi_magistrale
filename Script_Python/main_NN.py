@@ -292,8 +292,10 @@ if do_training == 'S':
             IMU_data = batch[1]                 # Batch di dimensioni [32, 5, 10] --> contiene i 3 valori IMU, i 4 sensori MOT (FV, FL, FW1, FW2) e i 2 di velocità reference (Vxref, omega_yref)
             dati_gps = batch[2].squeeze(1)      # Batch di dimensioni [32, 1, 2] --> si vuole avere dimensione [32, 2] per congruenza con output rete neurale --> si elimina una dimensione dalla batch
 
+            data = {'DVL': DVL_data, 'INS': IMU_data}
+
             # Si richiama la funzione di aggiornamento pesi
-            training_batch_loss = rete_neurale.backpropagation(IMU_data, DVL_data, dati_gps)
+            training_batch_loss = rete_neurale.backpropagation(data, dati_gps)
 
             # Si aggiornano i valori per il calcolo della media dei pesi sulla singola epoca
             training_epoch_loss += training_batch_loss       # Aggiornamento del valore totale di perdita per l'epoca corrente
@@ -317,7 +319,9 @@ if do_training == 'S':
                 IMU_data = batch[1]
                 GPS_data = batch[2].squeeze(1)
 
-                NN_displacement_estimation = rete_neurale.forward(IMU_data, DVL_data)
+                data = {'DVL': DVL_data, 'INS': IMU_data}
+
+                NN_displacement_estimation = rete_neurale.forward(data)
 
                 # Calcolo della loss function
                 validation_batch_loss = rete_neurale.loss_criterion(NN_displacement_estimation, GPS_data)
@@ -423,7 +427,9 @@ for (trajectory, combination) in test_missions_dict:
             IMU_data = batch[1]
             GPS_data = batch[2].squeeze(1)
 
-            NN_displacement_estimation = rete_neurale.forward(IMU_data, DVL_data)
+            data = {'DVL': DVL_data, 'INS': IMU_data}
+
+            NN_displacement_estimation = rete_neurale.forward(data)
 
             # Si ritrasformano i dati in metri non-normalizzati, si sommano al valore di posizione precedente e si aggiungono alla lista complessiva per ottenere la traiettoria
             NN_displacement_meters = (NN_displacement_estimation * GPS_std) + GPS_mean
