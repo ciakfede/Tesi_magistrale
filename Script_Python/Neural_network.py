@@ -52,20 +52,20 @@ class Dataset(torch.utils.data.Dataset):
         if mode == 'train':
 
             self.training_batches_list = []                                                             # Nella forma [[tensor(5_IMU), tensor(10_DVL), tensor(1_GPS)], [...], ...] --> struttura ripetuta per tutti i secondi di ogni missione
-            self.training_unitary_batches_building(tensor_dict, sensor_frequencies, test_missions)
+            self.unitary_batches_building(tensor_dict, sensor_frequencies, test_missions)
 
         elif mode == 'validazione':
 
             self.validation_batches_list = []                                                           # Nella forma [[tensor(5_IMU), tensor(10_DVL), tensor(1_GPS)], [...], ...] --> struttura ripetuta per tutti i secondi di ogni missione
-            self.training_unitary_batches_building(tensor_dict, sensor_frequencies, test_missions)
+            self.unitary_batches_building(tensor_dict, sensor_frequencies, test_missions)
 
         elif mode == 'test':
 
             self.test_batches_dict = {}                                                                 # Nella forma {'Missione1': [[tensor(5_IMU), tensor(10_DVL), tensor(1_GPS)], ...], 'Missione2': []...} --> struttura ripetuta all'interno di ogni missione per tutti i secondi della missione e per tutte le missioni
-            self.test_unitary_batches_building(tensor_dict, sensor_frequencies, test_missions)
+            self.unitary_batches_building(tensor_dict, sensor_frequencies, test_missions)
 
     # Funzione che permette di ricevere in input il dizionario dei tensori prodotto e restituire una lista di liste, con le misurazioni normalizzate ricevute per singolo secondo di missione
-    def training_unitary_batches_building(self, tensor_dict, sensors_frequencies, test_missions):
+    def unitary_batches_building(self, tensor_dict, sensors_frequencies, test_missions):
 
         for trajectory, mission_dict in tensor_dict.items():
 
@@ -81,10 +81,11 @@ class Dataset(torch.utils.data.Dataset):
                 mission_time = len(sensors_dict['GPS'])-1
 
                 # Verifica della missione --> se il numero di missione è nella lista fornita in input si salta il resto del ciclo passando alla missione dopo
-                if (trajectory, combination) in test_missions:
+                if (trajectory, combination) in test_missions and self.mode == 'test':
+                    if (trajectory, combination) not in self.test_batches_dict:
+                        self.test_batches_dict[(trajectory, combination)] = []
+                elif (trajectory, combination) in test_missions and (self.mode == 'train' or self.mode == 'validazione'):
                     continue
-
-                # Verifica della missione e della modalità --> si saltano le missioni di validazione se si è in modalità train e le missioni
 
                 for second in range(mission_time):
 
@@ -130,80 +131,14 @@ class Dataset(torch.utils.data.Dataset):
                         self.training_batches_list.append(single_second_batches_list)
                     elif batch_is_valid and (trajectory, combination) in self.validation_missions_dict and self.mode == 'validazione':
                         self.validation_batches_list.append(single_second_batches_list)
+                    elif batch_is_valid and (trajectory, combination) in test_missions and self.mode == 'test':
+                        self.test_batches_dict[(trajectory, combination)].append(single_second_batches_list)
                     else:
                         continue
 
                 print(f'  Batch unitarie per la missione {trajectory} - {combination} definite correttamente.')
 
         return self
-
-    # Funzione che permette di ricevere in input il dizionario di tensori prodotto e restituire un dizionario contenente le liste di liste contenenti le misurazioni normalizzate ricevute per singolo secondo delle sole missioni di test
-    def test_unitary_batches_building(self, tensor_dict, sensors_frequencies, test_missions):
-
-        for trajectory, mission_dict in tensor_dict.items():
-
-            print(f"\nScomposizione del tensore per le missioni di test associate alla traiettoria {trajectory} in corso:")
-
-            for combination, sensors_dict in mission_dict.items():
-
-                if not sensors_dict:
-                    continue
-
-                # Si definisce la durata di missione [s] --> si prende come riferimento la colonna di GPS che ha 1 misura al secondo
-                mission_time = len(sensors_dict['GPS'])-1
-
-                # Verifica della missione --> se il numero di missione non è nella lista fornita in input si salta il resto del ciclo passando alla missione dopo
-                if (trajectory, combination) not in test_missions:
-                    continue
-
-                # Si inizializza la lista associata alla missione nel dizionario delle batch
-                mission = (trajectory, combination)
-                if mission not in self.test_batches_dict:
-                    self.test_batches_dict[mission] = []
-
-                for second in range(mission_time):
-
-                    # Si inizializza una lista vuota che conterrà n tensori --> un tensore per ogni blocco sensori contenente le relative misurazioni di 1 secondo
-                    single_second_batches_list = []
-
-                    # Si inizializza la variabile booleana di controllo
-                    batch_is_valid = True
-
-                    # Si itera su ogni elemento presente all'interno del dizionario dei sensori, che rappresenta il tensore di ogni gruppo di misurazioni previsto
-                    for sensor_name, sensor_tensor in sensors_dict.items():
-
-                        try:
-
-                            # Si calcola il numero di misurazioni presenti in un secondo per il blocco di misurazioni di iterazione
-                            sensor_frequency = sensors_frequencies[sensor_name]              # Frequenza del sensore
-                            offset = 1 if sensor_name == 'GPS' else 0                        # Si definisce un offset di 1 secondo per il GPS --> in questo modo il delta viene stimato in base alle misurazioni del blocco dati precedente (il delta è la prima posizione del blocco per come è generato il dataset quindi userebbe dati non ancora esistenti al momento del calcolo del delta)
-                            batch_start_line = (second + offset) * sensor_frequency          # Ad es. 0 per t0=0s, 5/10/1 per t1=1s in base al sensore...
-                            batch_end_line = (second + 1 + offset) * sensor_frequency        # Ad es. 5/10/1 per t0=0s, 10/20/2 per t1=1s in base al sensore...
-
-                            # Si isola la porzione di tensore associata a quella durata di misurazioni
-                            porzione_tensore = sensor_tensor[batch_start_line:batch_end_line]
-
-                            # Controllo di validità della batch --> serve che il numero sia sempre lo stesso o altrimenti si scarta l'intero secondo
-                            if porzione_tensore.shape[0] != sensor_frequency:
-                                batch_is_valid = False
-                                print(f'    [WARNING]: Al secondo {second} della missione {trajectory} - {combination}, il blocco di sensori {sensor_name} presenta un numero di valori diverso dalla frequenza prevista.')
-                                break
-
-                            # Si aggiunge la porzione del sensore alla lista di batch per il secondo di iterazione
-                            single_second_batches_list.append(porzione_tensore)
-
-                        except Exception as e:
-                            print(f"    [WARNING] Errore nella fase di creazione del gruppo di batch unitarie per il secondo {second} --> {e}")
-                            batch_is_valid = False
-                            continue
-
-                    # Si aggiunge alla lista completa delle batch la sottolista contenente i dati dei sensori per il secondo di iterazione se le dimensioni singole sono corrette
-                    if batch_is_valid:
-                        self.test_batches_dict[mission].append(single_second_batches_list)
-
-                print(f'  Batch unitarie per la missione {trajectory} - {combination} definite correttamente.')
-
-        return self.test_batches_dict
 
     # Funzione che porta a definire il numero di campioni da 1 secondo accumulati --> necessaria per usare len(dataset) e per il dataloader
     def __len__(self):
@@ -284,16 +219,6 @@ class NavNet(nn.Module):
             nn.ReLU(),
             nn.Linear(input_size_FC//2, 2))
 
-        # Rete ricorsiva --> due LSTM da 100 hidden states l'uno posti in serie --> prodotti per ogni unità temporale vettori da freq(input)*100
-        #self.LSTM_IMU = nn.LSTM(input_size=10, hidden_size=100, num_layers=2, batch_first=True)
-        #self.LSTM_DVL = nn.LSTM(input_size=3, hidden_size=100, num_layers=2, batch_first=True)
-        #self.LSTM_REF = nn.LSTM(input_size=7, hidden_size=100, num_layers=2, batch_first=True)
-
-        # Simplified attention mechanism --> trattato come classe separata --> riceve in input i vettori dati dall LSTM e produce in output un vettore 100*1
-        #self.SAM_IMU = SimplifiedAttentionMechanism(hidden_size=self.LSTM_IMU.hidden_size)
-        #self.SAM_DVL = SimplifiedAttentionMechanism(hidden_size=self.LSTM_DVL.hidden_size)
-        #self.SAM_REF = SimplifiedAttentionMechanism(hidden_size=self.LSTM_REF.hidden_size)
-
         # Definizione struttura funzione di costo --> si sceglie una Euclidean Loss per restare coerenti con il paper
         self.loss_criterion = nn.L1Loss()
 
@@ -305,34 +230,41 @@ class NavNet(nn.Module):
         self.optimizer = new_optimizer(self.parameters(), **kwargs)
 
     # Si crea ora la funzione che gestisce la forward propagation della rete neurale
-    def forward(self, dati_IMU, dati_DVL):
+    def forward(self, data):
 
-        # Si itera su ogni elemento presente nel dizionario
+        # Si itera su ogni elemento presente nel dizionario dei dati per ramo
+        first_batch = True
+        previous_context_vector = torch.empty_like(data['DVL'])
+        c = torch.empty_like(data['DVL'])
+        for key, batch in data.items():
 
-        # 1. Passaggio negli LSTM
-        LSTM_outputs_IMU, _ = self.LSTMS['INS'](dati_IMU)
-        LSTM_outputs_DVL, _ = self.LSTMS['DVL'](dati_DVL)
-        #LSTM_outputs_REF, _ = self.LSTM_REF(dati_ref)
+            # 1. Passaggio negli LSTM
+            LSTM_output, _ = self.LSTMS[key](batch)
 
-        # 2. Passaggio al meccanismo di attenzione semplificato
-        Context_vector_IMU = self.SAMS['INS'](LSTM_outputs_IMU)
-        Context_vector_DVL = self.SAMS['DVL'](LSTM_outputs_DVL)
-        #Context_vector_REF = self.SAM_REF(LSTM_outputs_REF)
+            # 2. Passaggio attraverso il meccanismo di attenzione semplificato
+            context_vector = self.SAMS[key](LSTM_output)
 
-        # 3. Concatenazione dei vettori di contesto
-        c = torch.cat((Context_vector_IMU, Context_vector_DVL), dim=1)
+            # 3. Concatenazione dei vettori prodotti --> se è la prima iterazione salvo solo il vettore prodotto e poi continuo --> altrimenti si unisce il precedente vettore a quello nuovo e, infine, si aggiorna il vettore vecchio con quello concatenato creato
+            if first_batch:
+                first_batch = False
+                previous_context_vector = context_vector
+                continue
+            else:
+                c = torch.cat((previous_context_vector, context_vector), dim=1)
+
+            previous_context_vector = c
 
         # 4. Passaggio dai fully connected layers
-        posizione_predetta = self.FC(c)
+        predicted_displacement = self.FC(c)
 
-        return posizione_predetta
+        return predicted_displacement
 
     # Si crea una funzione per l'aggiornamento dei pesi tramite backpropagation per ogni epoca di addestramento
-    def backpropagation(self, dati_IMU, dati_DVL, pos_target):
+    def backpropagation(self, data, pos_target):
 
         # Fase di forward propagation della rete neurale --> viene eseguita e genera i valori obiettivo
         self.optimizer.zero_grad()                              # Funzione che resetta tutti i gradienti dei tensori gestiti dall'optimizer all'inizio di ogni iterazione
-        pos_predetta = self.forward(dati_IMU, dati_DVL)         # Richiamo la rete neurale sui dati (all'interno di appositi dataframe) da analizzare
+        pos_predetta = self.forward(data)         # Richiamo la rete neurale sui dati (all'interno di appositi dataframe) da analizzare
 
         # Fase di backward optimization --> si ottimizzano i pesi introdotti
         loss = self.loss_criterion(pos_predetta, pos_target)    # Calcolo della perdita associata alla predizione rispetto al target

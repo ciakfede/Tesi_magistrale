@@ -8,6 +8,7 @@ __pycache__/
 .idea/
 Dizionari_datasets/
 Storico_pesi/
+Storico_test/
 
 # Estensioni file da non considerare mai
 *.aux
