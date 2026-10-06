@@ -1647,8 +1647,8 @@ class PostProcessing:
         # Si trasformano le liste di tensori in array numpy --> in modo da poter effettuare operazioni matematiche vettoriali
         GPS_coordinates_array = torch.cat(GPS_coordinates, dim=0).cpu().numpy()
         NN_coordinates_array = torch.cat(NN_coordinates, dim=0).cpu().numpy()
-        #GPS_coordinates_array = np.array([t.detach().cpu().numpy().flatten() for t in GPS_coordinates])
-        #NN_coordinates_array = np.array([t.detach().cpu().numpy().flatten() for t in NN_coordinates])
+        # GPS_coordinates_array = np.array([t.detach().cpu().numpy().flatten() for t in GPS_coordinates])
+        # NN_coordinates_array = np.array([t.detach().cpu().numpy().flatten() for t in NN_coordinates])
 
         # Si calcola l'errore RMSE per gli assi East e North separatamente
         self.NN_recap_dict['RMSE_E'] = np.sqrt(mean_squared_error(GPS_coordinates_array[:, 0], NN_coordinates_array[:, 0]))
@@ -1732,7 +1732,15 @@ class PostProcessing:
         plt.grid(True, linestyle=':', alpha=0.6)
         plt.axis('equal')
 
+        # Si stampa il testo legato all'errore assoluto sulla posizione
+        Delta_E = np.abs(GPS_East[-1] - NN_East[-1])
+        Delta_N = np.abs(GPS_North[-1] - NN_North[-1])
+        print(f'\nPer la missione {mission} e la traiettoria {path_name}, si hanno i seguenti valori di Errore Assoluto sulla posizione:')
+        print(f'    Delta sulla posizione in direzione North è pari a: {Delta_N} m.')
+        print(f'    Delta sulla posizione in direzione East è pari a: {Delta_E} m.')
+
         plt.savefig(output_file_path, bbox_inches='tight')
+        #plt.show()
         plt.close()
 
     # Funzione che permette di stampare il grafico relativo alla loss function durante il training

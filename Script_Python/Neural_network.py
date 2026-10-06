@@ -220,6 +220,16 @@ class NavNet(nn.Module):
             nn.ReLU(),
             nn.Linear(input_size_FC//2, 2))
 
+        # Rete ricorsiva --> due LSTM da 100 hidden states l'uno posti in serie --> prodotti per ogni unità temporale vettori da freq(input)*100
+        #self.LSTM_IMU = nn.LSTM(input_size=10, hidden_size=100, num_layers=2, batch_first=True)
+        #self.LSTM_DVL = nn.LSTM(input_size=3, hidden_size=100, num_layers=2, batch_first=True)
+        #self.LSTM_REF = nn.LSTM(input_size=7, hidden_size=100, num_layers=2, batch_first=True)
+
+        # Simplified attention mechanism --> trattato come classe separata --> riceve in input i vettori dati dall LSTM e produce in output un vettore 100*1
+        #self.SAM_IMU = SimplifiedAttentionMechanism(hidden_size=self.LSTM_IMU.hidden_size)
+        #self.SAM_DVL = SimplifiedAttentionMechanism(hidden_size=self.LSTM_DVL.hidden_size)
+        #self.SAM_REF = SimplifiedAttentionMechanism(hidden_size=self.LSTM_REF.hidden_size)
+
         # Definizione struttura funzione di costo --> si sceglie una Euclidean Loss per restare coerenti con il paper
         self.loss_criterion = nn.MSELoss()
 
@@ -290,6 +300,7 @@ class NavNet(nn.Module):
 
     # Si crea una funzione per l'inizializzazione corretta dei pesi
     def initialize_weights(self):
+
         for m in self.modules():
             # Per i livelli lineari (FC e Attention)
             if isinstance(m, nn.Linear):
