@@ -1027,11 +1027,11 @@ class PreProcessing:
         elif sensor_name == 'MOT':
             sensor_dataframe = sensor_dataframe.drop(columns=['Mot_RV [%]', 'Mot_RL [%]'], errors='ignore')
 
-        elif sensor_name == 'IMU':
-            yaw_rad = np.radians(sensor_dataframe['Yaw [deg]'])
-            sensor_dataframe = sensor_dataframe.drop(columns=['Yaw [deg]'], errors='ignore')
-            sensor_dataframe['Yaw_sin'] = np.sin(yaw_rad)
-            sensor_dataframe['Yaw_cos'] = np.cos(yaw_rad)
+        #elif sensor_name == 'IMU':
+            #yaw_rad = np.radians(sensor_dataframe['Yaw [deg]'])
+            #sensor_dataframe = sensor_dataframe.drop(columns=['Yaw [deg]'], errors='ignore')
+            #sensor_dataframe['Yaw_sin'] = np.sin(yaw_rad)
+            #sensor_dataframe['Yaw_cos'] = np.cos(yaw_rad)
 
         return sensor_dataframe
 
@@ -1238,13 +1238,9 @@ class PostProcessing:
 
         self.test_missions_dict = {}        # Dizionario che conterrà le liste dei range temporali associati alle singole traiettorie di ogni missione prescelta per il test --> nella forma {('0', '4'): [(), (), (), ()], ('0', '8'): [...], ...}
 
-        self.warn_count = 0
+        self.warn_count = 0                 # Si inizializza il contatore dei warning per le operazioni iterative
 
-        self.RMSE_E = None
-
-        self.RMSE_N = None
-
-        self.RMSE_tot = None
+        self.NN_recap_dict = {}             # Dizionario contenente i valori di recap delle prestazioni delle reti neurali
 
         self.first_mission = True           # Variabile booleana per l'intestazione del file di testo sull'errore RMSE
 
@@ -1599,33 +1595,41 @@ class PostProcessing:
     # ======================================================
 
     # Funzione interna che riceve in input i valori di RMSE della traiettoria e li trascrive su un file di testo riassuntivo
-    def write_RMSE_on_txt(self, ROOT_DIR, mission):
+    def write_NN_recap_on_txt(self, ROOT_DIR, mission, path_name):
 
         # Si definisce il percorso di output del file
         OUTPUT_FOLDER_PATH = os.path.join(ROOT_DIR, 'Risultati_NN')
         os.makedirs(OUTPUT_FOLDER_PATH, exist_ok=True)
-        output_file_path = os.path.join(OUTPUT_FOLDER_PATH, f"RMSE_info.txt")
+        output_file_path = os.path.join(OUTPUT_FOLDER_PATH, f"NN_evaluations_info.txt")
 
         try:
 
-            print("\n  Salvataggio valori di RMSE in corso:")
+            print(f"\n  Salvataggio parametri di valutazione calcolati sul file di testo {output_file_path} in corso:")
 
             with open(output_file_path, "a") as output_file:
 
                 if self.first_mission:
                     output_file.write("=" * 100 + "\n")
-                    output_file.write(" " * 18 + "RIASSUNTO VALORI DI RMSE (TEST x)\n")
-                    output_file.write("=" * 100 + "\n\n\n")
+                    output_file.write(" " * 26 + "RIASSUNTO VALORI DI RMSE (TEST vx)\n")
+                    output_file.write("=" * 100 + "\n\n")
 
-                output_file.write("-" * 100 + "\n")
-                output_file.write(f"\nValori di Root Mean Square Error per la missione {mission}:\n")
+                output_file.write("\n" + "-" * 100 + "\n")
+                output_file.write(f"\nPARAMETRI DI PERFORMANCE PER {mission} - {path_name}:\n")
 
-                output_file.write(f"  RMSE in direzione East: {self.RMSE_E} m\n")
-                output_file.write(f"  RMSE in direzione North: {self.RMSE_N} m\n")
-                output_file.write(f"  RMSE complessivo: {self.RMSE_tot} m\n")
+                output_file.write(f"\nValori di Root Mean Square Error:\n")
+                output_file.write(f"  RMSE in direzione East: {self.NN_recap_dict['RMSE_E']} m\n")
+                output_file.write(f"  RMSE in direzione North: {self.NN_recap_dict['RMSE_N']} m\n")
+                output_file.write(f"  RMSE complessivo: {self.NN_recap_dict['RMSE_tot']} m\n")
+
+                output_file.write(f"\nValori di spostamento rispetto all'ultimo punto della missione:\n")
+                output_file.write(f"  Delta_East finale: {self.NN_recap_dict['Delta_E_end']} m\n")
+                output_file.write(f"  Delta_North finale: {self.NN_recap_dict['Delta_N_end']} m\n")
+                output_file.write(f"  Delta_tot finale: {self.NN_recap_dict['Delta_tot_end']} m\n")
+
+            print(f"    Salvataggio avvenuto correttamente.")
 
         except FileNotFoundError:
-            raise FileNotFoundError(f"  [ERROR] Errore, cartella {OUTPUT_FOLDER_PATH} o file {output_file_path} non trovato") from None
+            raise FileNotFoundError(f"    [ERROR] Errore, cartella {OUTPUT_FOLDER_PATH} o file {output_file_path} non trovato") from None
 
         except Exception as e:
             print(f"    [WARNING] Errore nel processo di salvataggio su file dei dati --> {e}")
@@ -1634,7 +1638,11 @@ class PostProcessing:
         return self
 
     # Funzione che riceve in input una lista di tensori (rappresentanti i valori di posizione GPS e predette) per ogni missione di test e produce in output i 3 valori di errore RMSE
-    def RMSE_estimation(self, GPS_coordinates, NN_coordinates, ROOT_DIR, mission):
+    def NN_recap_estimation(self, GPS_coordinates, NN_coordinates, ROOT_DIR, mission, path_name):
+
+        print(f"\nCalcolo parametri di valutazione NN per la missione {mission[0]} - {mission[1]} in corso:")
+
+        print(f"\n  Calcolo RMSE su assi E, N e complessiva:")
 
         # Si trasformano le liste di tensori in array numpy --> in modo da poter effettuare operazioni matematiche vettoriali
         GPS_coordinates_array = torch.cat(GPS_coordinates, dim=0).cpu().numpy()
@@ -1643,19 +1651,32 @@ class PostProcessing:
         #NN_coordinates_array = np.array([t.detach().cpu().numpy().flatten() for t in NN_coordinates])
 
         # Si calcola l'errore RMSE per gli assi East e North separatamente
-        self.RMSE_E = np.sqrt(mean_squared_error(GPS_coordinates_array[:, 0], NN_coordinates_array[:, 0]))
-        self.RMSE_N = np.sqrt(mean_squared_error(GPS_coordinates_array[:, 1], NN_coordinates_array[:, 1]))
+        self.NN_recap_dict['RMSE_E'] = np.sqrt(mean_squared_error(GPS_coordinates_array[:, 0], NN_coordinates_array[:, 0]))
+        self.NN_recap_dict['RMSE_N'] = np.sqrt(mean_squared_error(GPS_coordinates_array[:, 1], NN_coordinates_array[:, 1]))
 
         # Si calcola l'errore RMSE complessivo sulla posizione --> si usa approccio differente per avere anche il vettore degli errori nel tempo, in modo da poterlo valutare graficamente
-        errori_tot = np.linalg.norm(GPS_coordinates_array - NN_coordinates_array, axis=1)  # Si calcola la norma di un vettore --> necessario per ottenere l'errore sulla posizione assoluta
-        self.RMSE_tot = np.sqrt(np.mean(errori_tot ** 2))
+        total_errors = np.linalg.norm(GPS_coordinates_array - NN_coordinates_array, axis=1)  # Si calcola la norma di un vettore --> necessario per ottenere l'errore sulla posizione assoluta
+        self.NN_recap_dict['RMSE_tot'] = np.sqrt(np.mean(total_errors ** 2))
 
-        print(f'    RMSE sulla posizione in direzione North è pari a: {self.RMSE_N} m.')
-        print(f'    RMSE sulla posizione in direzione East è pari a: {self.RMSE_E} m.')
-        print(f'    RMSE sulla posizione complessiva è pari a: {self.RMSE_tot} m.')
+        print(f'    Calcolo e salvataggio RMSE eseguito correttamente.')
+
+        print(f"\n  Calcolo spostamenti lungo gli assi E, N e complessivo in corrispondenza del punto finale:")
+
+        # Si scompongono i vettori nelle rispettive componenti
+        GPS_East = [p[0] for p in GPS_coordinates_array]
+        GPS_North = [p[1] for p in GPS_coordinates_array]
+        NN_East = [p[0] for p in NN_coordinates_array]
+        NN_North = [p[1] for p in NN_coordinates_array]
+
+        # Si stampa il testo legato all'errore assoluto sulla posizione
+        self.NN_recap_dict['Delta_E_end'] = np.abs(GPS_East[-1] - NN_East[-1])
+        self.NN_recap_dict['Delta_N_end'] = np.abs(GPS_North[-1] - NN_North[-1])
+        self.NN_recap_dict['Delta_tot_end'] = np.hypot(self.NN_recap_dict['Delta_E_end'], self.NN_recap_dict['Delta_N_end'])
+
+        print(f"    Calcolo e salvataggio Delta eseguito correttamente.")
 
         # Si richiama la funzione per trascrivere le informazioni calcolate su file di testo
-        self.write_RMSE_on_txt(ROOT_DIR, mission)
+        self.write_NN_recap_on_txt(ROOT_DIR, mission, path_name)
 
         return self
 
@@ -1711,15 +1732,7 @@ class PostProcessing:
         plt.grid(True, linestyle=':', alpha=0.6)
         plt.axis('equal')
 
-        # Si stampa il testo legato all'errore assoluto sulla posizione
-        Delta_E = np.abs(GPS_East[-1] - NN_East[-1])
-        Delta_N = np.abs(GPS_North[-1] - NN_North[-1])
-        print(f'\nPer la missione {mission} e la traiettoria {path_name}, si hanno i seguenti valori di Errore Assoluto sulla posizione:')
-        print(f'    Delta sulla posizione in direzione North è pari a: {Delta_N} m.')
-        print(f'    Delta sulla posizione in direzione East è pari a: {Delta_E} m.')
-
         plt.savefig(output_file_path, bbox_inches='tight')
-        #plt.show()
         plt.close()
 
     # Funzione che permette di stampare il grafico relativo alla loss function durante il training

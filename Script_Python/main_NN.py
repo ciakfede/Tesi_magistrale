@@ -38,11 +38,11 @@ def stima_trapezoidale(velocita, timestamps, ROOT_DIR, pos_iniziale=0):
 #              INIZIALIZZAZIONE VARIABILI
 # ======================================================
 
-# Variabili legate alla rete neurale
+# Variabili legate alla configurazione della rete neurale
 batch_size = 32                                                                         # Numero di secondi di missione forniti contemporaneamente alla rete
 batch_size_test = 1                                                                     # Per il test si usa una batch size di 1s --> si ottiene la stima della posizione per ogni secondo di navigazione (coincidenza perfetta con batch GPS)
-num_epoch = 80                                                                          # Numero di epoche di iterazione per l'addestramento
-network_config = {'DVL': 3, 'INS': 10}
+num_epoch = 60                                                                          # Numero di epoche di iterazione per l'addestramento
+network_config = {'DVL': 3, 'INS': 9}
 hidden_size = 100
 
 sensors_frequencies = {'IMU': 5, 'DVL': 10, 'Depth': 5, 'DepthVel': 5, 'MOT': 5, 'V_ref': 5, 'GPS': 1}             # Frequenze associate ai sensori
@@ -474,8 +474,7 @@ for (trajectory, combination) in test_missions_dict:
 
             # Si calcola l'errore RMSE sui vettori prodotti
             #RMSE_NN.append(RMSE_NN_tot)
-            print(f'\nPer la missione {trajectory} - {combination} e il percorso {path_name}, si hanno i seguenti valori di Root Mean Squared Error:')
-            post_processing.RMSE_estimation(GPS_coordinates_list, NN_coordinates_list, ROOT_DIR, mission)
+            post_processing.NN_recap_estimation(GPS_coordinates_list, NN_coordinates_list, ROOT_DIR, mission, path_name)
             post_processing.first_mission = False
 
             # Si realizza il grafico associato alla singola traiettoria
