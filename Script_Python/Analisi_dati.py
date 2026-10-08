@@ -62,8 +62,8 @@ class PreProcessing:
                             'Attitude': ['Roll [deg]', 'Pitch [deg]', 'Yaw [deg]'],
                             'Depth': ['Depth [m]'],
                             'DepthVel': ['Depth_Rate [m/s]'],
-                            'AxisRef': ['Ref_Vx [%]', 'Ref_Vy [%]', 'Ref_Vz [%]', 'Ref_ωx [%]', 'Ref_ωy [%]', 'Ref_ωz [%]'],
                             'MotorRef': ['Mot_FV [%]', 'Mot_FL [%]', 'Mot_RV [%]', 'Mot_RL [%]', 'Mot_FW1 [%]', 'Mot_FW2 [%]', 'Mot_FW3 [%]', 'Mot_FW4 [%]'],
+                            'AxisRef': ['Ref_Vx [%]', 'Ref_Vy [%]', 'Ref_Vz [%]', 'Ref_ωx [%]', 'Ref_ωy [%]', 'Ref_ωz [%]'],
                             'UTMPos': ['UTM_North [m]', 'UTM_East [m]', 'Zone', 'Quality']}
 
         # Si definiscono i blocchi di sensori con frequenze differenti --> tuple che contengono sia le colonne che la frequenza associata oltre che la lista di destinazione associata all'attributo self --> sono quelli usati per il processing
@@ -86,7 +86,7 @@ class PreProcessing:
 
         try:
 
-            print(f"\n  Analisi file di configurazione per estrazione dati associati alle missioni in corso:")
+            print(f"\n    Analisi file di configurazione per estrazione dati associati alle missioni in corso:")
 
             with open(file_config, "r") as file:
 
@@ -108,11 +108,13 @@ class PreProcessing:
                         if line[0] != '':
                             self.config_matrix[traj_number].append(line[0])  # Si aggiunge alla lista della traiettoria la stringa con la combinazione scenario ambientale/operativo
 
+            print(f"      Dizionario contenente la matrice delle configurazioni delle varie missioni generata correttamente.")
+
         except FileNotFoundError:
-            raise FileNotFoundError(f"    [ERROR] Il {file_config} non è stato trovato. Ricontrollare il percorso del file.") from None
+            raise FileNotFoundError(f"      [ERROR] Il {file_config} non è stato trovato. Ricontrollare il percorso del file.") from None
 
         except Exception as e:
-            print(f"    [WARNING] Errore nella lettura del file di testo {file_config} --> {e}")
+            print(f"      [WARNING] Errore nella lettura del file di testo {file_config} --> {e}")
 
         return self
 
@@ -141,7 +143,7 @@ class PreProcessing:
 
         except Exception as e:
             self.warn_count += 1
-            print(f"    [WARNING] Errore nel processo di pulizia del dataframe associato alla missione {trajectory} - {combination} --> {e}")
+            print(f"      [WARNING] Errore nel processo di pulizia del dataframe associato alla missione {trajectory} - {combination} --> {e}")
             mission_dataframe = pd.DataFrame()
 
         return mission_dataframe
@@ -162,7 +164,7 @@ class PreProcessing:
         # Si itera su ogni traiettoria simulata --> l'elemento config_list è una lista di stringhe contenenti la coppia configurazione ambientale/operativa del drone in simulazione
         for trajectory, config_list in self.config_matrix.items():
 
-            print(f'\n  Analisi file csv per traiettoria {trajectory} in corso:')
+            print(f'\n    Analisi file csv per traiettoria {trajectory} in corso:')
 
             # Si definisce la cartella di riferimento
             input_folder = os.path.join(ROOT_DIR, f'Telemetrie/Telemetria_traiettoria_{trajectory}')
@@ -186,7 +188,7 @@ class PreProcessing:
 
                         # Check di verifica sul DataFrame di missione vuoto già al momento dell'estrazione --> si segnala ma per il momento non si fa gestisce appositamente
                         if mission_dataframe.empty:
-                            print(f"    [WARNING] Il DataFrame associato alla missione {trajectory} - {combination} risulta essere vuoto al momento dell'estrazione dati. Ricontrollare il file csv di origine.")
+                            print(f"      [WARNING] Il DataFrame associato alla missione {trajectory} - {combination} risulta essere vuoto al momento dell'estrazione dati. Ricontrollare il file csv di origine.")
                             self.warn_count += 1
                             dataframes_dict[trajectory][combination] = pd.DataFrame()
                             continue
@@ -196,19 +198,19 @@ class PreProcessing:
                     except FileNotFoundError:
                         dataframes_dict[trajectory][combination] = pd.DataFrame()
                         self.warn_count += 1
-                        print(f'    [WANRING] File di telemetria per la missione {trajectory} - {combination} non trovato.')
+                        print(f'      [WANRING] File di telemetria per la missione {trajectory} - {combination} non trovato.')
                         continue
 
                     except DtypeWarning:
                         mission_dataframe = pd.read_csv(telemetry_file_name, low_memory=False)
                         dataframes_dict[trajectory][combination] = mission_dataframe
                         self.warn_count += 1
-                        print(f'    [WARNING] Il file di telemetria per la missione {trajectory} - {combination} contiene valori di tipo misto (problema opportunamente corretto dopo).')
+                        print(f'      [WARNING] Il file di telemetria per la missione {trajectory} - {combination} contiene valori di tipo misto (problema opportunamente corretto dopo).')
 
                     except Exception as e:
                         dataframes_dict[trajectory][combination] = pd.DataFrame()
                         self.warn_count += 1
-                        print(f'    [WARNING] Errore nel processo di analisi ed estrazione dati dal file di telemetria per la missione {trajectory} - {combination} --> {e}')
+                        print(f'      [WARNING] Errore nel processo di analisi ed estrazione dati dal file di telemetria per la missione {trajectory} - {combination} --> {e}')
                         continue
 
                 else:
@@ -228,7 +230,7 @@ class PreProcessing:
                         INS_dataframe = pd.read_csv(INS_csv)
 
                         if DVL_dataframe.empty or INS_dataframe.empty:
-                            print(f"    [WARNING] Il DataFrame associato alla missione {trajectory} - {combination} risulta essere vuoto al momento dell'estrazione dati. Ricontrollare il file csv di origine.")
+                            print(f"      [WARNING] Il DataFrame associato alla missione {trajectory} - {combination} risulta essere vuoto al momento dell'estrazione dati. Ricontrollare il file csv di origine.")
                             self.warn_count += 1
                             dataframes_dict[trajectory][combination] = pd.DataFrame()
                             continue
@@ -244,7 +246,7 @@ class PreProcessing:
                     except FileNotFoundError:
                         dataframes_dict[trajectory][combination] = pd.DataFrame()
                         self.warn_count += 1
-                        print(f'    [WANRING] File di telemetria per la missione {trajectory} - {combination} non trovato.')
+                        print(f'      [WANRING] File di telemetria per la missione {trajectory} - {combination} non trovato.')
                         continue
 
                     except DtypeWarning:
@@ -254,15 +256,15 @@ class PreProcessing:
                         mission_dataframe = mission_dataframe.sort_values('timestamp', ignore_index=True)
                         dataframes_dict[trajectory][combination] = mission_dataframe
                         self.warn_count += 1
-                        print(f'    [WARNING] Il file di telemetria della missione {trajectory} - {combination} contiene valori di tipo misto (problema opportunamente corretto dopo).')
+                        print(f'      [WARNING] Il file di telemetria della missione {trajectory} - {combination} contiene valori di tipo misto (problema opportunamente corretto dopo).')
 
                     except Exception as e:
                         dataframes_dict[trajectory][combination] = pd.DataFrame()
                         self.warn_count += 1
-                        print(f'    [WARNING] Errore nel processo di unificazione e estrazione dati dai file di telemetria per la missione {trajectory} - {combination} --> {e}')
+                        print(f'      [WARNING] Errore nel processo di unificazione e estrazione dati dai file di telemetria per la missione {trajectory} - {combination} --> {e}')
                         continue
 
-            print(f"    Unificazione file csv per la traiettoria {trajectory} completata con {self.warn_count} warnings.")
+            print(f"      Unificazione file csv per la traiettoria {trajectory} completata con {self.warn_count} warnings.")
 
         # -----------------------------------------------------
         #      GENERAZIONE DIZIONARIO DATAFRAME GLOBALE
@@ -271,7 +273,7 @@ class PreProcessing:
         # Si itera su ogni missione presente all'interno del dizionario
         for trajectory, mission_dict in dataframes_dict.items():
 
-            print(f'\n  Estrazione dati di telemetria per missioni traiettoria {trajectory} in corso:')
+            print(f'\n    Estrazione dati di telemetria per missioni traiettoria {trajectory} in corso:')
 
             # Si salva il dataframe all'interno di un dizionario assegnandola alla singola missione
             if trajectory not in self.raw_database:
@@ -331,10 +333,10 @@ class PreProcessing:
                     if (trajectory, combination) not in self.empty_missions_list:
                         self.empty_missions_list.append((trajectory, combination))
                     self.warn_count += 1
-                    print(f'    [WARNING] Errore nel processo di formattazione del dataframe per la missione {trajectory} - {combination} (missione non considerata) --> {e}')
+                    print(f'      [WARNING] Errore nel processo di formattazione del dataframe per la missione {trajectory} - {combination} (missione non considerata) --> {e}')
                     continue
 
-            print(f'    I dataframe globali per la traiettoria {trajectory} sono stati generati correttamente, al netto di {self.warn_count} nuovi warnings rilevati (le eccezioni corrispondono a DataFrame vuoti nel dizionario).')
+            print(f'      I dataframe globali per la traiettoria {trajectory} sono stati generati correttamente, al netto di {self.warn_count} nuovi warnings rilevati (le eccezioni corrispondono a DataFrame vuoti nel dizionario).')
 
         return self
 
@@ -387,22 +389,22 @@ class PreProcessing:
 
                     else:
                         self.warn_count += 1
-                        print(f"    [WARNING] Non trovata nessuna colonna con nome 'Yaw [deg]' o 'Pitch [deg]' nel dataframe della missione {trajectory} - {combination}.")
+                        print(f"      [WARNING] Non trovata nessuna colonna con nome 'Yaw [deg]' o 'Pitch [deg]' nel dataframe della missione {trajectory} - {combination}.")
 
                 else:
                     self.warn_count += 1
-                    print(f"    [WARNING] Non trovata nessuna colonna con nome 'Delta_East [m]' o 'Delta_North [m]' nel dataframe della missione {trajectory} - {combination}.")
+                    print(f"      [WARNING] Non trovata nessuna colonna con nome 'Delta_East [m]' o 'Delta_North [m]' nel dataframe della missione {trajectory} - {combination}.")
 
             else:
                 self.warn_count += 1
-                print(f"    [WARNING]  Il dataframe della missione {trajectory} - {combination} risulta vuoto.")
+                print(f"      [WARNING]  Il dataframe della missione {trajectory} - {combination} risulta vuoto.")
 
         except KeyError:
-            raise KeyError(f"    [ERROR] Errore nella conversione delle coordinate NED -> Body per la missione {trajectory} - {combination}. Ricontrollare la corrispondenza delle etichette usate.") from None
+            raise KeyError(f"      [ERROR] Errore nella conversione delle coordinate NED -> Body per la missione {trajectory} - {combination}. Ricontrollare la corrispondenza delle etichette usate.") from None
 
         except Exception as e:
             self.warn_count += 1
-            print(f"    [WARNING] Errore nella trasformazione delle coordinate NED -> Body per la missione {trajectory} - {combination} --> {e}")
+            print(f"      [WARNING] Errore nella trasformazione delle coordinate NED -> Body per la missione {trajectory} - {combination} --> {e}")
 
         return self
 
@@ -454,18 +456,18 @@ class PreProcessing:
 
                 else:
                     self.warn_count += 1
-                    print(f"    [WARNING] Non trovata nessuna colonna con nome 'UTM_East' o 'UTM_North' nel dataframe della missione {trajectory} - {combination}.")
+                    print(f"      [WARNING] Non trovata nessuna colonna con nome 'UTM_East' o 'UTM_North' nel dataframe della missione {trajectory} - {combination}.")
 
             else:
                 self.warn_count += 1
-                print(f"    [WARNING] Il dataframe per la missione {trajectory} - {combination} risulta vuoto.")
+                print(f"      [WARNING] Il dataframe per la missione {trajectory} - {combination} risulta vuoto.")
 
         except KeyError:
-            raise KeyError(f"    [ERROR] Errore nella conversione delle coordinate NED -> Body per la missione {trajectory} - {combination}. Ricontrollare la corrispondenza delle etichette usate.")
+            raise KeyError(f"      [ERROR] Errore nella conversione delle coordinate NED -> Body per la missione {trajectory} - {combination}. Ricontrollare la corrispondenza delle etichette usate.")
 
         except Exception as e:
             self.warn_count += 1
-            print(f"    [WARNING] Errore nella trasformazione delle coordinate UTM -> NED per la missione {trajectory} - {combination} --> {e}")
+            print(f"      [WARNING] Errore nella trasformazione delle coordinate UTM -> NED per la missione {trajectory} - {combination} --> {e}")
 
         return self
 
@@ -497,7 +499,7 @@ class PreProcessing:
 
         except Exception as e:
             self.warn_count += 1
-            print(f"    [WARNING] Errore nel processo di resampling per la missione {trajectory} - {combination} --> {e}")
+            print(f"      [WARNING] Errore nel processo di resampling per la missione {trajectory} - {combination} --> {e}")
             self.resampled_database[trajectory][combination] = pd.DataFrame()
 
         return self
@@ -517,7 +519,7 @@ class PreProcessing:
                     dataframe_globale = pickle.load(f)
 
             except Exception as e:
-                print(f" [WARNING] Errore nell'apertura del file pickle per l'elaborazione dei dataframe --> {e}")
+                print(f"    [WARNING] Errore nell'apertura del file pickle per l'elaborazione dei dataframe --> {e}")
                 raise
 
         # Se la scelta è si il dataframe globale si prende direttamente da quello generato con la lettura dei file csv
@@ -533,7 +535,7 @@ class PreProcessing:
         # Si itera per ogni elemento contenuto nel dizionario separando il nome del foglio (= nome_missione) e il dataframe associato
         for trajectory, combinations_dict in dataframe_globale.items():
 
-            print(f'\n  Analisi dei dataframe associati alla traiettoria {trajectory} in corso:')
+            print(f'\n    Analisi dei dataframe associati alla traiettoria {trajectory} in corso:')
 
             # Si crea il dizionario associato alla singola traiettoria all'interno del dizionario globale, che contiene tutti i dataframe trattati (se non presente)
             if trajectory not in self.sensors_divided_database:
@@ -589,7 +591,7 @@ class PreProcessing:
                     t_end_GPS = pd.date_range(start=t_start_dataframe, end=t_end_dataframe, freq=f'{(1/GPS_freq)*1000}ms').max()
 
                 except KeyError:
-                    raise KeyError(f"    [ERROR] Ci sono chiavi associate ai sensori errate per la traiettoria {trajectory}. Ricontrollare la corrispondenza delle etichette usate.") from None
+                    raise KeyError(f"      [ERROR] Ci sono chiavi associate ai sensori errate per la traiettoria {trajectory}. Ricontrollare la corrispondenza delle etichette usate.") from None
 
                 # -----------------------------------------------------
                 #           MERGE SU GRIGLIA TEMPORALE COMUNE
@@ -623,7 +625,7 @@ class PreProcessing:
                     except Exception as e:
                         self.warn_count += 1
                         mission_failed = True
-                        print(f"    [WARNING] Errore nella fase di unificazione griglia temporale per il blocco sensori {sensor_block_name} nella missione {trajectory} - {combination} (l'intera missione verrà scartata)--> {e}")
+                        print(f"      [WARNING] Errore nella fase di unificazione griglia temporale per il blocco sensori {sensor_block_name} nella missione {trajectory} - {combination} (l'intera missione verrà scartata)--> {e}")
                         continue
 
                 # Si aggiorna il dizionario scomposto globale unicamente se tutti i sensori presenti sono stati analizzati correttamente --> altrimenti nascerebbero problemi di dimensionalità delle batch con la rete neurale --> si effettua, inoltre, un continue passando immediatamente alla missione successiva
@@ -649,7 +651,7 @@ class PreProcessing:
 
                 self.dataframe_resampling(trajectory, combination)
 
-            print(f'    Analisi delle missioni associate alla {trajectory} completata con {self.warn_count} nuovi warnings rilevati.')
+            print(f'      Analisi delle missioni associate alla {trajectory} completata con {self.warn_count} nuovi warnings rilevati.')
 
         return self
 
@@ -668,7 +670,7 @@ class PreProcessing:
                     raw_database = pickle.load(f)
 
             except Exception as e:
-                print(f" [WARNING] Errore nell'apertura del file pickle per l'elaborazione dei dataframe --> {e}")
+                print(f"    [WARNING] Errore nell'apertura del file pickle per l'elaborazione dei dataframe --> {e}")
                 raise
 
         # Se la scelta è si il dataframe globale si prende direttamente da quello generato con la lettura dei file csv
@@ -684,7 +686,7 @@ class PreProcessing:
         # Si itera per ogni elemento contenuto nel dizionario separando il nome del foglio (= nome_missione) e il dataframe associato
         for trajectory, combinations_dict in raw_database.items():
 
-            print(f'\n  Interpolazione dei dataframe associati alla traiettoria {trajectory} in corso:')
+            print(f'\n    Interpolazione dei dataframe associati alla traiettoria {trajectory} in corso:')
 
             # Si crea il dizionario associato alla singola traiettoria all'interno del dizionario globale, che contiene tutti i dataframe trattati (se non presente)
             if trajectory not in self.interpolated_database:
@@ -727,12 +729,12 @@ class PreProcessing:
                     self.interpolated_database[trajectory][combination] = interpolated_dataframe
 
                 except KeyError:
-                    raise KeyError(f"    [ERROR] Errore nel drop delle colonne non utili. Ricontrollare la corrispondenza delle etichette usate.") from None
+                    raise KeyError(f"      [ERROR] Errore nel drop delle colonne non utili. Ricontrollare la corrispondenza delle etichette usate.") from None
 
                 except Exception as e:
                     self.interpolated_database[trajectory][combination] = pd.DataFrame()
                     self.warn_count += 1
-                    print(f"    [WARNING] Errore nell'interpolazione della missione {trajectory} - {combination} --> {e}")
+                    print(f"      [WARNING] Errore nell'interpolazione della missione {trajectory} - {combination} --> {e}")
                     continue
 
                 # Si applicano le trasformazioni in assi NED e assi body per ottenere il dataframe completo
@@ -748,9 +750,9 @@ class PreProcessing:
                     #else:
                         #self.interpolated_database[trajectory][combination].drop(columns=['UTM_East [m]', 'UTM_North [m]'], inplace=True)
                 except KeyError:
-                    raise KeyError(f"    [ERROR] Errore nel drop delle colonne non utili. Ricontrollare la corrispondenza delle etichette usate.") from None
+                    raise KeyError(f"      [ERROR] Errore nel drop delle colonne non utili. Ricontrollare la corrispondenza delle etichette usate.") from None
 
-            print(f"    Interpolazione dataframes associati alla traiettoria {trajectory} effettuata con {self.warn_count} nuovi warnings rilevati.")
+            print(f"      Interpolazione dataframes associati alla traiettoria {trajectory} effettuata con {self.warn_count} nuovi warnings rilevati.")
 
         return self
 
@@ -759,12 +761,12 @@ class PreProcessing:
     # ======================================================
 
     # Funzione per il salvataggio del dataframe generato dalla funzione csv_analysis (nel formato di salvataggio opportuno)
-    def save_raw_dataframes(self, formato, ROOT_DIR):
+    def save_raw_datasets_dict(self, formato, ROOT_DIR):
 
         # Se il formato è pickle si salva il dizionario globale dei dataframe per un uso futuro nella rete neurale
         if formato == 'pickle':
 
-            print(f'\n  Salvataggio del file in formato pickle contenente il database in corso:')
+            print(f'\n    Salvataggio del file in formato pickle contenente il database in corso:')
 
             try:
 
@@ -772,16 +774,16 @@ class PreProcessing:
                 with open(save_file_path, 'wb') as f:
                     pickle.dump(self.raw_database, f)
 
-                    print(f'    Salvataggio del dataframe in file {save_file_path} eseguito correttamente.')
+                    print(f'      Salvataggio del dataframe in file {save_file_path} eseguito correttamente.')
 
             except Exception as e:
-                print(f'    [WARNING] Errore nel salvataggio del dizionario contenente tutti i dataframe in formato pickle --> {e}')
+                print(f'      [WARNING] Errore nel salvataggio del dizionario contenente tutti i dataframe in formato pickle --> {e}')
 
         elif formato == 'excel':
 
             for trajectory, dataframes in self.raw_database.items():
 
-                print(f'  Salvataggio del file in formato Excel per le missioni della traiettoria {trajectory} in corso:')
+                print(f'    Salvataggio del file in formato Excel per le missioni della traiettoria {trajectory} in corso:')
 
                 try:
 
@@ -825,49 +827,68 @@ class PreProcessing:
                             worksheet.set_column('G:I', 17, formato_att)        # Blocco misure attitude
                             worksheet.set_column('J:K', 17, formato_dep)        # Blocco misura profondità e rateo di discesa
                             #worksheet.set_column('L:Q', 17, formato_check)      # Blocco misure sensori di controllo come alt e pressione interna
-                            worksheet.set_column('L:Q', 17, formato_axis)       # Blocco misure axis_ref
-                            worksheet.set_column('R:Y', 17, formato_mot)        # Blocchi misure dei motor_ref
+                            worksheet.set_column('L:S', 17, formato_mot)        # Blocchi misure dei motor_ref
+                            worksheet.set_column('T:Y', 17, formato_axis)       # Blocco misure axis_ref
                             worksheet.set_column('Z:AC', 19, formato_GPS)       # Blocchi misure del GPS
 
                             # Verifica della corretta scrittura della telemetria della missione analizzata
                             if nome_foglio in writer.sheets and len(dataframe_copy) > 0:
-                                print(f'    La tabella in Excel per la missione {trajectory} - {combination} è stata generata correttamente con {len(dataframe_copy)} campioni.')
+                                print(f'      La tabella in Excel per la missione {trajectory} - {combination} è stata generata correttamente con {len(dataframe_copy)} campioni.')
                             else:
-                                print(f'    [ERRORE]: mancata generazione del foglio {nome_foglio}.\n')
+                                print(f'      [ERRORE]: mancata generazione del foglio {nome_foglio}.\n')
 
                 except Exception as e:
-                    print(f'    [WARNING] Errore nel salvataggio del database su file Excel per  {trajectory} --> {e}\n')
+                    print(f'      [WARNING] Errore nel salvataggio del database su file Excel per  {trajectory} --> {e}\n')
 
-    # Funzione che permette il salvataggio in file Excel del dataframe a seguito di pre-processing
-    def save_dataframe_resampled(self, formato, ROOT_DIR):
+    # Funzione che permette di gestire il salvataggio del Dataset elaborato con i vari possibili metodi
+    def save_processed_dataset_dict(self, formato, ROOT_DIR, processing_method):
 
         # Se il formato è pickle si salva il dizionario globale dei dataframe per un uso futuro nella rete neurale
         if formato == 'pickle':
 
-            print(f'\n  Salvataggio del file in formato pickle contenente il database resampled in corso:')
+            print(f'\n    Salvataggio del file in formato pickle contenente il database resampled in corso:')
 
             try:
 
-                save_file_path = os.path.join(ROOT_DIR, 'Dataset_resampled.pkl')
-                with open(save_file_path, 'wb') as f:
-                    pickle.dump(self.resampled_database, f)
+                if processing_method == 'resampling':
+                    output_file_path_res = os.path.join(ROOT_DIR, 'Dataset_resampled.pkl')
+                    output_file_path_blocks = os.path.join(ROOT_DIR, 'Dataset_resampled_scomposto.pkl')
 
-                    print(f'    Salvataggio del dataframe resampled in file {save_file_path} eseguito correttamente.')
+                    with open(output_file_path_res, 'wb') as f:
+                        pickle.dump(self.resampled_database, f)
+                        print(f'      Salvataggio del dataframe resampled in file {output_file_path_res} eseguito correttamente.')
 
-                save_file_path = os.path.join(ROOT_DIR, 'Dataset_resampled_blocchi.pkl')
-                with open(save_file_path, 'wb') as f:
-                    pickle.dump(self.sensors_divided_database, f)
+                    with open(output_file_path_blocks, 'wb') as f:
+                        pickle.dump(self.sensors_divided_database, f)
+                        print(f'      Salvataggio del dataframe suddiviso per sensore in file {output_file_path_blocks} eseguito correttamente.')
 
-                    print(f'    Salvataggio del dataframe suddiviso per sensore in file {save_file_path} eseguito correttamente.')
+                elif processing_method == 'interpolazione':
+                    output_file_path = os.path.join(ROOT_DIR, 'Dataset_interpolated.pkl')
+
+                    with open(output_file_path, 'wb') as f:
+                        pickle.dump(self.resampled_database, f)
+                        print(f'      Salvataggio del dataframe resampled in file {output_file_path} eseguito correttamente.')
+
+                else:
+                    print(f"      Il metodo inserito come argomento non è valido. Ricontrollare la chiamata alla funzione di salvataggio del dataset in formato pickle per {processing_method.upper()}.")
+                    sys.exit()
 
             except Exception as e:
-                print(f'    [WARNING] Errore nel salvataggio del dizionario contenente tutti i dataframe in formato pickle --> {e}')
+                print(f'      [WARNING] Errore nel salvataggio del dizionario contenente tutti i dataframe in formato pickle --> {e}')
 
         elif formato == 'excel':
 
-            for trajectory, dataframes in self.resampled_database.items():
+            if processing_method == 'resampling':
+                database = self.resampled_database
+            elif processing_method == 'interpolazione':
+                database = self.interpolated_database
+            else:
+                print(f"      Il metodo inserito come argomento non è valido. Ricontrollare la chiamata alla funzione di salvataggio del dataset in formato pickle per {processing_method.upper()}.")
+                sys.exit()
 
-                print(f'\n  Salvataggio del file in formato Excel per le missioni della traiettoria {trajectory} trattate con resampling in corso:')
+            for trajectory, dataframes in database.items():
+
+                print(f'\n    Salvataggio del file in formato Excel per le missioni della traiettoria {trajectory} trattate con resampling in corso:')
 
                 try:
 
@@ -917,92 +938,13 @@ class PreProcessing:
 
                             # Verifica della corretta scrittura della telemetria della missione analizzata
                             if nome_foglio in writer.sheets and len(dataframe_copy) > 0:
-                                print(f'    La tabella in Excel per la missione {trajectory} - {combination} è stata generata correttamente con {len(dataframe_copy)} campioni.')
+                                print(f'      La tabella in Excel per la missione {trajectory} - {combination} è stata generata correttamente con {len(dataframe_copy)} campioni.')
                             else:
-                                print(f'    [ERRORE]: mancata generazione del foglio {nome_foglio}.\n')
+                                print(f'      [ERRORE]: mancata generazione del foglio {nome_foglio}.\n')
 
                 except Exception as e:
-                    print(f'    [WARNING] Errore nel salvataggio del database su file Excel per  {trajectory} --> {e}\n')
+                    print(f'      [WARNING] Errore nel salvataggio del database su file Excel per  {trajectory} --> {e}\n')
 
-    # Funzione che permette il salvataggio in file Excel del dataframe a seguito di pre-processing
-    def save_dataframe_interpolated(self, formato, ROOT_DIR):
-
-        # Se il formato è pickle si salva il dizionario globale dei dataframe per un uso futuro nella rete neurale
-        if formato == 'pickle':
-
-            print(f'\n  Salvataggio del file in formato pickle contenente il database interpolated in corso:')
-
-            try:
-
-                save_file_path = os.path.join(ROOT_DIR, 'Dataset_interpolated.pkl')
-                with open(save_file_path, 'wb') as f:
-                    pickle.dump(self.interpolated_database, f)
-
-                    print(f'    Salvataggio del dataframe in file {save_file_path} eseguito correttamente.')
-
-            except Exception as e:
-                print(f'    [WARNING] Errore nel salvataggio del dizionario contenente tutti i dataframe in formato pickle --> {e}')
-
-        elif formato == 'excel':
-
-            for trajectory, dataframes in self.interpolated_database.items():
-
-                print(f'\n  Salvataggio del file in formato Excel per le missioni della traiettoria {trajectory} trattate con interpolazione in corso:')
-
-                try:
-
-                    # Si genera un file Excel differente per ogni traiettoria
-                    save_folder_path = os.path.join(ROOT_DIR, f'File_Excel/Traiettoria_{trajectory}')
-                    os.makedirs(save_folder_path, exist_ok=True)
-                    save_file_path = os.path.join(save_folder_path, f'Telemetria_{trajectory}_interpolated.xlsx')
-                    with pd.ExcelWriter(save_file_path, engine='xlsxwriter') as writer:
-
-                        for combination, dataframe in dataframes.items():
-
-                            if dataframe.empty:
-                                continue
-
-                            # Si crea una copia del dataframe per evitare modifiche impattanti nel main
-                            dataframe_copy = dataframe.drop(columns=['UTM_East [m]', 'UTM_North [m]'])
-
-                            # Formattazione per file Excel --> necessario creare una nuova colonna con i tempi per sostituire quella originale, che approssima male gli istanti di tempo rendendo l'analisi incomprensibile
-                            dataframe_copy['timestamp'] = dataframe_copy['timestamp'].dt.strftime('%H:%M:%S.%f').str[:-3]
-
-                            # Si definisce il nome del foglio della missione e si crea all'interno del file Excel di traiettoria
-                            nome_foglio = f"Missione_{combination}"
-                            dataframe_copy.to_excel(writer, index=False, sheet_name=nome_foglio)
-
-                            # Si apre la zona di modifica
-                            workbook = writer.book
-                            worksheet = writer.sheets[nome_foglio]
-
-                            # Definizione manuale dei colori per i blocchi
-                            formato_dvl = workbook.add_format({'bg_color': '#D9EAD3', 'border': 1})     # Verde chiaro
-                            formato_att = workbook.add_format({'bg_color': '#CFE2F3', 'border': 1})     # Blu chiaro
-                            formato_dep = workbook.add_format({'bg_color': '#F4CCCC', 'border': 1})     # Rosso chiaro
-                            formato_check = workbook.add_format({'bg_color': '#E8E8E8', 'border': 1})   # Scala grigi
-                            formato_axis = workbook.add_format({'bg_color': '#DCF4EF', 'border': 1})    # Verde - turchese
-                            formato_mot = workbook.add_format({'bg_color': '#FFF2CC', 'border': 1})     # Giallo chiaro
-                            formato_GPS = workbook.add_format({'bg_color': '#FF8C00', 'border': 1})     # Dark orange
-
-                            # Applicazione colori associati alle colonne divise per sensori
-                            worksheet.set_column('A:A', 17)                     # Timestamp
-                            worksheet.set_column('B:E', 17, formato_dvl)        # Blocco misure DVL
-                            worksheet.set_column('F:H', 17, formato_att)        # Blocco misure attitude
-                            worksheet.set_column('I:J', 17, formato_dep)        # Blocco misura profondità e rateo di discesa
-                            #worksheet.set_column('K:L', 17, formato_check)      # Blocco misure sensori di controllo come alt e pressione interna
-                            worksheet.set_column('K:P', 17, formato_axis)       # Blocco misure axis_ref
-                            worksheet.set_column('O:V', 17, formato_mot)        # Blocchi misure dei motor_ref
-                            worksheet.set_column('W:AB', 19, formato_GPS)       # Blocchi misure del GPS
-
-                            # Verifica della corretta scrittura della telemetria della missione analizzata
-                            if nome_foglio in writer.sheets and len(dataframe_copy) > 0:
-                                print(f'    La tabella in Excel per la missione {trajectory} - {combination} è stata generata correttamente con {len(dataframe_copy)} campioni.')
-                            else:
-                                print(f'    [ERRORE]: mancata generazione del foglio {nome_foglio}.\n')
-
-                except Exception as e:
-                    print(f'    [WARNING] Errore nel salvataggio del database su file Excel per  {trajectory} --> {e}\n')
 
     # ======================================================
     #         TRASFORMAZIONE DATAFRAMES IN TENSORI

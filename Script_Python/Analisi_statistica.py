@@ -175,13 +175,13 @@ class StatisticalAnalysis:
         # Si itera su ogni metodo di processing telemetrie selezionato
         for processing_method in processing_methods:
 
-            dataframes_dict = processed_dataframes_dict[processing_method].copy()
+            dataset_dict = processed_dataframes_dict[processing_method].drop(columns=['UTM_North [m]', 'UTM_East [m]'])
 
             # Si itera sui metodi di analisi prescelti
             for correlation_method in correlation_methods:
 
                 # Si itera su ogni elemento presente all'interno dei dizionari di partenza
-                for trajectory, missions_dict in dataframes_dict.items():
+                for trajectory, missions_dict in dataset_dict.items():
 
                     print(f'\n  Esecuzione analisi correlazione di {correlation_method.upper()}, sul database con {processing_method.upper()}, per le missioni associate alla traiettoria {trajectory} in corso:')
 

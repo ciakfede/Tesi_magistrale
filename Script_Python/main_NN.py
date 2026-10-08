@@ -2,7 +2,9 @@
               FEDERICO CECCHINI
             ANNO ACCADEMICO 2025/26             """
 
-'''All'interno del main si effettuano le seguenti operazioni in ordine:
+'''
+
+All'interno del main si effettuano le seguenti operazioni in ordine:
     - pre-processing dei dati, ottenendo i tensori utili per la rete neurale --> tiene conto delle differenti frequenze dei sensori:
         -- 10 Hz per DVL
         -- 5 Hz per IMU e REF
@@ -52,13 +54,20 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR: str = os.path.dirname(SCRIPT_DIR)
 DF_DICT_DIR = os.path.join(ROOT_DIR, 'Dizionari_datasets')
 os.makedirs(DF_DICT_DIR, exist_ok=True)                                                 # Si genera la cartella di destinazione dei file di salvataggio pickle con i vari dataframe
-file_database_raw = os.path.join(DF_DICT_DIR, 'Dataset_globale.pkl')                    # File pickle di output/input contenente i dati sul dizionario globale dei dataframe generato al termine del pre-processing
-file_database_resampled = os.path.join(DF_DICT_DIR, 'Dataset_resampled.pkl')            # File pickle di output/input contenente i dati sul dizionario globale dei dataframe resampled generato al termine del pre-processing
-file_database_sensors = os.path.join(DF_DICT_DIR, 'Dataset_resampled_blocchi.pkl')      # File pickle di output/input contenente i dati sul dizionario suddiviso per i vari sensori dei dataframe generato al termine del pre-processing
+file_dataset_raw = os.path.join(DF_DICT_DIR, 'Dataset_globale.pkl')                     # File pickle di output/input contenente i dati sul dizionario globale dei dataframe generato al termine del pre-processing
+file_dataset_resampled = os.path.join(DF_DICT_DIR, 'Dataset_resampled.pkl')             # File pickle di output/input contenente i dati sul dizionario globale dei dataframe resampled generato al termine del pre-processing
+file_database_sensors = os.path.join(DF_DICT_DIR, 'Dataset_resampled_scpmposto.pkl')    # File pickle di output/input contenente i dati sul dizionario suddiviso per i vari sensori dei dataframe generato al termine del pre-processing
 file_config = os.path.join(ROOT_DIR, "Telemetrie/Matrice_configurazioni.txt")           # File di testo di input contenente un elenco delle combinazioni condizione ambientale/operativa per ogni traiettoria simulata
 weights_save_path = os.path.join(ROOT_DIR, "NavNet_weights.pkl")                        # File pickle contenente i pesi della rete neurale
 file_database_waypoints = os.path.join(DF_DICT_DIR, 'Waypoints_dict.pkl')               # File pickle contenente i waypoints per ogni missione
 file_test_missions_dict = os.path.join(DF_DICT_DIR, 'Test_missions_dict.pkl')           # File pickle contenente il dizionario con le missioni prescelte per il test sotto forma di (trajectory, combination) e gli intervalli temporali associati ad ogni ripetizione della traiettoria
+
+
+# Si inizializzano i metodi prescelti e i dizionari per l'immagazzinamento associati
+possible_processing_methods = ['resampling', 'interpolazione']              # Lista di metodi per il trattamento dei dati di telemetria pura
+processed_datasets_dict = {}                                                # Dizionario che conterrà i dizionari processati con i vari metodi prescelti --> nella forma {'metodo 1': {}, 'metodo 2': {}, ...}
+files_processed_datasets = {'resampling': file_dataset_resampled}           # Dizionario con i percorsi di salvataggio di tutti i metodi di processing disponibili
+
 
 # ======================================================
 #             PRE-PROCESSING TELEMETRIA
@@ -79,100 +88,140 @@ post_processing = PostProcessing()
 print('\n\n----------------------------------------------------')
 print('---------- CARICAMENTO DATI DI TELEMETRIA ----------')
 print('----------------------------------------------------')
+
 while True:
 
-    # Si richiede all'utente se si vuole generare un dataframe a partire dai file di telemetria
-    generate_new_dataframe = input(f'\nSi desidera generare un nuovo dataframe contenente i dati di telemetria (S/N/EXIT)?').upper()
+    generate_new_dataset = input(f"\n  Si vuole generare un nuovo Dataset contenente i dati di telemetria (S/N/EXIT)?").upper()
 
-    if generate_new_dataframe == 'S':
+    if generate_new_dataset == 'S':
 
-        # Si analizzano i file .csv contenenti i dati di telemetria di ogni missione --> si genera un dizionario globale e si salva in un apposito file pickle
         pre_processing.csv_analysis(file_config, ROOT_DIR)
-        pre_processing.save_raw_dataframes('pickle', DF_DICT_DIR)
+        pre_processing.save_raw_datasets_dict('pickle', DF_DICT_DIR)
+        raw_dataset = pre_processing.raw_database
 
-        # Gestione del salvataggio del file in formato Excel del dataframe
         while True:
-            save_excel = input(f'\n  Si vuole salvare il dataframe anche in formato Excel (S/N)?').upper()
-            if save_excel == 'S':
-                pre_processing.save_raw_dataframes('excel', DF_DICT_DIR)
+
+            save_raw_dataset = input(f"\n    Si vuole salvare in formato Excel il Dataset prodotto (S/N/EXIT)?").upper()
+
+            if save_raw_dataset == 'S':
+
+                pre_processing.save_raw_datasets_dict('excel', DF_DICT_DIR)
                 break
-            elif save_excel == 'N':
-                print(f'    Prosecuzione operazioni pre-processing dati senza salvataggio Excel.')
+
+            elif save_raw_dataset == 'N':
+                print(f"      Prosecuzione analisi senza salvare i Dataset grezzi prodotti.")
                 break
+
+            elif save_raw_dataset == 'EXIT':
+                print(f"      Chiusura del programma forzata da utente in corso...")
+                sys.exit()
+
             else:
-                print(f'    Inserito input non valido. Ripetere la scelta.')
+                print(f"      Input inserito non valido. Ripetere la selezione inserendo s, n o exit.")
 
         break
 
-    elif generate_new_dataframe == 'N':
+    elif generate_new_dataset == 'N':
 
-        # Si continua con l'analisi usando i dati raccolti in un file pickle in iterazione precedente
-        if os.path.isfile(file_database_raw):
-            print(f'  Caricamento del database dal file {file_database_raw}')
+        # Controllo esistenza del file pickle
+        if os.path.isfile(file_dataset_raw) and not os.stat(file_dataset_raw).st_size == 0:
+            print(f"    Utilizzo del Dataset precedentemente generato e salvato in {file_dataset_raw}.")
+            with open(file_dataset_raw, 'rb') as f:
+                raw_dataset = pickle.load(f)
             break
         else:
-            print(f'  File contenente il database non trovato. Verificare o procedere con la generazione del database.')
+            print(f"    Il file {file_dataset_raw} risulta non presente o vuoto. Verificare la presenza o generare un nuovo dataset.")
 
-    elif generate_new_dataframe == 'EXIT':
-        print(f"  Chiusura forzata da utente del programma.")
+    elif generate_new_dataset == 'EXIT':
+        print(f"    Chiusura del programma forzata da utente in corso...")
         sys.exit()
 
     else:
-        print(f'  Input inserito non riconosciuto. Ripetere la scelta.')
+        print(f"    Input inserito non valido. Ripetere la selezione inserendo s, n o exit.")
 
 
 # -----------------------------------------------------
-#          PROCESSING DEI DATAFRAMES GREZZI
+#         GESTIONE SCELTA SU NUOVA ELABORAZIONE
 # -----------------------------------------------------
 
 print('\n\n---------------------------------------------------')
 print('------------- ELABORAZIONE DATAFRAMES -------------')
 print('---------------------------------------------------')
+
+processing_methods = ['resampling']
 while True:
 
-    process_dataframe = input(f"\nSi vuole generare da zero il dataframe elaborato (S/N/EXIT)?").upper()
+    process_dataset = input(f"\n  Si vuole procedere con una nuova elaborazione dei dati di telemetria (S/N/EXIT)? ").upper()
 
-    resampled_database = {}
-    if process_dataframe == 'S':
-        pre_processing.raw_dataframes_processing(generate_new_dataframe, file_database_raw, sensors_frequencies)        # Si analizzano i dati di telemetria --> si generano in output due dizionari, uno con un dataframe ricampionato per ogni missione e l'altro suddiviso anche per sensori
-        pre_processing.save_dataframe_resampled('pickle', DF_DICT_DIR)                                          # Si salva automaticamente in formato pickle per successive iterazioni
-        resampled_database = pre_processing.resampled_database                                                          # Si salva il database completo all'interno di una variabile locale (utile per la rete neurale)
+    # Se si è generato un nuovo Dataset grezzo è inevitabile rieseguire anche l'elaborazione dello stesso
+    if generate_new_dataset == 'S':
+        process_dataset = 'S'
 
-        # Gestione del salvataggio del file in formato Excel del dataframe ricampionato
-        while True:
-            save_excel = input(f'\n  Si vuole salvare il dataframe elaborato con resampling in formato Excel (S/N)?').upper()
-            if save_excel == 'S':
-                pre_processing.save_dataframe_resampled('excel', DF_DICT_DIR)
-                break
-            elif save_excel == 'N':
-                print(f'    Continuazione analisi senza salvataggio Excel.')
-                break
+    if process_dataset == 'S':
+
+        # Si itera su ogni metodo selezionato in precedenza --> per ognuno si effettua l'analisi tramite apposita funzione
+        for processing_method in processing_methods:
+
+            if processing_method == 'resampling':
+                pre_processing.raw_dataframes_processing(generate_new_dataset, file_dataset_raw, sensors_frequencies)
+                pre_processing.save_processed_dataset_dict('pickle', DF_DICT_DIR, 'resampling')
+                processed_datasets_dict[processing_method] = pre_processing.resampled_database
+
+            elif processing_method == 'interpolazione':
+                pre_processing.dataframe_interpolation(generate_new_dataset, file_dataset_raw)
+                pre_processing.save_processed_dataset_dict('pickle', DF_DICT_DIR, 'interpolazione')
+                processed_datasets_dict[processing_method] = pre_processing.interpolated_database
+
+            # Gestione eventuale salvataggio in formato Excel
+            while True:
+
+                save_processed_dataset = input(f"\n    Si desidera salvare il Dataset trattato con {processing_method.upper()} in formato Excel (S/N/EXIT)?").upper()
+
+                if save_processed_dataset == 'S':
+
+                    pre_processing.save_processed_dataset_dict('excel', DF_DICT_DIR, processing_method)
+                    break
+
+                elif save_processed_dataset == 'N':
+                    print(f"      Prosecuzione analisi senza salvare i Dataset elaborati prodotti.")
+                    break
+
+                elif save_processed_dataset == 'EXIT':
+                    print(f"      Chiusura del programma forzata da utente in corso...")
+                    sys.exit()
+
+                else:
+                    print(f"      Input inserito non valido. Ripetere la scelta con s, n o exit.")
+
+
+    elif process_dataset == 'N':
+
+        file_exists = True
+        for processing_method in processing_methods:
+
+            dict_file_path = files_processed_datasets[processing_method]
+            if os.path.isfile(dict_file_path) and os.stat(dict_file_path).st_size > 0:
+
+                with open(dict_file_path, 'rb') as f:
+                    processed_datasets_dict[processing_method] = pickle.load(f)
+
             else:
-                print(f'    Inserito input non valido. Ripetere la scelta.')
+                print(f"    Il file {dict_file_path} risulta non presente o vuoto. Ricontrollare o rieseguire l'analisi dei dati grezzi. ")
+                file_exists = False
 
-        break
-
-    elif process_dataframe == 'N':
-
-        if os.path.isfile(file_database_resampled):
-            print(f'  Caricamento del dataframe resampled dal file {file_database_resampled}')
-            try:
-                with open(file_database_resampled, 'rb') as f:
-                    resampled_database = pickle.load(f)
-            except Exception as e:
-                print(f" [WARNING] Errore nell'apertura del file pickle per l'elaborazione dei dataframe --> {e}")
-                raise
+        # Solo se tutti i file pickle di interesse sono stati letti correttamente si esce dal ciclo
+        if file_exists:
             break
-        else:
-            print(f'  File contenenti i database non trovati. Verificare o procedere con la generazione dei database.')
 
-    elif process_dataframe == 'EXIT':
-        print(f"  Chiusura forzata da utente del programma.")
+    elif process_dataset == 'EXIT':
+        print(f"    Chiusura del programma forzata da utente in corso...")
         sys.exit()
 
     else:
+        print(f"    Input inserito non valido. Ripetere la selezione inserendo s, n o exit.")
 
-        print(f'  Inserito un input non valido. Ripetere la scelta.')
+
+resampled_dataset = processed_datasets_dict['resampling']
 
 
 # -----------------------------------------------------
@@ -180,7 +229,7 @@ while True:
 # -----------------------------------------------------
 
 # Si genera il dizionario delle missioni di test o si apre se il file pickle corrispondente esiste già
-if os.path.isfile(file_database_waypoints) and process_dataframe == 'N':
+if os.path.isfile(file_database_waypoints) and process_dataset == 'N':
 
     try:
         with open(file_database_waypoints, 'rb') as f:
@@ -198,7 +247,7 @@ else:
 
 
 # Si genera il dizionario delle missioni di test o si apre se il file pickle corrispondente esiste già
-if os.path.isfile(file_test_missions_dict) and process_dataframe == 'N':
+if os.path.isfile(file_test_missions_dict) and process_dataset == 'N':
 
     try:
         with open(file_test_missions_dict, 'rb') as f:
@@ -209,14 +258,14 @@ if os.path.isfile(file_test_missions_dict) and process_dataframe == 'N':
         raise
 
 else:
-    post_processing.test_missions_definition(resampled_database, ROOT_DIR)
+    post_processing.test_missions_definition(resampled_dataset, ROOT_DIR)
     test_missions_dict = post_processing.test_missions_dict
 
 # -----------------------------------------------------
 #         TRASFORMAZIONE DATAFRAMES IN TENSORI
 # -----------------------------------------------------
 
-pre_processing.dataframe_to_tensor(process_dataframe, test_missions_dict, file_database_sensors)    # Si generano i tensori pytorch -->  si genera in output un dizionario in cui per ogni missione sono presenti 3 tensori, uno per ogni frequenza di misurazione presente
+pre_processing.dataframe_to_tensor(process_dataset, test_missions_dict, file_database_sensors)    # Si generano i tensori pytorch -->  si genera in output un dizionario in cui per ogni missione sono presenti 3 tensori, uno per ogni frequenza di misurazione presente
 tensor_dict = pre_processing.pytorch_tensor_dict                                                    # Si richiama il dizionario di tensori da usare per la rete neurale --> ogni tensore è una lista ordinata (per sensore) contenente le misurazioni di tutte missioni
 
 # Si stampa un resoconto del pre-processing con le missioni ritenute non valide e non utilizzate per l'analisi
@@ -411,10 +460,10 @@ for (trajectory, combination) in test_missions_dict:
         # -----------------------------------------------------
 
         # Si itera per ogni batch del test_loader (sono batch_size secondi)
-        GPS_starting_coordinates = resampled_database[trajectory][combination][['NED_East [m]', 'NED_North [m]']].iloc[0].to_numpy(dtype=np.float32)      # Definizione della posizione iniziale dal dataframe pandas ricampionato
+        GPS_starting_coordinates = resampled_dataset[trajectory][combination][['NED_East [m]', 'NED_North [m]']].iloc[0].to_numpy(dtype=np.float32)      # Definizione della posizione iniziale dal dataframe pandas ricampionato
         GPS_NED_coordinates = torch.tensor(GPS_starting_coordinates, dtype=torch.float32).unsqueeze(0)                                                    # Trasformazione del vettore posizione in un tensore pytorch --> con unsqueeze si rende compatibile con le dimensioni della batch [1,2]
         NN_NED_coordinates = {}                                                                                                                           # Inizializzazione dizionario per l'immagazzinamento dei valori di posizione per ogni traiettoria della missione --> ha forma {'Traiettoria1': [], 'Traiettoria2': [],....}
-        GPS_abs_origin = resampled_database[trajectory][combination][['UTM_East [m]', 'UTM_North [m]']].iloc[0].to_numpy(dtype=np.float64)
+        GPS_abs_origin = resampled_dataset[trajectory][combination][['UTM_East [m]', 'UTM_North [m]']].iloc[0].to_numpy(dtype=np.float64)
 
         # -----------------------------------------------------
         #      STIMA POSIZIONE PER OGNI SECONDO DI MISSIONE

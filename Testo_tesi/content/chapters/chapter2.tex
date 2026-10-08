@@ -106,67 +106,84 @@ Durante gli anni sono state proposte numerose funzioni di attivazione, via via p
 
 \subsection{Loss function}
 
-Un elemento chiave per il corretto funzionamento di una rete neurale è la cosiddetta funzione di perdita, che permette di quantificare l'errore commesso dalla rete in ogni epoca di addestramento. Naturalmente, esistono numerose tipologie di funzioni, ognuna delle quali presenta delle caratteristiche che la rendono più o meno adatta all'utilizzo per specifici problemi. La scelta della loss function, pertanto, è un aspetto fondamentale per il successo dell'addestramento della rete e per le prestazioni complessive del modello.
+Nelle precedenti sezioni si sono analizzati nel dettaglio gli elementi alla base della \textit{forward propagation}, che porta la rete neurale a generare l'output desiderato $\hat{y}$. Questo processo, tuttavia, non darebbe risultati accettabili senza l'integrazione della \textit{backpropagation} e la conseguente fase di addestramento della rete. In particolare, l'elemento chiave in questa fase diventa la cosiddetta funzione di perdita, che permette di quantificare l'errore commesso dalla rete in ogni epoca di addestramento. 
 
-Come introdotto all'interno del paper di Terven et al.\cite{AlignNet}, esistono alcune proprietà fondamentali associate alle loss functions, quali:
+Naturalmente, esistono numerose tipologie di funzioni, ognuna delle quali presenta delle caratteristiche che la rendono più o meno adatta all'utilizzo per specifici problemi. La scelta della loss function, pertanto, è un aspetto fondamentale per il successo dell'addestramento della rete e per le prestazioni complessive del modello.
+
+Come introdotto all'interno del paper di Terven et al.\cite{LF_review_Terven}, esistono alcune proprietà fondamentali associate alle loss functions, quali:
 
     \begin{itemize}
+
         \item \textbf{Convessità}: una funzione convessa garantisce che ogni minimo locale sia anche un minimo globale, semplificando il processo di ottimizzazione e riducendo la probabilità di rimanere bloccati in soluzioni subottimali.
 
-        \item \textbf{Differenziabilità}: l'esistanza di una derivata continua è fondamentale, in particolare per algoritmi di deep learning, che basano il loro processo di apprendimento sul metodo del gradiente.
+        \item \textbf{Differenziabilità}: l'esistenza di una derivata continua è fondamentale, in particolare per algoritmi di deep learning, che basano il loro processo di apprendimento sul metodo del gradiente.
 
         \item \textbf{Robustezza}: una funzione robusta permette di gestire efficacemente gli outlier, solitamente presenti in grandi dataset, evitando che essi influenzino le prestazioni complessive della rete.
 
         \item \textbf{Gradualità}: questa proprietà è strettamente collegata alla differenziabilità. Una funzione caratterizzata da una derivata graduale consente di ottenere un processo di ottimizzazione più stabile e veloce, evitando oscillazioni eccessive durante l'addestramento.
 
-        \item \textbf{Monotonia}: una funzione si definisce monotona se il suo valore diminuisce all'aumentare della qualità della predizione, garantendo che l'ottimizzazione stia procedendo nella direzione corretta.
+        \item \textbf{Monotonia}: una funzione si definisce monotona se il suo valore diminuisce all'aumentare della qualità della predizione, garantendo che l'ottimizzazione proceda sempre nella direzione corretta.
 
     \end{itemize}
 
-Come anticipato, nel corso degli anni sono stati sviluppati numerose funzioni di perdita, adatte ai vari ambiti di utilizzo degli algoritmi di machine learning. All'interno di questo lavoro di tesi, tuttavia, verranno analizzate solo alcune di quelle più utilizzate e performanti in relazione ai problemi di regressione, presentate nel seguito:
+Come anticipato, nel corso degli anni sono state sviluppate numerose loss function, pensate per adattarsi al meglio ai vari ambiti di utilizzo degli algoritmi di machine learning. All'interno di questo lavoro di tesi, tuttavia, verranno analizzate solo alcune di quelle più utilizzate e performanti in relazione ai problemi di regressione, essendo maggiormente attinenti al tipo di analisi svolta. 
 
-    \begin{itemize}
+La prima funzione presentata, nominata solitamente \textbf{L2 Loss}, è basata sul \textbf{Mean Squared Error (MSE)}. A livello matematico, dunque, è definita come la media del quadrato della differenza tra il valore predetto dalla rete e quello reale, come mostrato in \emph{(2.6)}:
 
-        \item la prima funzione oggetto di analisi dettagliata è basata sul \textbf{Mean Squared Error (MSE)} e viene solitamente definita \textbf{L2 Loss}. A livello matematico, essa è definita come la media del quadrato della differenza tra il valore predetto dalla rete e quello reale, come mostrato in \emph{(2.6)}:
+        \begin{center}
+            $MSE = \displaystyle \frac{\sum_{i=1}^{N} (y_i - \hat{y}_i)^2}{N}$ \ \ \ $(2.6)$
+        \end{center}
 
-            \begin{center}
-                $MSE = \displaystyle \frac{\sum_{i=1}^{N} (y_i - \hat{y}_i)^2}{N}$ \ \ \ $(2.6)$
-            \end{center}
+L'MSE presenta numerosi pregi, tra cui la semplicità di implementazione, la differenziabilità e la convessità, che la rendono la scelta preferenziale per la maggior parte dei problemi di regressione. Tuttavia, l'utilizzo del quadrato porta ad una notevole amplificazione degli errori grandi, rendendo la funzione molto sensibile agli outlier. Questa caratteristica, ad ogni modo, la rende preferibile per problemi in cui si vogliono penalizzare gli errori pià grandi a discapito di quelli piccoli. Infine, occorre tenere in considerazione la dipendenza dalle unità di misura dei dati, che rende difficile il confronto tra modelli diversi.
 
-        L'MSE presenta numerosi pregi, tra cui la semplicità di implementazione, la differenziabilità e la convessità, che la rendono la scelta preferenziale per la maggior parte dei problemi di regressione. Tuttavia, l'utilizzo del quadrato porta ad una notevole amplificazione degli errori grandi, rendendo la funzione molto sensibile agli outlier. Questa caratteristica, inoltre, la rende preferibile per problemi in cui si vogliono penalizzare gli errori pià grandi a discapito di quelli piccoli. Infine, è dipendente dalle unità di misura dei dati, rendendo difficile il confronto tra modelli diversi.
+Una seconda funzione molto usata, detta \textbf{L1 Loss}, è basata sul \textbf{Mean Absolute Error (MAE)}; a differenza della precedente, calcola la media del valore assoluto della differenza tra il valore predetto e quello reale, come mostrato in \emph{(2.7)}:
 
-        \item una seconda funzione molto usata, detta \textbf{L1 Loss}, è basata sul \textbf{Mean Absolute Error (MAE)}; a differenza della precedente, essa calcola la media del valore assoluto della differenza tra il valore predetto e quello reale, come mostrato in \emph{(2.7)}:
+        \begin{center}
+            $MAE = \displaystyle \frac{\sum_{i=1}^{N} |y_i - \hat{y}_i|}{N}$ \ \ \ $(2.7)$
+        \end{center}
 
-            \begin{center}
-                $MAE = \displaystyle \frac{\sum_{i=1}^{N} |y_i - \hat{y}_i|}{N}$ \ \ \ $(2.7)$
-            \end{center}
+Il MAE risulta essere, quindi, meno sensibile agli outlier, diventando una scelta quasi obbligata per problemi caratterizzati da un gran numero di misurazioni fuori scala, e più bilanciato nella penalizzazione degli errori. Tuttavia, la derivata presenta una discontinuità in 0 e, in generale, è meno graduale rispetto a quella dell'MSE, rendendo più complesso e lungo il processo di ottimizzazione.
 
-        Il MAE risulta essere, dunque, meno sensibile agli outlier, diventando una scelta quasi obbligata per problemi caratterizzati da un gran numero di misurazioni fuori scala, e più bilanciato nella penalizzazione degli errori. Tuttavia, la derivata presenta una discontinuità in 0 e, in generale, è meno graduale rispetto a quella dell'MSE, rendendo più complesso e lungo il processo di ottimizzazione.
+Un'evoluzione quasi diretta delle funzioni fino a qui presentate è la \textbf{Huber Loss}, in grado di combinare i pregi di entrambe, riducendone i difetti. Essa, infatti, si comporta come la L1 Loss per valori di errore grandi e come la L2 Loss per valori piccoli, come mostrato in \emph{(2.8)}:
 
-        \item un'evoluzione delle funzioni fino a qui presentate è la \textbf{Huber Loss}, in grado di combinare i pregi di entrambe, riducendone i difetti. Essa, infatti, si comporta come la L1 Loss per valori di errore grandi e come la L2 Loss per valori piccoli, come mostrato in \emph{(2.8)}:
+    \begin{center}
+        $L_{\text{Huber}} (y, \hat{y}) = \begin{cases}
+            \displaystyle \frac{1}{2}(y_i - \hat{y}_i)^2, & \text{se } |y_i - \hat{y}_i| \leq \delta\\
+            \delta |y_i - \hat{y}_i| - \displaystyle \frac{1}{2}\delta^2, & \text{altrimenti}
+        \end{cases}$ \ \ \ $(2.8)$
+    \end{center}
 
-            \begin{center}
-                $L_{\delta} = \begin{cases}
-                    \displaystyle \frac{1}{2}(y_i - \hat{y}_i)^2, & \text{se } |y_i - \hat{y}_i| \leq \delta\\
-                    \delta |y_i - \hat{y}_i| - \displaystyle \frac{1}{2}\delta^2, & \text{altrimenti}
-                \end{cases}$ \ \ \ $(2.8)$
-            \end{center}
+Questo comportamento consente, infatti, di ottenere una derivata continua e graduale per gli errori più piccoli (tipico dell'MSE) e di ridurre allo stesso tempo la sensibilità agli outlier, usando un approccio lineare per gli errori più grandi (tipico del MAE). Tuttavia, tale approccio introduce alcune complessità all'interno del modello. E', infatti, necessario definire il valore del parametro $\delta$, che stabilisce il punto di transizione tra i due comportamenti. Questa scelta può influenzare significativamente le prestazioni della rete e richiede, pertanto, un'attenta valutazione in base al problema specifico e alla distribuzione degli errori. Inoltre, resta presente un punto di non differenziabilità per $|y_{i} - \hat{y}_{i}| = \delta$, che rende necessario l'utilizzo di un gradiente opportuno.
 
-        Questo comportamento consente, infatti, di ottenere una derivata continua e graduale per gli errori più piccoli (tipico dell'MSE) e di ridurre allo stesso tempo la sensibilità agli outlier, usando un approccio lineare per gli errori più grandi (tipico del MAE). Tuttavia, tale approccio comporta la necessità di definire il valore del parametro $\delta$, che stabilisca il punto di transizione tra i due comportamenti. Questa scelta può influenzare significativamente le prestazioni della rete e richiede, pertanto, un'attenta valutazione in base al problema specifico e alla distribuzione degli errori.
+Uno dei più recenti sviluppi in questo campo di ricerca è rappresentato dalla \textbf{Log-cosh Loss function}, basata sull'utilizzo del logaritmo del coseno iperbolico per la misura dell'errore:
 
-        \item una delle più recenti funzioni sviluppate è la \textbf{Log-cosh Loss}, basata sull'utilizzo del logaritmo del coseno iperbolico per la misura dell'errore:
+    \begin{center}
+        $L_{\text{Log-cosh}} (y, \hat{y}) = \displaystyle \frac{\sum_{i=1}^{N} \log(\cosh(y_i - \hat{y}_i))}{N}$ \ \ \ $(2.9)$
+    \end{center}
 
-            \begin{center}
-                $L = \displaystyle \frac{\sum_{i=1}^{N} \log(\cosh(y_i - \hat{y}_i))}{N}$ \ \ \ $(2.9)$
-            \end{center}
+Essa, consente di migliorare ulteriormente il comportamento associato alla Huber Loss. L'utilizzo del logaritmo, infatti, permette di contenere l'aumento del coseno iperbolico per valori di errore grandi, riducendo la sensibilità della funzione agli outliers. Allo stesso tempo, la derivata risulta molto graduale e continua su tutto il dominio, eliminando anche il singolo punto di discontinuità presente nella precedente funzione. Inoltre, la particolare combinazione di funzioni utilizzata permette di mantenere anche una buona sensibilità ai piccoli errori. Tendenzialmente, dunque, una funzione analoga si presta a reti neurali molto complesse.
 
-        Essa, consente di migliorare ulteriormente il comportamento associato alla Huber Loss. L'utilizzo del logaritmo, infatti, permette di contenere l'aumento del coseno iperbolico per valori di errore grandi, riducendo la sensibilità della funzione agli outliers. Allo stesso tempo, la derivata risulta molto graduale e continua su tutto il dominio, eliminando anche il singolo punto di discontinuità presente nella precedente funzione. Inoltre, la particolare combinazione di funzioni utilizzata permette di mantenere una buona sensibilità ai piccoli errori. Tendenzialmente, dunque, una funzione analoga si presta a reti neurali molto complesse.
+Una delle funzioni indubbiamente più particolari risulta essere la \textbf{Quantile Loss}, basata sull'utilizzo di un parametro \emph{q}, che determina il comportamento della rete rispetto alle predizioni effettuate:
 
-        \item \textbf{Quantile loss}
+    \begin{center}
+        $L_{\text{quantile}} (y, \hat{y}) = q * \text{max}(y-\hat{y}, 0) + (1-q) * \text{max}(\hat{y}-y, 0)$ \ \ \ $(2.10)$
+    \end{center}
 
+Come si può intuire dalla formulazione matematica alla base della funzione, una sottostima dell'output target è proporzionale a \emph{q}, mentre una sovrastima risulta legata a \emph{(1-q)}. Pertanto, imponendo un parametro $q > 0.5$,  si tendono ad evidenziare gli effetti del primo termine. Analogamente a quanto visto per la L1 Loss, la funzione presenta un punto di non derivabilità per $y-\hat{y} = \hat{y} - y = 0$, che necessita di essere opportunamente gestito tramite appositi algoritmi di discesa del gradiente. E', poi, interessante osservare che per valori di $q = 0.5$, si ottiene una formulazione coincidente con il MAE.
 
+Infine, l'ultima funzione presa in considerazione è la \textbf{Poisson Loss}, solitamente utilizzata per algoritmi di stima delle occorrenze di un determinato evento in un periodo specificato. Matematicamente, infatti, è basata sul concetto di \textit{distribuzione di Poisson}:
 
-    \end{itemize}
+    \begin{center}
+        $L_{\text{Poisson}}(y, \hat{y}) = \displaystyle \frac{\sum_{i=1}^{N} \hat{y}_{i} - y_{i} log(\hat{y}_{i})}{N}$ \ \ \ $(2.11)$
+    \end{center}
+
+In particolare, la stima della rete neurale sul numero di occorrenze, non potendo assumere valori negativi, si calcola come:
+
+    \begin{center}
+        $\hat{y}_{i} = e^{w*x_{i} + b}$ \ \ \ $(2.12)$ 
+    \end{center}
+
+Tenendo conto dei pregi e dei difetti di ogni funzione presentata in questo paragrafo, oltre che dell'attinenza con l'obiettivo del modello di rete neurale qui considerato, si tengono in considerazione prevalentemente la \textit{L1 Loss}, la \textit{L2 Loss} e la \textit{Log-cosh Loss}. 
 
 \subsection{Optimizer}
 

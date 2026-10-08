@@ -9,9 +9,14 @@ import pickle                                                   # Libreria per l
 from Analisi_dati import PreProcessing                          # Classe contenente tutte le funzioni necessarie al pre-processing
 from Analisi_statistica import StatisticalAnalysis              # Raccolta funzioni necessarie all'analisi dei dati e alla generazione del file Excel di output
 
-''' In input prende i dati di telemetria (caricati nella cartella Telemetria) e li elabora, generando una tabella contenente tutti i dati dei sensori in ordine di timestamp (tramite interpolazione o resampling) e convertendola in formato Excel.
-    In seguito, si esegue un'analisi di correlazione tramite i metodi indicati all'inizio --> si generano delle heatmap, dei file .txt riassuntivi con i valori numerici e un dizionario contenente tutti i valori dei coefficienti suddivisi per metodo.
-    L'analisi si conclude generando un file .txt con i soli valori medi rilevanti dei coefficienti di correlazione'''
+''' Si ricevono in input i dati di telemetria grezzi contenuti in file .csv suddivisi per la combinazione (traiettoria, combinazione condizioni ambientali/operative) che definisce la singola missione. 
+    Le combinazioni sono estratte dal file di testo opportuno e usate per generare le chiavi del dizionario riassuntivo oltre che per accedere ai file nella cartella Telemetrie.
+    I file sono, quindi, analizzati per estrarre e salvare i DataFrame grezzi nel dizionario opportuno e elaborati con uno o più metodi differenti per produrre dei DataFrame regolarizzati da usare per le analisi.
+    L'utente può scegliere se procedere da 0 con le due fasi (se ci sono stati cambiamenti nei file o se ci sono stati cambiamenti nel codice per l'elaborazione). In caso può anche scegliere di fare un solo tipo di processing se l'altro non viene intaccato.
+    Successivamente si procede con l'analisi statistica. Anche qui l'utente può selezionare il tipo di analisi da effettuare e con quali Datasets farla. Al termine di questa fase si producono dei file di testo contenenti
+    i coefficienti di correlazione di ogni singola missione e uno con i valori medi di quelle più significative, oltre che delle heatmap che mostrano graficamente questi legami.
+    Infine, si procede con un'analisi PCA.
+    Per cambiare i metodi usati per il processing dei DataFrame o per l'analisi statistica occorre cambiare le liste presenti nella fase di inizializzazione delle variabili'''
 
 
 # Funzione per la creazione della tabella riassuntiva con tutti i coefficienti medi per la tesi --> li salva successivamente in un file di testo
@@ -99,24 +104,28 @@ def tabella_tesi(storico_coppie_medie):
 #              INIZIALIZZAZIONE VARIABILI
 # ======================================================
 
-sensors_frequencies = {'IMU': 5, 'DVL': 10, 'Depth': 5, 'Depth_rate': 5, 'MOT': 5, 'V_ref': 5, 'GPS': 1}  # Frequenze associate ai sensori
+sensors_frequencies = {'IMU': 5, 'DVL': 10, 'Depth': 5, 'DepthVel': 5, 'MOT': 5, 'V_ref': 5, 'GPS': 1}  # Frequenze associate ai sensori
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-ROOT_DIR : str = os.path.dirname(SCRIPT_DIR)
-DF_DICT_DIR = os.path.join(ROOT_DIR, 'Dizionari_dataframes')
-os.makedirs(DF_DICT_DIR, exist_ok=True)                                                 # Si genera la cartella di destinazione dei file di salvataggio pickle con i vari dataframe
-file_database_raw = os.path.join(DF_DICT_DIR, 'Dataframe_globale.pkl')                  # File pickle di output/input contenente i dati sul dizionario globale dei dataframe generato al termine del pre-processing
-file_database_resampled = os.path.join(DF_DICT_DIR, 'Dataframe_resampled.pkl')          # File pickle di output/input contenente i dati sul dizionario globale dei dataframe generato al termine del pre-processing
-file_database_interpolated = os.path.join(DF_DICT_DIR, 'Dataframe_interpolated.pkl')    # File pickle di output/input contenente i dati sul dizionario globale dei dataframe generato al termine del pre-processing
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))                                 # Directory in cui si trova lo script python
+ROOT_DIR : str = os.path.dirname(SCRIPT_DIR)                                            # Directory esterna a quella dello script --> in questa verranno generate le cartelle degli output
+DF_DICT_DIR = os.path.join(ROOT_DIR, 'Dizionari_datasets')                              # Directory in cui verranno salvati i file pickle associati a ogni dizionario prodotto nell'esecuzione
+os.makedirs(DF_DICT_DIR, exist_ok=True)                                                 # Si genera la cartella di destinazione dei file di salvataggio pickle con i vari DataFrame (se non presente)
+file_datasets_raw = os.path.join(DF_DICT_DIR, 'Dataset_globale.pkl')                    # File pickle di output/input contenente i dati sul dizionario globale dei dataframe generato al termine del pre-processing
+file_datasets_resampled = os.path.join(DF_DICT_DIR, 'Dataset_resampled.pkl')            # File pickle di output/input contenente i dati sul dizionario globale dei dataframe generato al termine del pre-processing
+file_datasets_interpolated = os.path.join(DF_DICT_DIR, 'Dataset_interpolated.pkl')      # File pickle di output/input contenente i dati sul dizionario globale dei dataframe generato al termine del pre-processing
 file_config = os.path.join(ROOT_DIR, "Telemetrie/Matrice_configurazioni.txt")           # File di testo di input contenente un elenco delle combinazioni condizione ambientale/operativa per ogni traiettoria simulata
 
 # Si inizializzano i metodi prescelti e i dizionari per l'immagazzinamento associati
-processing_methods = ['resampling', 'interpolazione']             # Lista di metodi per il trattamento dei dati di telemetria pura
-correlation_methods = ['pearson', 'spearman']                     # Lista di metodi usati per l'analisi di correlazione
-correlation_dict = {}                                             # Dizionario necessario per accumulare i valori di correlazione calcolati --> forma {metodo: {coppia_valori}...}
-mean_correlation_dict = {}                                        # Dizionario necessario per accumulare i valori medi su tutte le missioni per i coefficienti --> forma {'resampling': {'Pearson': {}, 'Spearman': {}}, 'interpolazione': {...}}
+possible_processing_methods = ['resampling', 'interpolazione']              # Lista di metodi per il trattamento dei dati di telemetria pura
+possible_correlation_methods = ['pearson', 'spearman']                      # Lista di metodi usati per l'analisi di correlazione
+processed_datasets_dict = {}                                                # Dizionario che conterrà i dizionari processati con i vari metodi prescelti --> nella forma {'metodo 1': {}, 'metodo 2': {}, ...}
 
-# Si inizializzano le variabili
+files_processed_datasets = {'resampling': file_datasets_resampled, 'interpolazione': file_datasets_interpolated}
+
+#correlation_dict = {}                                             # Dizionario necessario per accumulare i valori di correlazione calcolati --> forma {metodo: {coppia_valori}...}
+#mean_correlation_dict = {}                                        # Dizionario necessario per accumulare i valori medi su tutte le missioni per i coefficienti --> forma {'resampling': {'Pearson': {}, 'Spearman': {}}, 'interpolazione': {...}}
+
+# Si inizializzano le variabili --> per evitare soft warnings nel seguito
 processing_methods_choice = ''
 processing_choice = ''
 
@@ -130,194 +139,181 @@ print('===================================================')
 
 # Si richiama la classe associata al pre-processing
 pre_processing = PreProcessing()
-print(f"\nClasse di pre-processing inizializzata correttamente.")
+print(f"\nSelezionare i parametri legati all'estrazione e all'analisi dei dati di telemetria:")
 
 # -----------------------------------------------------
 #         ESTRAZIONE DATAFRAMES GREZZI DA CSV
 # -----------------------------------------------------
 
-print('\n\n----------------------------------------------------')
-print('---------- CARICAMENTO DATI DI TELEMETRIA ----------')
-print('----------------------------------------------------')
 while True:
 
-    # Gestione dati di telemetria di origine --> si può generare nuovamente il dataframe o utilizzarne uno già creato
-    generate_new_dataframe = input(f'\nSi vuole generare un nuovo dataframe contenente i dati di telemetria (S/N)?').upper()
+    generate_new_dataset = input(f"\n  Si vuole generare un nuovo Dataset contenente i dati di telemetria (S/N/EXIT)?").upper()
 
-    if generate_new_dataframe == 'S':
+    if generate_new_dataset == 'S':
 
-        # Si analizzano i file .csv contenenti i dati di telemetria di ogni missione --> si genera un dizionario globale e si salva in un apposito file pickle
         pre_processing.csv_analysis(file_config, ROOT_DIR)
-        pre_processing.save_raw_dataframes('pickle', DF_DICT_DIR)
+        pre_processing.save_raw_datasets_dict('pickle', DF_DICT_DIR)
+        raw_dataset = pre_processing.raw_database
 
-        # Gestione del salvataggio del file in formato Excel del dataframe
         while True:
-            save_excel = input(f'\n  Si vuole salvare il dataframe anche in formato Excel (S/N)?').upper()
-            if save_excel == 'S':
-                pre_processing.save_raw_dataframes('excel', DF_DICT_DIR)
+
+            save_raw_dataset = input(f"\n    Si vuole salvare in formato Excel il Dataset prodotto (S/N/EXIT)?").upper()
+
+            if save_raw_dataset == 'S':
+
+                pre_processing.save_raw_datasets_dict('excel', DF_DICT_DIR)
                 break
-            elif save_excel == 'N':
-                print(f'    Prosecuzione operazioni pre-processing dati senza salvataggio Excel.')
+
+            elif save_raw_dataset == 'N':
+                print(f"      Prosecuzione analisi senza salvare i Dataset grezzi prodotti.")
                 break
+
+            elif save_raw_dataset == 'EXIT':
+                print(f"      Chiusura del programma forzata da utente in corso...")
+                sys.exit()
+
             else:
-                print(f'    Inserito input non valido. Ripetere la scelta.')
+                print(f"      Input inserito non valido. Ripetere la selezione inserendo s, n o exit.")
 
         break
 
-    elif generate_new_dataframe == 'N':
+    elif generate_new_dataset == 'N':
 
-        # Si continua con l'analisi usando i dati raccolti in un file pickle in iterazione precedente
-        if os.path.isfile(file_database_raw):
-            print(f'  Caricamento del database dal file {file_database_raw}')
+        # Controllo esistenza del file pickle
+        if os.path.isfile(file_datasets_raw) and not os.stat(file_datasets_raw).st_size == 0:
+            print(f"    Utilizzo del Dataset precedentemente generato e salvato in {file_datasets_raw}.")
+            with open(file_datasets_raw, 'rb') as f:
+                raw_dataset = pickle.load(f)
             break
         else:
-            print(f'  File contenente il database non trovato. Verificare o procedere con la generazione del database.')
+            print(f"    Il file {file_datasets_raw} risulta non presente o vuoto. Verificare la presenza o generare un nuovo dataset.")
 
-    elif generate_new_dataframe == 'EXIT':
-        print(f"  Chiusura forzata da utente del programma.")
+    elif generate_new_dataset == 'EXIT':
+        print(f"    Chiusura del programma forzata da utente in corso...")
         sys.exit()
 
     else:
+        print(f"    Input inserito non valido. Ripetere la selezione inserendo s, n o exit.")
 
-        # Si fa ripetere il ciclo poiché l'input utente non è valido
-        print(f'  Inserito un input non valido. Ripetere la scelta.')
 
 # -----------------------------------------------------
-#           PROCESSING DEI DATAFRAMES GREZZI
+#           SELEZIONE METODI PER PROCESSING
 # -----------------------------------------------------
 
-print('\n\n---------------------------------------------------')
-print('------------- ELABORAZIONE DATAFRAMES -------------')
-print('---------------------------------------------------')
 while True:
 
-    process_dataframe = input(f"\nSi vuole generare da zero il dataframe elaborato (S/N/EXIT)?").upper()
+    all_processing_methods = input("\n  Si vuole effettuare il processing dei dati con tutti i metodi disponibili (S/N/EXIT)?").upper()
 
-    if process_dataframe == 'S':
+    if all_processing_methods == 'S':
+        processing_methods = possible_processing_methods
+        break
+
+    elif all_processing_methods == 'N':
 
         while True:
 
-            processing_methods_choice = input(f'\n  Si vogliono trattare i dati con tutti i metodi disponibili (S/N)?').upper()
+            processing_methods_choice = input(f"\n    Selezionare il/i metodi di processing dei dati da utilizzare ({[m for m in possible_processing_methods]}) separati da una virgola:").lower()
 
-            if processing_methods_choice == 'S':
+            processing_methods = [m.strip() for m in processing_methods_choice.split(',') if m.strip()]
 
-                # Si itera su tutti i metodi presenti all'interno della lista di possibilità
-                for processing_method in processing_methods:
-                    print(f'\n  -- Gestione dati di telemetria con {processing_method} in corso:')
-
-                    # Si effettua il resampling del dataframe
-                    if processing_method == 'resampling':
-                        pre_processing.raw_dataframes_processing(generate_new_dataframe, file_database_raw, sensors_frequencies)
-                        pre_processing.save_dataframe_resampled('pickle', DF_DICT_DIR)
-
-                    # Si effettua l'interpolazione del dataframe
-                    elif processing_method == 'interpolazione':
-                        pre_processing.dataframe_interpolation(generate_new_dataframe, file_database_raw)
-                        pre_processing.save_dataframe_interpolated('pickle', DF_DICT_DIR)
-
-                # Gestione del salvataggio dei dataframe così generati
-                while True:
-
-                    save_processed_dataframe = input(f'\n  Si vogliono salvare i dataframe generati in formato Excel (S/N)?').upper()
-
-                    if save_processed_dataframe == 'S':
-                        pre_processing.save_dataframe_resampled('excel', DF_DICT_DIR)
-                        pre_processing.save_dataframe_interpolated('excel', DF_DICT_DIR)
-                        break
-
-                    elif save_processed_dataframe == 'N':
-
-                        print(f'    Prosecuzione analisi senza salvataggio Excel dei dataframe elaborati.')
-                        break
-
-                    else:
-
-                        print(f'    Inserito input non valido. Ripetere la scelta.')
-
-                break
-
-            elif processing_methods_choice == 'N':
-
-                # Selezione del metodo di gestione dati da usare
-                while True:
-
-                    processing_choice = input(f"\n  Quale metodo si vuole utilizzare per trattare i dati (resampling/interpolazione)?").lower()
-
-                    if processing_choice not in processing_methods:
-
-                        print(f"  Il metodo selezionato non è presente nella lista o la formattazione dell'input è errata. Reinserire il metodo.")
-
-                    else:
-
-                        # Si genera il dataframe trattato opportunamente per ogni missione --> salvato in apposito dizionario
-                        print(f'\n  -- Gestione dati di telemetria con {processing_choice} in corso:')
-
-                        # Si effettua il resampling del dataframe
-                        if processing_choice == 'resampling':
-                            pre_processing.raw_dataframes_processing(generate_new_dataframe, file_database_raw, sensors_frequencies)
-                            pre_processing.save_dataframe_resampled('pickle', DF_DICT_DIR)
-
-                        # Si effettua l'interpolazione del dataframe
-                        elif processing_choice == 'interpolazione':
-                            pre_processing.dataframe_interpolation(generate_new_dataframe, file_database_raw)
-                            pre_processing.save_dataframe_interpolated('pickle', DF_DICT_DIR)
-
-                        # Gestione del salvataggio dei dataframe così generati
-                        while True:
-
-                            save_processed_dataframe = input(f'\n  Si vuole salvare il dataframe generato tramite {processing_choice} in formato Excel (S/N)?').upper()
-
-                            if save_processed_dataframe == 'S':
-
-                                # Si effettua il resampling del dataframe
-                                if processing_choice == 'resampling':
-                                    pre_processing.save_dataframe_resampled('excel', ROOT_DIR)
-
-                                # Si effettua l'interpolazione del dataframe
-                                elif processing_choice == 'interpolazione':
-                                    pre_processing.save_dataframe_interpolated('excel', ROOT_DIR)
-                                break
-
-                            elif save_processed_dataframe == 'N':
-
-                                print(f'    Prosecuzione analisi senza salvataggio Excel dei dataframe elaborati.')
-                                break
-
-                            else:
-
-                                print(f'    Inserito input non valido. Ripetere la scelta.')
-
-                        break
-                break
+            if any(m not in possible_processing_methods for m in processing_methods):
+                print(f"      Il/i metodi selezionati non sono stati inseriti correttamente. Ripetere la scelta")
 
             else:
+                break
 
-                print(f'    Inserito un input non valido. Ripetere la scelta.')
         break
 
-    elif process_dataframe == 'N':
-
-        if os.path.isfile(file_database_resampled) and os.path.isfile(file_database_interpolated):
-            print(f'  Caricamento del dataframe resampled e interpolated dai file {file_database_resampled} e {file_database_interpolated}')
-            break
-        else:
-            print(f'  File contenenti i database non trovati. Verificare o procedere con la generazione dei database.')
-
-    elif process_dataframe == 'EXIT':
-        print(f"  Chiusura forzata da utente del programma.")
+    elif all_processing_methods == 'EXIT':
+        print(f"    Chiusura del programma forzata da utente in corso...")
         sys.exit()
 
     else:
+        print(f"    Input inserito non valido. Ripetere la selezione inserendo s, n o exit.")
 
-        # Si fa ripetere il ciclo poiché l'input utente non è valido
-        print(f'  Inserito un input non valido. Ripetere la scelta.')
+
+# -----------------------------------------------------
+#         GESTIONE SCELTA SU NUOVA ELABORAZIONE
+# -----------------------------------------------------
+
+while True:
+
+    process_dataset = input(f"\n  Si vuole procedere con una nuova elaborazione dei dati di telemetria (S/N/EXIT)?").upper()
+
+    # Se si è generato un nuovo Dataset grezzo è inevitabile rieseguire anche l'elaborazione dello stesso
+    if generate_new_dataset == 'S':
+        process_dataset = 'S'
+
+    if process_dataset == 'S':
+
+        # Si itera su ogni metodo selezionato in precedenza --> per ognuno si effettua l'analisi tramite apposita funzione
+        for processing_method in processing_methods:
+
+            if processing_method == 'resampling':
+                pre_processing.raw_dataframes_processing(generate_new_dataset, file_datasets_raw, sensors_frequencies)
+                pre_processing.save_processed_dataset_dict('pickle', DF_DICT_DIR, 'resampling')
+                processed_datasets_dict[processing_method] = pre_processing.resampled_database
+
+            elif processing_method == 'interpolazione':
+                pre_processing.dataframe_interpolation(generate_new_dataset, file_datasets_raw)
+                pre_processing.save_processed_dataset_dict('pickle', DF_DICT_DIR, 'interpolazione')
+                processed_datasets_dict[processing_method] = pre_processing.interpolated_database
+
+            # Gestione eventuale salvataggio in formato Excel
+            while True:
+
+                save_processed_dataset = input(f"\n    Si desidera salvare il Dataset trattato con {processing_method.upper()} in formato Excel (S/N/EXIT)?").upper()
+
+                if save_processed_dataset == 'S':
+
+                    pre_processing.save_processed_dataset_dict('excel', DF_DICT_DIR, processing_method)
+                    break
+
+                elif save_processed_dataset == 'N':
+                    print(f"      Prosecuzione analisi senza salvare i Dataset elaborati prodotti.")
+                    break
+
+                elif save_processed_dataset == 'EXIT':
+                    print(f"      Chiusura del programma forzata da utente in corso...")
+                    sys.exit()
+
+                else:
+                    print(f"      Input inserito non valido. Ripetere la scelta con s, n o exit.")
+
+
+    elif process_dataset == 'N':
+
+        file_exists = True
+        for processing_method in processing_methods:
+
+            dict_file_path = files_processed_datasets[processing_method]
+            if os.path.isfile(dict_file_path) and os.stat(dict_file_path).st_size > 0:
+
+                with open(dict_file_path, 'rb') as f:
+                    processed_datasets_dict[processing_method] = pickle.load(f)
+
+            else:
+                print(f"    Il file {dict_file_path} risulta non presente o vuoto. Ricontrollare o rieseguire l'analisi dei dati grezzi. ")
+                file_exists = False
+
+        # Solo se tutti i file pickle di interesse sono stati letti correttamente si esce dal ciclo
+        if file_exists:
+            break
+
+    elif process_dataset == 'EXIT':
+        print(f"    Chiusura del programma forzata da utente in corso...")
+        sys.exit()
+
+    else:
+        print(f"    Input inserito non valido. Ripetere la selezione inserendo s, n o exit.")
+
 
 
 # ======================================================
 #           ANALISI STATISTICA DI CORRELAZIONE
 # ======================================================
 
-print('=====================================================')
+print('\n\n=====================================================')
 print('========== AVVIO FASE DI ANALISI STATISTICA =========')
 print('=====================================================')
 
@@ -327,116 +323,65 @@ analysis = StatisticalAnalysis()
 #          CARICAMENTO DATABASE PROCESSATO
 # -----------------------------------------------------
 
-# Si gestiscono le varie condizioni --> quale metodo è stato scelto e se si è scelto di caricarlo da zero o usare il dataframe salvato
-resampled_dataframes_dict = {}
-interpolated_dataframes_dict = {}
-if process_dataframe == 'S':
-
-    if processing_methods_choice == 'S':
-
-        resampled_dataframes_dict = pre_processing.resampled_database.copy()
-        interpolated_dataframes_dict = pre_processing.interpolated_database.copy()
-
-    elif processing_methods_choice == 'N':
-
-        # Se il metodo è resampling si carica il solo dizionario associato e si aggiorna la lista per il ciclo for di aggregazione --> se il dizionario dovesse essere vuoto si esce dal programma
-        if processing_methods_choice == 'resampling':
-
-            resampled_dataframes_dict = pre_processing.resampled_database.copy()
-            processing_methods = ['resampling']
-            if not resampled_dataframes_dict:
-                print(f"  [ERRORE] Il dataset elaborato con resampling non risulta caricato correttamente (è vuoto).")
-                sys.exit()
-
-        # Se il metodo è interpolazione si carica il solo dizionario associato e si aggiorna la lista per il ciclo for di aggregazione --> se il dizionario dovesse essere vuoto si esce dal programma
-        elif processing_choice == 'interpolazione':
-
-            interpolated_dataframes_dict = pre_processing.interpolated_database.copy()
-            processing_methods = ['interpolazione']
-            if not interpolated_dataframes_dict:
-                print(f"  [ERRORE] Il dataset elaborato con interpolazione non risulta caricato correttamente (è vuoto).")
-                sys.exit()
-
-elif process_dataframe == 'N':
-
-    try:
-        with open(file_database_resampled, 'rb') as f:
-            resampled_dataframes_dict = pickle.load(f)
-
-        with open(file_database_interpolated, 'rb') as f:
-            interpolated_dataframes_dict = pickle.load(f)
-
-    except Exception as e:
-        print(f"  [WARNING] Errore nell'apertura del file pickle dei dataframe elaborati --> {e}")
-
 # Se uno dei due dataframe risulta vuoto ci sono stati errori non previsti a monte e si interrompe qui il codice
-if processing_methods_choice == 'S' and (not resampled_dataframes_dict or not interpolated_dataframes_dict):
+print("\nVerifica correttezza Dataset per i metodi di elaborazione selezionati:")
+if not all(d for d in processed_datasets_dict.values()):
     print(f"  [ERRORE] Almeno uno dei due dataset elaborati non risulta caricato correttamente (è vuoto).")
     sys.exit()
-
-# Si uniscono i dataframe, usando come chiavi i metodi utilizzati nel pre-processing
-processed_dataframes_dict = {}
-for processing_method in processing_methods:
-
-    if processing_method not in processed_dataframes_dict:
-        processed_dataframes_dict[processing_method] = {}
-
-    if processing_method == 'resampling':
-        processed_dataframes_dict[processing_method] = resampled_dataframes_dict
-    elif processing_method == 'interpolazione':
-        processed_dataframes_dict[processing_method] = interpolated_dataframes_dict
+else:
+    print("  I Dataset sono stati generati/caricati correttamente.")
 
 # -----------------------------------------------------
 #          GESTIONE ANALISI DI CORRELAZIONE
 # -----------------------------------------------------
 
+print(f"\nSelezionare i parametri legati all'analisi di correlazione da effettuare:")
+
 while True:
 
-    both_methods = input(f"\nSi vogliono eseguire tutti i tipi di analisi indicati (S/N)?").upper()
+    all_correlation_methods = input(f"\n  Si vogliono eseguire tutti i tipi di analisi indicati (S/N/EXIT)?").upper()
 
-    if both_methods == 'S':
+    if all_correlation_methods == 'S':
 
-        # Si effettua il calcolo dei coefficienti con entrambi i metodi e per ognuno dei due dataset (resampling e interpolazione)
-        analysis.correlation_analysis(correlation_methods, processed_dataframes_dict, processing_methods, ROOT_DIR)
-
-        # Si effettua il calcolo dei valori medi sui dizionari generati
+        correlation_methods = possible_correlation_methods
+        analysis.correlation_analysis(correlation_methods, processed_datasets_dict, processing_methods, ROOT_DIR)
         analysis.mean_correlation_analysis(correlation_methods, processing_methods, ROOT_DIR)
 
         break
 
-    elif both_methods == 'N':
+    elif all_correlation_methods == 'N':
 
         while True:
-            method_choice = input(f"\n  Quale analisi si vuole effettuare?").lower()
 
-            if method_choice == 'pearson':
+            correlation_methods_choice = input(f"\n    Quale analisi si vuole effettuare ({[m for m in possible_correlation_methods]})?").lower()
 
-                # Si effettua il calcolo dei coefficienti con il metodo prescelto e per ognuno dei due dataset (resampling e interpolazione)
-                analysis.correlation_analysis(correlation_methods[0], processed_dataframes_dict, processing_methods, ROOT_DIR)
+            correlation_methods = [m.strip() for m in correlation_methods_choice.split(',') if m.strip()]
 
-                # Si effettua il calcolo dei valori medi sui dizionari generati
-                analysis.mean_correlation_analysis(correlation_methods[0], processing_methods, ROOT_DIR)
+            valid_input = True
+            for correlation_method in correlation_methods:
 
+                if correlation_method in possible_correlation_methods:
+
+                    analysis.correlation_analysis(correlation_method, processed_datasets_dict, processing_methods, ROOT_DIR)
+                    analysis.mean_correlation_analysis(correlation_method, processing_methods, ROOT_DIR)
+
+                else:
+                    valid_input = False
+
+            if valid_input:
                 break
-
-            elif method_choice == 'spearman':
-
-                # Si effettua il calcolo dei coefficienti con il metodo prescelto e per ognuno dei due dataset (resampling e interpolazione)
-                analysis.correlation_analysis(correlation_methods[1], processed_dataframes_dict, processing_methods, ROOT_DIR)
-
-                # Si effettua il calcolo dei valori medi sui dizionari generati
-                analysis.mean_correlation_analysis(correlation_methods[1], processing_methods, ROOT_DIR)
-
-                break
-
             else:
-                print(f"    Inserito un input non valido. Ripetere la scelta.")
+                print(f"      Inserito un input non valido. Ripetere la scelta selezionando uno o più metodi corretti.")
 
         break
 
+    elif all_correlation_methods == 'EXIT':
+        print(f"      Chiusura del programma forzata da utente in corso...")
+        sys.exit()
+
     else:
 
-        print(f'  Input non valido. Ripetere la scelta.')
+        print(f'    Input non valido. Ripetere la scelta selezionando s, n o exit.')
 
 
 
