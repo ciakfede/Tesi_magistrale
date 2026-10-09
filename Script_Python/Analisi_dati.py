@@ -1389,7 +1389,7 @@ class PostProcessing:
     # ======================================================
 
     # Funzione interna che permette di costruire un dizionario
-    def single_path_definition(self, resampled_database):
+    def single_path_definition(self, processed_dataset):
 
         trajectory_0_intervals = {('0', '4'): [(177, 414), (635, 980), (1262, 2366), (2630, 3402)],
                                  ('0', '8'): [(268, 611), (891, 1201), (1367, 1848), (2010, 2525)],
@@ -1417,7 +1417,7 @@ class PostProcessing:
                 continue
 
             # Si verifica che il DataFrame non sia vuoto --> altrimenti si salta la missione
-            resampled_dataframe = resampled_database[trajectory][combination]
+            resampled_dataframe = processed_dataset[trajectory][combination]
             if resampled_dataframe.empty:
                 continue
 
@@ -1473,7 +1473,7 @@ class PostProcessing:
         return self
 
     # Funzione utile a inizializzare le chiavi del dizionario delle missioni di test tramite la lettura di un file di testo di input
-    def test_missions_definition(self, resampled_database, ROOT_DIR):
+    def test_missions_definition(self, processed_dataset, ROOT_DIR):
 
         # Si inizializza il percorso del file di testo che contiene l'elenco delle missioni prescelte per il test
         INPUT_FOLDER_PATH = os.path.join(ROOT_DIR, 'Telemetrie')
@@ -1485,7 +1485,7 @@ class PostProcessing:
         os.makedirs(OUTPUT_FOLDER_PATH, exist_ok=True)
         output_file_path = os.path.join(OUTPUT_FOLDER_PATH, f"Test_missions_dict.pkl")
 
-        print(f"\nDefinizione missioni di test e scomposizione in singole traiettorie in corso:")
+        print(f"\n    Definizione missioni di test e scomposizione in singole traiettorie in corso:")
 
         try:
 
@@ -1509,14 +1509,14 @@ class PostProcessing:
 
                     except Exception as e:
                         self.warn_count += 1
-                        print(f"  [WARNING] Errore nella fase di lettura e salvataggio del contenuto del file --> {e}")
+                        print(f"    [WARNING] Errore nella fase di lettura e salvataggio del contenuto del file --> {e}")
                         continue
 
         except FileNotFoundError:
-            raise FileNotFoundError(f"  [ERROR] Errore nel processo di estrazione dati dei waypoints. Ricontrollare esistenza del file {input_file_path}") from None
+            raise FileNotFoundError(f"    [ERROR] Errore nel processo di estrazione dati dei waypoints. Ricontrollare esistenza del file {input_file_path}") from None
 
         # Si richiama la funzione per scomporre la missione nelle quattro ripetizioni della traiettoria
-        self.single_path_definition(resampled_database)
+        self.single_path_definition(processed_dataset)
 
         # Si effettua il salvataggio del dizionario sul file pickle opportuno
         try:
@@ -1526,9 +1526,9 @@ class PostProcessing:
 
         except Exception as e:
             self.warn_count += 1
-            print(f'    [WARNING] Errore nel salvataggio del dizionario contenente tutti i dataframe in formato pickle --> {e}')
+            print(f'      [WARNING] Errore nel salvataggio del dizionario contenente tutti i dataframe in formato pickle --> {e}')
 
-        print(f"  Dizionario delle missioni di test generato con {self.warn_count} warnings. Il dizionario è stato salvato all'interno del file {output_file_path} ")
+        print(f"    Dizionario delle missioni di test generato con {self.warn_count} warnings. Il dizionario è stato salvato all'interno del file {output_file_path} ")
 
         return self
 
@@ -1674,15 +1674,7 @@ class PostProcessing:
         plt.grid(True, linestyle=':', alpha=0.6)
         plt.axis('equal')
 
-        # Si stampa il testo legato all'errore assoluto sulla posizione
-        Delta_E = np.abs(GPS_East[-1] - NN_East[-1])
-        Delta_N = np.abs(GPS_North[-1] - NN_North[-1])
-        print(f'\nPer la missione {mission} e la traiettoria {path_name}, si hanno i seguenti valori di Errore Assoluto sulla posizione:')
-        print(f'    Delta sulla posizione in direzione North è pari a: {Delta_N} m.')
-        print(f'    Delta sulla posizione in direzione East è pari a: {Delta_E} m.')
-
         plt.savefig(output_file_path, bbox_inches='tight')
-        #plt.show()
         plt.close()
 
     # Funzione che permette di stampare il grafico relativo alla loss function durante il training

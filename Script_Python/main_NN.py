@@ -44,7 +44,7 @@ def stima_trapezoidale(velocita, timestamps, ROOT_DIR, pos_iniziale=0):
 batch_size = 32                                                                         # Numero di secondi di missione forniti contemporaneamente alla rete
 batch_size_test = 1                                                                     # Per il test si usa una batch size di 1s --> si ottiene la stima della posizione per ogni secondo di navigazione (coincidenza perfetta con batch GPS)
 num_epoch = 60                                                                          # Numero di epoche di iterazione per l'addestramento
-network_config = {'DVL': 3, 'INS': 9}
+network_config = {'INS': 9, 'DVL': 3}
 hidden_size = 100
 
 sensors_frequencies = {'IMU': 5, 'DVL': 10, 'Depth': 5, 'DepthVel': 5, 'MOT': 5, 'V_ref': 5, 'GPS': 1}             # Frequenze associate ai sensori
@@ -56,7 +56,7 @@ DF_DICT_DIR = os.path.join(ROOT_DIR, 'Dizionari_datasets')
 os.makedirs(DF_DICT_DIR, exist_ok=True)                                                 # Si genera la cartella di destinazione dei file di salvataggio pickle con i vari dataframe
 file_dataset_raw = os.path.join(DF_DICT_DIR, 'Dataset_globale.pkl')                     # File pickle di output/input contenente i dati sul dizionario globale dei dataframe generato al termine del pre-processing
 file_dataset_resampled = os.path.join(DF_DICT_DIR, 'Dataset_resampled.pkl')             # File pickle di output/input contenente i dati sul dizionario globale dei dataframe resampled generato al termine del pre-processing
-file_database_sensors = os.path.join(DF_DICT_DIR, 'Dataset_resampled_scpmposto.pkl')    # File pickle di output/input contenente i dati sul dizionario suddiviso per i vari sensori dei dataframe generato al termine del pre-processing
+file_database_sensors = os.path.join(DF_DICT_DIR, 'Dataset_resampled_scomposto.pkl')    # File pickle di output/input contenente i dati sul dizionario suddiviso per i vari sensori dei dataframe generato al termine del pre-processing
 file_config = os.path.join(ROOT_DIR, "Telemetrie/Matrice_configurazioni.txt")           # File di testo di input contenente un elenco delle combinazioni condizione ambientale/operativa per ogni traiettoria simulata
 weights_save_path = os.path.join(ROOT_DIR, "NavNet_weights.pkl")                        # File pickle contenente i pesi della rete neurale
 file_database_waypoints = os.path.join(DF_DICT_DIR, 'Waypoints_dict.pkl')               # File pickle contenente i waypoints per ogni missione
@@ -151,7 +151,7 @@ print('---------------------------------------------------')
 processing_methods = ['resampling']
 while True:
 
-    process_dataset = input(f"\n  Si vuole procedere con una nuova elaborazione dei dati di telemetria (S/N/EXIT)? ").upper()
+    process_dataset = input(f"\n  Si vuole procedere con una nuova elaborazione dei dati di telemetria (S/N/EXIT)?").upper()
 
     # Se si è generato un nuovo Dataset grezzo è inevitabile rieseguire anche l'elaborazione dello stesso
     if generate_new_dataset == 'S':
@@ -193,6 +193,7 @@ while True:
                 else:
                     print(f"      Input inserito non valido. Ripetere la scelta con s, n o exit.")
 
+        break
 
     elif process_dataset == 'N':
 
@@ -220,7 +221,6 @@ while True:
     else:
         print(f"    Input inserito non valido. Ripetere la selezione inserendo s, n o exit.")
 
-
 resampled_dataset = processed_datasets_dict['resampling']
 
 
@@ -228,49 +228,74 @@ resampled_dataset = processed_datasets_dict['resampling']
 #        ANALISI WAYPOINTS E TRAIETTORIA IDEALE
 # -----------------------------------------------------
 
-# Si genera il dizionario delle missioni di test o si apre se il file pickle corrispondente esiste già
-if os.path.isfile(file_database_waypoints) and process_dataset == 'N':
+# Si gestiste il caricamento o la generazione dei dizionari con le informazioni utili al post-processing delle traiettorie in base a quanto scelto da utente --> se si è eseguita una nuova analisi in una delle due fasi precedenti si rigenera
+while True:
 
-    try:
-        with open(file_database_waypoints, 'rb') as f:
-            post_processing.waypoints_dict = pickle.load(f)
+    new_waypoints_dict = input(f"\n  Si vuole generare un nuovo dizionario dei Waypoints associati alle varie traiettorie (S/N/EXIT)?").upper()
 
-    except Exception as e:
-        print(f" [WARNING] Errore nell'apertura del file pickle per il database dei waypoints --> {e}")
-        raise
+    if new_waypoints_dict == 'S':
 
-else:
-    post_processing.waypoints_dict_building(ROOT_DIR)       # Si genera il dizionario che contiene le liste di waypoints
-    post_processing.write_on_file(ROOT_DIR)                 # Si salva il dizionario sotto forma testuale
-    post_processing.ideal_trajectories_plot(ROOT_DIR)       # Si generano i grafici delle traiettorie ideali
-    waypoints_dict = post_processing.waypoints_dict
+        post_processing.waypoints_dict_building(ROOT_DIR)       # Si genera il dizionario che contiene le liste di waypoints
+        post_processing.write_on_file(ROOT_DIR)                 # Si salva il dizionario sotto forma testuale
+        post_processing.ideal_trajectories_plot(ROOT_DIR)       # Si generano i grafici delle traiettorie ideali
+        break
+
+    elif new_waypoints_dict == 'N':
+
+        # Controllo esistenza del file pickle --> se esiste si carica dal pickle e si salva nella variabile associata alla classe di post-processing (per averla anche nelle successive funzioni)
+        if os.path.isfile(file_database_waypoints) and not os.stat(file_database_waypoints).st_size == 0:
+            print(f"    Utilizzo del dizionario di waypoints precedentemente generato e salvato in {file_database_waypoints}.")
+            with open(file_database_waypoints, 'rb') as f:
+                post_processing.waypoints_dict = pickle.load(f)
+            break
+        else:
+            print(f"    Il file {file_database_waypoints} risulta non presente o vuoto. Verificare la presenza o generare un nuovo dizionario.")
+
+    elif new_waypoints_dict == 'EXIT':
+        print(f"    Chiusura del programma forzata da utente in corso...")
+        sys.exit()
+
+    else:
+        print(f"    Input inserito non valido. Ripetere la selezione inserendo s, n o exit.")
 
 
-# Si genera il dizionario delle missioni di test o si apre se il file pickle corrispondente esiste già
-if os.path.isfile(file_test_missions_dict) and process_dataset == 'N':
+# Per la definizione delle missioni di test e la scomposizione in singoli percorsi di ognuna si asseconda la scelta fatta per la generazione di nuovi Dataset --> in tal caso è obbligatorio per evitare sfasamenti temporali
+while True:
 
-    try:
-        with open(file_test_missions_dict, 'rb') as f:
-            test_missions_dict = pickle.load(f)
+    if generate_new_dataset == 'S' or process_dataset == 'S':
 
-    except Exception as e:
-        print(f" [WARNING] Errore nell'apertura del file pickle per le missioni di test e i relativi intervalli temporali --> {e}")
-        raise
+        for processing_method in processing_methods:
 
-else:
-    post_processing.test_missions_definition(resampled_dataset, ROOT_DIR)
-    test_missions_dict = post_processing.test_missions_dict
+            post_processing.test_missions_definition(processing_method, ROOT_DIR)
+            test_missions_dict = post_processing.test_missions_dict
+
+        break
+
+    else:
+
+        if os.path.isfile(file_test_missions_dict) and os.stat(file_test_missions_dict).st_size > 0:
+
+            try:
+                with open(file_test_missions_dict, 'rb') as f:
+                    test_missions_dict = pickle.load(f)
+
+                break
+
+            except FileNotFoundError:
+                raise FileNotFoundError(f"   [ERROR] Errore nell'apertura del file pickle per le missioni di test e i relativi intervalli temporali.")
+
 
 # -----------------------------------------------------
 #         TRASFORMAZIONE DATAFRAMES IN TENSORI
 # -----------------------------------------------------
 
-pre_processing.dataframe_to_tensor(process_dataset, test_missions_dict, file_database_sensors)    # Si generano i tensori pytorch -->  si genera in output un dizionario in cui per ogni missione sono presenti 3 tensori, uno per ogni frequenza di misurazione presente
+pre_processing.dataframe_to_tensor(process_dataset, test_missions_dict, file_database_sensors)      # Si generano i tensori pytorch --> si genera in output un dizionario in cui per ogni missione sono presenti 3 tensori, uno per ogni frequenza di misurazione presente
 tensor_dict = pre_processing.pytorch_tensor_dict                                                    # Si richiama il dizionario di tensori da usare per la rete neurale --> ogni tensore è una lista ordinata (per sensore) contenente le misurazioni di tutte missioni
 
 # Si stampa un resoconto del pre-processing con le missioni ritenute non valide e non utilizzate per l'analisi
-print(f"\n\nFase di pre-processing delle telemetrie conclusa. Le seguenti missioni sono state escluse dai database prodotti:")
-print(f"  {pre_processing.empty_missions_list}")
+if generate_new_dataset == 'S':
+    print(f"\n\nFase di pre-processing delle telemetrie conclusa. Le seguenti missioni sono state escluse dai database prodotti:")
+    print(f"  {pre_processing.empty_missions_list}")
 
 
 # ======================================================
@@ -298,106 +323,116 @@ print('----------- FASE DI TRAINING RETE NEURALE -----------')
 print('-----------------------------------------------------')
 
 # Si richiede se si desidera fare il training della rete --> da fare al cambiamento del dataset
-do_training = input(f'\nSi desidera effettuare il training della rete (S/N)?').upper()
-if do_training == 'S':
 
-    # Si richiama la classe Dataset per definire la lunghezza della batch unitaria per ogni blocco di sensori --> successivamente tramite libreria pytorch si generano batch di forma [32, frequenza, numero di colonne]
-    training_dataset = Dataset(tensor_dict, sensors_frequencies, test_missions_dict, mode='train')
-    validation_dataset = Dataset(tensor_dict, sensors_frequencies, test_missions_dict, mode='validazione')
+while True:
 
-    # Si scompone il dataset di addestramento per poter fare anche validazione
-    #dataset_length = len(training_dataset)
-    #split_point = int(dataset_length * 0.80)                                                                    # Definizione del punto di split dei dati --> 80% delle missioni usate per training e 25% per validazione
-    #training_subset = torch.utils.data.Subset(training_dataset, range(0, split_point))                          # Definizione del subset legato ai soli dati di train
-    #validation_subset = torch.utils.data.Subset(training_dataset, range(split_point, dataset_length))           # Definizione del subset legato ai soli dati di validazione --> sono le ultime due missioni
+    do_training = input(f'\nSi desidera effettuare il training della rete (S/N/EXIT)?').upper()
 
-    # Si trasformano i subset definiti nei dataloader necessari alla rete neurale --> si aggregano più blocchi in base alla batch_size definita
-    training_loader = torch.utils.data.DataLoader(training_dataset, batch_size=batch_size, shuffle=True)                 # Definizione del dataloader associato al training
-    validation_loader = torch.utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)            # Definizione del dataloader associato alla validazione
+    if do_training == 'S':
 
-    # Si calcola la loss e si effettua la backpropagation per la stima dei migliori pesi
-    print(f'\n  Inizio training rete neurale:')
-    loss_train = []
-    loss_val = []
-    best_epoch = -1
-    best_val_loss = float('inf')
-    for epoch in range(num_epoch):
+        # Si richiama la classe Dataset per definire la lunghezza della batch unitaria per ogni blocco di sensori --> successivamente tramite libreria pytorch si generano batch di forma [32, frequenza, numero di colonne]
+        training_dataset = Dataset(tensor_dict, sensors_frequencies, test_missions_dict, mode='train')
+        validation_dataset = Dataset(tensor_dict, sensors_frequencies, test_missions_dict, mode='validazione')
 
-        # Si imposta la rete neurale in modalità training
-        rete_neurale.train()
+        # Si trasformano i subset definiti nei dataloader necessari alla rete neurale --> si aggregano più blocchi in base alla batch_size definita
+        training_loader = torch.utils.data.DataLoader(training_dataset, batch_size=batch_size, shuffle=True)                 # Definizione del dataloader associato al training
+        validation_loader = torch.utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)            # Definizione del dataloader associato alla validazione
 
-        # Inizializzazione parametri necessari
-        epoch_batches_number = 0                      # Inizializzazione numero di batch per l'epoca corrente
-        training_epoch_loss = 0                       # Inizializzazione perdita complessiva per l'epoca corrente in merito al training
-        validation_epoch_loss = 0                     # Inizializzazione perdita complessiva per l'epoca corrente in merito alla validazione
+        # Si calcola la loss e si effettua la backpropagation per la stima dei migliori pesi
+        print(f'\n  Inizio training rete neurale:')
+        loss_train = []
+        loss_val = []
+        best_epoch = -1
+        best_val_loss = float('inf')
+        for epoch in range(num_epoch):
 
-        # -----------------------------------------------------
-        #           STIMA PERDITA E BACKPROPAGATION
-        # -----------------------------------------------------
+            # Si imposta la rete neurale in modalità training
+            rete_neurale.train()
 
-        for batch in training_loader:
+            # Inizializzazione parametri necessari
+            epoch_batches_number = 0                      # Inizializzazione numero di batch per l'epoca corrente
+            training_epoch_loss = 0                       # Inizializzazione perdita complessiva per l'epoca corrente in merito al training
+            validation_epoch_loss = 0                     # Inizializzazione perdita complessiva per l'epoca corrente in merito alla validazione
 
-            DVL_data = batch[0]                 # Batch di dimensioni [32, 10, 3]
-            IMU_data = batch[1]                 # Batch di dimensioni [32, 5, 10] --> contiene i 3 valori IMU, i 4 sensori MOT (FV, FL, FW1, FW2) e i 2 di velocità reference (Vxref, omega_yref)
-            dati_gps = batch[2].squeeze(1)      # Batch di dimensioni [32, 1, 2] --> si vuole avere dimensione [32, 2] per congruenza con output rete neurale --> si elimina una dimensione dalla batch
+            # -----------------------------------------------------
+            #           STIMA PERDITA E BACKPROPAGATION
+            # -----------------------------------------------------
 
-            data = {'DVL': DVL_data, 'INS': IMU_data}
+            for batch in training_loader:
 
-            # Si richiama la funzione di aggiornamento pesi
-            training_batch_loss = rete_neurale.backpropagation(data, dati_gps)
+                DVL_data = batch[0]                 # Batch di dimensioni [32, 10, 3]
+                IMU_data = batch[1]                 # Batch di dimensioni [32, 5, 10] --> contiene i 3 valori IMU, i 4 sensori MOT (FV, FL, FW1, FW2) e i 2 di velocità reference (Vxref, omega_yref)
+                dati_gps = batch[2].squeeze(1)      # Batch di dimensioni [32, 1, 2] --> si vuole avere dimensione [32, 2] per congruenza con output rete neurale --> si elimina una dimensione dalla batch
 
-            # Si aggiornano i valori per il calcolo della media dei pesi sulla singola epoca
-            training_epoch_loss += training_batch_loss       # Aggiornamento del valore totale di perdita per l'epoca corrente
-            epoch_batches_number += 1                        # Aggiornamento del numero di batches per l'epoca corrente
+                data = {'INS': IMU_data, 'DVL': DVL_data}
 
-        # Calcolo media associata all'epoca corrente
-        loss_epoca_train = training_epoch_loss / epoch_batches_number
-        loss_train.append(loss_epoca_train)
-        print(f"    Loss media di training calcolata per l'epoca {epoch}: {loss_epoca_train:.4f}")
+                # Si richiama la funzione di aggiornamento pesi
+                training_batch_loss = rete_neurale.backpropagation(data, dati_gps)
 
-        # -----------------------------------------------------
-        #               VALIDAZIONE RETE NEURALE
-        # -----------------------------------------------------
+                # Si aggiornano i valori per il calcolo della media dei pesi sulla singola epoca
+                training_epoch_loss += training_batch_loss       # Aggiornamento del valore totale di perdita per l'epoca corrente
+                epoch_batches_number += 1                        # Aggiornamento del numero di batches per l'epoca corrente
 
-        rete_neurale.eval()
-        with torch.no_grad():
-            epoch_batches_number = 0
-            for batch in validation_loader:
+            # Calcolo media associata all'epoca corrente
+            loss_epoca_train = training_epoch_loss / epoch_batches_number
+            loss_train.append(loss_epoca_train)
+            print(f"    Loss media di training calcolata per l'epoca {epoch}: {loss_epoca_train:.4f}")
 
-                DVL_data = batch[0]
-                IMU_data = batch[1]
-                GPS_data = batch[2].squeeze(1)
+            # -----------------------------------------------------
+            #               VALIDAZIONE RETE NEURALE
+            # -----------------------------------------------------
 
-                data = {'DVL': DVL_data, 'INS': IMU_data}
+            rete_neurale.eval()
+            with torch.no_grad():
+                epoch_batches_number = 0
+                for batch in validation_loader:
 
-                NN_displacement_estimation = rete_neurale.forward(data)
+                    DVL_data = batch[0]
+                    IMU_data = batch[1]
+                    GPS_data = batch[2].squeeze(1)
 
-                # Calcolo della loss function
-                validation_batch_loss = rete_neurale.loss_criterion(NN_displacement_estimation, GPS_data)
-                validation_epoch_loss += validation_batch_loss
-                epoch_batches_number += 1
+                    data = {'INS': IMU_data, 'DVL': DVL_data}
 
-            # Calcolo della loss media sulla singola epoca
-            loss_validation_epoch = validation_epoch_loss / epoch_batches_number
-            loss_val.append(loss_validation_epoch)
-            print(f"    Loss media di validazione calcolata per l'epoca {epoch}: {loss_validation_epoch:.4f}")
+                    NN_displacement_estimation = rete_neurale.forward(data)
 
-            # Si salvano i pesi aggiornati in un dizionario pytorch apposito per l'epoca a cui è associata la minore perdita di validazione
-            if loss_validation_epoch < best_val_loss:
-                best_val_loss = loss_validation_epoch
-                best_epoch = epoch
-                torch.save(rete_neurale.state_dict(), weights_save_path)
+                    # Calcolo della loss function
+                    validation_batch_loss = rete_neurale.loss_criterion(NN_displacement_estimation, GPS_data)
+                    validation_epoch_loss += validation_batch_loss
+                    epoch_batches_number += 1
 
-        # -----------------------------------------------------
-        #      AGGIORNAMENTO PARAMETRI TRAMITE SCHEDULER
-        # -----------------------------------------------------
-        scheduler.step(loss_validation_epoch)
+                # Calcolo della loss media sulla singola epoca
+                loss_validation_epoch = validation_epoch_loss / epoch_batches_number
+                loss_val.append(loss_validation_epoch)
+                print(f"    Loss media di validazione calcolata per l'epoca {epoch}: {loss_validation_epoch:.4f}")
 
-    # Si realizza il grafico complessivo
-    post_processing.plot_loss_function(loss_train, loss_val, num_epoch, ROOT_DIR)
+                # Si salvano i pesi aggiornati in un dizionario pytorch apposito per l'epoca a cui è associata la minore perdita di validazione
+                if loss_validation_epoch < best_val_loss:
+                    best_val_loss = loss_validation_epoch
+                    best_epoch = epoch
+                    torch.save(rete_neurale.state_dict(), weights_save_path)
 
-    # Si salvano i pesi aggiornati alla fine dell'addestramento in un dizionario pytorch apposito
-    #torch.save(rete_neurale.state_dict(), weights_save_path)
+            # -----------------------------------------------------
+            #      AGGIORNAMENTO PARAMETRI TRAMITE SCHEDULER
+            # -----------------------------------------------------
+            scheduler.step(loss_validation_epoch)
+
+        # Si realizza il grafico complessivo
+        post_processing.plot_loss_function(loss_train, loss_val, num_epoch, ROOT_DIR)
+
+        break
+
+    elif do_training == 'N':
+
+        print(f"  Prosecuzione nell'esecuzione delle rete neurale con i pesi salvati in un precedente addestramento all'interno di {weights_save_path}.")
+        break
+
+    elif do_training == 'EXIT':
+        print(f"  Chiusura del programma forzata da utente in corso...")
+        sys.exit()
+
+
+    else:
+        print(f"  Input inserito non valido. Ripetere la selezione con s, n o exit.")
 
 
 # ======================================================
@@ -476,7 +511,7 @@ for (trajectory, combination) in test_missions_dict:
             IMU_data = batch[1]
             GPS_data = batch[2].squeeze(1)
 
-            data = {'DVL': DVL_data, 'INS': IMU_data}
+            data = {'INS': IMU_data, 'DVL': DVL_data}
 
             NN_displacement_estimation = rete_neurale.forward(data)
 

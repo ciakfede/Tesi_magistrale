@@ -265,7 +265,7 @@ class NavNet(nn.Module):
     def backpropagation(self, data, pos_target):
 
         # Fase di forward propagation della rete neurale --> viene eseguita e genera i valori obiettivo
-        self.optimizer.zero_grad()                              # Funzione che resetta tutti i gradienti dei tensori gestiti dall'optimizer all'inizio di ogni iterazione
+        self.optimizer.zero_grad()                # Funzione che resetta tutti i gradienti dei tensori gestiti dall'optimizer all'inizio di ogni iterazione
         pos_predetta = self.forward(data)         # Richiamo la rete neurale sui dati (all'interno di appositi dataframe) da analizzare
 
         # Fase di backward optimization --> si ottimizzano i pesi introdotti
