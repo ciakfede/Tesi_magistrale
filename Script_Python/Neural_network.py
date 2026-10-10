@@ -234,10 +234,7 @@ class NavNet(nn.Module):
     def forward(self, data):
 
         # Si itera su ogni elemento presente nel dizionario dei dati per ramo
-        #context_vector_list = []
-        first_batch = True
-        previous_context_vector = torch.empty_like(data['DVL'])
-        c = torch.empty_like(data['DVL'])
+        context_vector_list = []
         for key, batch in data.items():
 
             # 1. Passaggio negli LSTM
@@ -246,15 +243,11 @@ class NavNet(nn.Module):
             # 2. Passaggio attraverso il meccanismo di attenzione semplificato
             context_vector = self.SAMS[key](LSTM_output)
 
-            # 3. Concatenazione dei vettori prodotti --> se è la prima iterazione salvo solo il vettore prodotto e poi continuo --> altrimenti si unisce il precedente vettore a quello nuovo e, infine, si aggiorna il vettore vecchio con quello concatenato creato
-            if first_batch:
-                first_batch = False
-                previous_context_vector = context_vector
-                continue
-            else:
-                c = torch.cat((previous_context_vector, context_vector), dim=1)
+            # Salvataggio del context vector prodotto nella lista
+            context_vector_list.append(context_vector)
 
-            previous_context_vector = c
+        # 3. Concatenazione dei vettori prodotti
+        c = torch.cat(context_vector_list, dim=1)
 
         # 4. Passaggio dai fully connected layers
         predicted_displacement = self.FC(c)
