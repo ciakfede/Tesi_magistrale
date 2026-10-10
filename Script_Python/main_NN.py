@@ -467,7 +467,7 @@ while True:
                     NN_displacement_estimation = rete_neurale.forward(data)
 
                     # Calcolo della loss function
-                    validation_batch_loss = rete_neurale.loss_criterion(NN_displacement_estimation)
+                    validation_batch_loss = rete_neurale.loss_criterion(NN_displacement_estimation, data['GPS'])
                     validation_epoch_loss += validation_batch_loss
                     epoch_batches_number += 1
 

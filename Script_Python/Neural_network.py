@@ -166,6 +166,16 @@ class Dataset(torch.utils.data.Dataset):
             return 1
 
 
+# Classe che permette di implementare la loss function Log-Cosh
+class LogCoshLoss(nn.Module):
+    def __init__(self):
+        super(LogCoshLoss, self).__init__()
+
+    def forward(self, y_pred, y_true):
+        diff = y_pred - y_true
+        return torch.mean(diff + nn.functional.softplus(-2.0 * diff) - torch.log(torch.tensor(2.0)))
+
+
 # Si definisce la classe utilizzata per il Simplified Attention Mechanism --> trattata come classe per non appesantire troppo il codice della NavNet --> prodotto in output un vettore dim(hidden_layer)*1
 class SimplifiedAttentionMechanism(nn.Module):
 
@@ -224,7 +234,7 @@ class NavNet(nn.Module):
             nn.Linear(input_size_FC//2, 2))
 
         # Definizione struttura funzione di costo --> si sceglie una Euclidean Loss per restare coerenti con il paper
-        self.loss_criterion = nn.MSELoss()
+        self.loss_criterion = LogCoshLoss()
 
         # Definizione ottimizzatore per la backward propagation --> qui si usa il metodo Adams
         self.optimizer = optim.Adam(self.parameters(), lr=0.001, betas=(0.9, 0.999))
