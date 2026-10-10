@@ -120,8 +120,6 @@ class Dataset(torch.utils.data.Dataset):
                                 break
 
                             # Si aggiunge la porzione del sensore alla lista di batch per il secondo di iterazione
-                            if sensor_name == 'IMU':
-                                sensor_name = 'INS'
                             single_second_batches_list[sensor_name] = porzione_tensore
 
                         except Exception as e:
