@@ -106,13 +106,18 @@ def tabella_tesi(storico_coppie_medie):
 
 sensors_frequencies = {'IMU': 5, 'DVL': 10, 'Depth': 5, 'DepthVel': 5, 'MOT': 5, 'V_ref': 5, 'GPS': 1}  # Frequenze associate ai sensori
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))                                 # Directory in cui si trova lo script python
-ROOT_DIR : str = os.path.dirname(SCRIPT_DIR)                                            # Directory esterna a quella dello script --> in questa verranno generate le cartelle degli output
-DF_DICT_DIR = os.path.join(ROOT_DIR, 'Dizionari_datasets')                              # Directory in cui verranno salvati i file pickle associati a ogni dizionario prodotto nell'esecuzione
-os.makedirs(DF_DICT_DIR, exist_ok=True)                                                 # Si genera la cartella di destinazione dei file di salvataggio pickle con i vari DataFrame (se non presente)
-file_datasets_raw = os.path.join(DF_DICT_DIR, 'Dataset_globale.pkl')                    # File pickle di output/input contenente i dati sul dizionario globale dei dataframe generato al termine del pre-processing
-file_datasets_resampled = os.path.join(DF_DICT_DIR, 'Dataset_resampled.pkl')            # File pickle di output/input contenente i dati sul dizionario globale dei dataframe generato al termine del pre-processing
-file_datasets_interpolated = os.path.join(DF_DICT_DIR, 'Dataset_interpolated.pkl')      # File pickle di output/input contenente i dati sul dizionario globale dei dataframe generato al termine del pre-processing
+# Definizione delle cartelle di riferimento per il progetto
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))                                 # Cartella in cui sono contenuti gli script Python
+ROOT_DIR: str = os.path.dirname(SCRIPT_DIR)                                             # Cartella più esterna in cui è contenuta la cartella degli script e le restanti, sia di input che di output
+DF_DICT_DIR = os.path.join(ROOT_DIR, 'Dizionari_datasets')                              # Cartella all'interno della quale verranno salvati i dizionari in formato pickle e i Dataset in formato Excel
+os.makedirs(DF_DICT_DIR, exist_ok=True)                                                 # Si genera la cartella di destinazione dei file di salvataggio pickle con i vari dataframe
+RAW_DF_DIR = os.path.join(ROOT_DIR, 'Telemetrie')                                       # Cartella all'interno della quale sono contenuti tutti i file .csv e .txt necessari al pre-processing
+
+# File di input/output necessarie al pre-processing
+file_dataset_raw = os.path.join(DF_DICT_DIR, 'Dataset_globale.pkl')                     # File pickle di output/input contenente i dati sul dizionario globale dei dataframe generato al termine del pre-processing
+file_dataset_resampled = os.path.join(DF_DICT_DIR, 'Dataset_resampled.pkl')             # File pickle di output/input contenente i dati sul dizionario globale dei dataframe resampled generato al termine del pre-processing
+file_database_sensors = os.path.join(DF_DICT_DIR, 'Dataset_resampled_scomposto.pkl')    # File pickle di output/input contenente i dati sul dizionario suddiviso per i vari sensori dei dataframe generato al termine del pre-processing
+file_dataset_interpolated = os.path.join(DF_DICT_DIR, 'Dataset_interpolated.pkl')       # File pickle di output/input contenente i dati sul dizionario globale dei dataframe interpolati al termine del pre-processing
 file_config = os.path.join(ROOT_DIR, "Telemetrie/Matrice_configurazioni.txt")           # File di testo di input contenente un elenco delle combinazioni condizione ambientale/operativa per ogni traiettoria simulata
 
 # Si inizializzano i metodi prescelti e i dizionari per l'immagazzinamento associati
@@ -120,7 +125,7 @@ possible_processing_methods = ['resampling', 'interpolazione']              # Li
 possible_correlation_methods = ['pearson', 'spearman']                      # Lista di metodi usati per l'analisi di correlazione
 processed_datasets_dict = {}                                                # Dizionario che conterrà i dizionari processati con i vari metodi prescelti --> nella forma {'metodo 1': {}, 'metodo 2': {}, ...}
 
-files_processed_datasets = {'resampling': file_datasets_resampled, 'interpolazione': file_datasets_interpolated}
+files_processed_datasets = {'resampling': file_dataset_resampled, 'interpolazione': file_dataset_interpolated}
 
 #correlation_dict = {}                                             # Dizionario necessario per accumulare i valori di correlazione calcolati --> forma {metodo: {coppia_valori}...}
 #mean_correlation_dict = {}                                        # Dizionario necessario per accumulare i valori medi su tutte le missioni per i coefficienti --> forma {'resampling': {'Pearson': {}, 'Spearman': {}}, 'interpolazione': {...}}
@@ -145,6 +150,7 @@ print(f"\nSelezionare i parametri legati all'estrazione e all'analisi dei dati d
 #         ESTRAZIONE DATAFRAMES GREZZI DA CSV
 # -----------------------------------------------------
 
+raw_dataset = {}
 while True:
 
     generate_new_dataset = input(f"\n  Si vuole generare un nuovo Dataset contenente i dati di telemetria (S/N/EXIT)?").upper()
@@ -153,7 +159,7 @@ while True:
 
         pre_processing.csv_analysis(file_config, ROOT_DIR)
         pre_processing.save_raw_datasets_dict('pickle', DF_DICT_DIR)
-        raw_dataset = pre_processing.raw_database
+        raw_dataset = pre_processing.raw_dataset
 
         while True:
 
@@ -180,13 +186,13 @@ while True:
     elif generate_new_dataset == 'N':
 
         # Controllo esistenza del file pickle
-        if os.path.isfile(file_datasets_raw) and not os.stat(file_datasets_raw).st_size == 0:
-            print(f"    Utilizzo del Dataset precedentemente generato e salvato in {file_datasets_raw}.")
-            with open(file_datasets_raw, 'rb') as f:
+        if os.path.isfile(file_dataset_raw) and not os.stat(file_dataset_raw).st_size == 0:
+            print(f"    Utilizzo del Dataset precedentemente generato e salvato in {file_dataset_raw}.")
+            with open(file_dataset_raw, 'rb') as f:
                 raw_dataset = pickle.load(f)
             break
         else:
-            print(f"    Il file {file_datasets_raw} risulta non presente o vuoto. Verificare la presenza o generare un nuovo dataset.")
+            print(f"    Il file {file_dataset_raw} risulta non presente o vuoto. Verificare la presenza o generare un nuovo dataset.")
 
     elif generate_new_dataset == 'EXIT':
         print(f"    Chiusura del programma forzata da utente in corso...")
@@ -250,14 +256,14 @@ while True:
         for processing_method in processing_methods:
 
             if processing_method == 'resampling':
-                pre_processing.raw_dataframes_processing(generate_new_dataset, file_datasets_raw, sensors_frequencies)
+                pre_processing.raw_dataframes_processing(raw_dataset, sensors_frequencies)
                 pre_processing.save_processed_dataset_dict('pickle', DF_DICT_DIR, 'resampling')
-                processed_datasets_dict[processing_method] = pre_processing.resampled_database
+                processed_datasets_dict[processing_method] = pre_processing.resampled_dataset
 
             elif processing_method == 'interpolazione':
-                pre_processing.dataframe_interpolation(generate_new_dataset, file_datasets_raw)
+                pre_processing.dataframe_interpolation(generate_new_dataset, file_dataset_raw)
                 pre_processing.save_processed_dataset_dict('pickle', DF_DICT_DIR, 'interpolazione')
-                processed_datasets_dict[processing_method] = pre_processing.interpolated_database
+                processed_datasets_dict[processing_method] = pre_processing.interpolated_dataset
 
             # Gestione eventuale salvataggio in formato Excel
             while True:

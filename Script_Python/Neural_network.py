@@ -90,8 +90,8 @@ class Dataset(torch.utils.data.Dataset):
 
                 for second in range(mission_time):
 
-                    # Si inizializza una lista vuota che conterrà n tensori --> un tensore per ogni blocco sensori contenente le relative misurazioni di 1 secondo
-                    single_second_batches_list = []
+                    # Si inizializza un dizionario vuoto che conterrà n tensori --> un tensore per ogni blocco sensori contenente le relative misurazioni di 1 secondo
+                    single_second_batches_list = {}
 
                     # Si inizializza la variabile booleana di controllo
                     batch_is_valid = True
@@ -120,7 +120,9 @@ class Dataset(torch.utils.data.Dataset):
                                 break
 
                             # Si aggiunge la porzione del sensore alla lista di batch per il secondo di iterazione
-                            single_second_batches_list.append(porzione_tensore)
+                            if sensor_name == 'IMU':
+                                sensor_name = 'INS'
+                            single_second_batches_list[sensor_name] = porzione_tensore
 
                         except Exception as e:
                             print(f"    [WARNING] Errore nella fase di creazione del gruppo di batch unitarie per il secondo {second} --> {e}")
@@ -210,11 +212,14 @@ class NavNet(nn.Module):
         # Si itera su ogni ramo da calcolare, applicando LSTM e attention layer
         for branch_name, branch_size in network_config.items():
 
+            if branch_name == 'GPS':
+                continue
+
             self.LSTMS[branch_name] = nn.LSTM(input_size=branch_size, hidden_size=hidden_size, batch_first=True)
             self.SAMS[branch_name] = SimplifiedAttentionMechanism(hidden_size=hidden_size)
 
         # Si applicano i Fully connected layers --> ricevono in input il vettore c concatenato --> devo arrivare a 2 output, che rappresentano gli spostamenti nei due assi (possibile automatizzare aggiungendo più strati)
-        input_size_FC = hidden_size * len(network_config)
+        input_size_FC = hidden_size * (len(network_config)-1)
         self.FC = nn.Sequential(
             nn.Linear(input_size_FC, input_size_FC//2),
             nn.ReLU(),
@@ -237,6 +242,9 @@ class NavNet(nn.Module):
         context_vector_list = []
         for key, batch in data.items():
 
+            if key == 'GPS':
+                continue
+
             # 1. Passaggio negli LSTM
             LSTM_output, _ = self.LSTMS[key](batch)
 
@@ -255,13 +263,14 @@ class NavNet(nn.Module):
         return predicted_displacement
 
     # Si crea una funzione per l'aggiornamento dei pesi tramite backpropagation per ogni epoca di addestramento
-    def backpropagation(self, data, pos_target):
+    def backpropagation(self, data):
 
         # Fase di forward propagation della rete neurale --> viene eseguita e genera i valori obiettivo
         self.optimizer.zero_grad()                # Funzione che resetta tutti i gradienti dei tensori gestiti dall'optimizer all'inizio di ogni iterazione
         pos_predetta = self.forward(data)         # Richiamo la rete neurale sui dati (all'interno di appositi dataframe) da analizzare
 
         # Fase di backward optimization --> si ottimizzano i pesi introdotti
+        pos_target = data['GPS']
         loss = self.loss_criterion(pos_predetta, pos_target)    # Calcolo della perdita associata alla predizione rispetto al target
         loss.backward()                                         # Calcolo del gradiente della funzione di costo
         self.optimizer.step()                                   # Update dei parametri di ottimizzazione

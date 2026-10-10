@@ -23,6 +23,7 @@ from Analisi_dati import PostProcessing     # Importo il modulo per eseguire il 
 import numpy as np                          # Libreria per i calcoli matematici
 import sys                                  # Libreria che permette di interagire con il Runtime di Python
 import pickle                               # Libreria per la gestione del formato di salvataggio pickle
+import json                                 # libreria per la gestione del formato di salvataggio json
 
 
 def stima_trapezoidale(velocita, timestamps, ROOT_DIR, pos_iniziale=0):
@@ -44,29 +45,36 @@ def stima_trapezoidale(velocita, timestamps, ROOT_DIR, pos_iniziale=0):
 batch_size = 32                                                                         # Numero di secondi di missione forniti contemporaneamente alla rete
 batch_size_test = 1                                                                     # Per il test si usa una batch size di 1s --> si ottiene la stima della posizione per ogni secondo di navigazione (coincidenza perfetta con batch GPS)
 num_epoch = 60                                                                          # Numero di epoche di iterazione per l'addestramento
-network_config = {'INS': 9, 'DVL': 3}
-hidden_size = 100
+network_config = {'INS': 9, 'DVL': 3, 'GPS': 2}                                         # Dizionario di configurazione della rete neurale --> utile per impostare ordine, numero e nome dei rami associati a LSTM e SAM
+hidden_size = 100                                                                       # Numero di neuroni appartenenti al layer nascosto del LSTM
 
 sensors_frequencies = {'IMU': 5, 'DVL': 10, 'Depth': 5, 'DepthVel': 5, 'MOT': 5, 'V_ref': 5, 'GPS': 1}             # Frequenze associate ai sensori
 
-# File di input/output necessarie al pre-processing
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-ROOT_DIR: str = os.path.dirname(SCRIPT_DIR)
-DF_DICT_DIR = os.path.join(ROOT_DIR, 'Dizionari_datasets')
+# Definizione delle cartelle di riferimento per il progetto
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))                                 # Cartella in cui sono contenuti gli script Python
+ROOT_DIR: str = os.path.dirname(SCRIPT_DIR)                                             # Cartella più esterna in cui è contenuta la cartella degli script e le restanti, sia di input che di output
+DF_DICT_DIR = os.path.join(ROOT_DIR, 'Dizionari_datasets')                              # Cartella all'interno della quale verranno salvati i dizionari in formato pickle e i Dataset in formato Excel
 os.makedirs(DF_DICT_DIR, exist_ok=True)                                                 # Si genera la cartella di destinazione dei file di salvataggio pickle con i vari dataframe
+RAW_DF_DIR = os.path.join(ROOT_DIR, 'Telemetrie')                                       # Cartella all'interno della quale sono contenuti tutti i file .csv e .txt necessari al pre-processing
+
+# File di input/output necessarie al pre-processing
 file_dataset_raw = os.path.join(DF_DICT_DIR, 'Dataset_globale.pkl')                     # File pickle di output/input contenente i dati sul dizionario globale dei dataframe generato al termine del pre-processing
 file_dataset_resampled = os.path.join(DF_DICT_DIR, 'Dataset_resampled.pkl')             # File pickle di output/input contenente i dati sul dizionario globale dei dataframe resampled generato al termine del pre-processing
 file_database_sensors = os.path.join(DF_DICT_DIR, 'Dataset_resampled_scomposto.pkl')    # File pickle di output/input contenente i dati sul dizionario suddiviso per i vari sensori dei dataframe generato al termine del pre-processing
+file_dataset_interpolated = os.path.join(DF_DICT_DIR, 'Dataset_interpolated.pkl')       # File pickle di output/input contenente i dati sul dizionario globale dei dataframe interpolati al termine del pre-processing
 file_config = os.path.join(ROOT_DIR, "Telemetrie/Matrice_configurazioni.txt")           # File di testo di input contenente un elenco delle combinazioni condizione ambientale/operativa per ogni traiettoria simulata
 weights_save_path = os.path.join(ROOT_DIR, "NavNet_weights.pkl")                        # File pickle contenente i pesi della rete neurale
 file_database_waypoints = os.path.join(DF_DICT_DIR, 'Waypoints_dict.pkl')               # File pickle contenente i waypoints per ogni missione
-file_test_missions_dict = os.path.join(DF_DICT_DIR, 'Test_missions_dict.pkl')           # File pickle contenente il dizionario con le missioni prescelte per il test sotto forma di (trajectory, combination) e gli intervalli temporali associati ad ogni ripetizione della traiettoria
+file_test_missions_dict = os.path.join(DF_DICT_DIR, 'Test_missions_dict.pkl')           # File pickle contenente il dizionario con le missioni prescelte per il test sotto forma di (trajectory, combination) e gli intervalli temporali associati a ogni ripetizione della traiettoria
+empy_list_file = os.path.join(DF_DICT_DIR, 'empy_list.json')                            # File json contenente la lista delle missioni ritenute non valide
+file_tensor_dict = os.path.join(DF_DICT_DIR, 'Tensor_dict.pt')                          # File pickle di pytorch contenente il dizionario dei tensori
+file_norm_parameters_dict = os.path.join(DF_DICT_DIR, 'Norm_parameters_dict.pkl')       # File pickle contenente il dizionario con tutti i valori di media e std per ogni blocco di sensori
 
-
-# Si inizializzano i metodi prescelti e i dizionari per l'immagazzinamento associati
+# Si inizializzano i metodi prescelti e il dizionario per l'immagazzinamento dei dataset associati
 possible_processing_methods = ['resampling', 'interpolazione']              # Lista di metodi per il trattamento dei dati di telemetria pura
 processed_datasets_dict = {}                                                # Dizionario che conterrà i dizionari processati con i vari metodi prescelti --> nella forma {'metodo 1': {}, 'metodo 2': {}, ...}
-files_processed_datasets = {'resampling': file_dataset_resampled}           # Dizionario con i percorsi di salvataggio di tutti i metodi di processing disponibili
+
+files_processed_datasets = {'resampling': file_dataset_resampled, 'interpolazione': file_dataset_interpolated}           # Dizionario con i percorsi di salvataggio di tutti i metodi di processing disponibili
 
 
 # ======================================================
@@ -81,6 +89,8 @@ print('===================================================')
 pre_processing = PreProcessing()
 post_processing = PostProcessing()
 
+print(f"\nSelezione parametri di pre-processing:")
+
 # -----------------------------------------------------
 #         ESTRAZIONE DATAFRAMES GREZZI DA CSV
 # -----------------------------------------------------
@@ -89,15 +99,16 @@ print('\n\n----------------------------------------------------')
 print('---------- CARICAMENTO DATI DI TELEMETRIA ----------')
 print('----------------------------------------------------')
 
+raw_dataset = {}
 while True:
 
     generate_new_dataset = input(f"\n  Si vuole generare un nuovo Dataset contenente i dati di telemetria (S/N/EXIT)?").upper()
 
     if generate_new_dataset == 'S':
 
-        pre_processing.csv_analysis(file_config, ROOT_DIR)
-        pre_processing.save_raw_datasets_dict('pickle', DF_DICT_DIR)
-        raw_dataset = pre_processing.raw_database
+        pre_processing.csv_analysis(file_config, RAW_DF_DIR)
+        pre_processing.save_raw_datasets_dict('pickle', DF_DICT_DIR, file_dataset_raw)
+        raw_dataset = pre_processing.raw_dataset
 
         while True:
 
@@ -105,7 +116,7 @@ while True:
 
             if save_raw_dataset == 'S':
 
-                pre_processing.save_raw_datasets_dict('excel', DF_DICT_DIR)
+                pre_processing.save_raw_datasets_dict('excel', DF_DICT_DIR, file_dataset_raw)
                 break
 
             elif save_raw_dataset == 'N':
@@ -154,7 +165,7 @@ while True:
     process_dataset = input(f"\n  Si vuole procedere con una nuova elaborazione dei dati di telemetria (S/N/EXIT)?").upper()
 
     # Se si è generato un nuovo Dataset grezzo è inevitabile rieseguire anche l'elaborazione dello stesso
-    if generate_new_dataset == 'S':
+    if generate_new_dataset == 'S' and process_dataset != 'EXIT':
         process_dataset = 'S'
 
     if process_dataset == 'S':
@@ -163,14 +174,15 @@ while True:
         for processing_method in processing_methods:
 
             if processing_method == 'resampling':
-                pre_processing.raw_dataframes_processing(generate_new_dataset, file_dataset_raw, sensors_frequencies)
-                pre_processing.save_processed_dataset_dict('pickle', DF_DICT_DIR, 'resampling')
-                processed_datasets_dict[processing_method] = pre_processing.resampled_database
+                pre_processing.raw_dataframes_processing(raw_dataset, sensors_frequencies)
+                pre_processing.save_processed_dataset_dict('pickle', DF_DICT_DIR, file_dataset_resampled, 'resampling')
+                pre_processing.save_processed_dataset_dict('pickle', DF_DICT_DIR, file_database_sensors, 'sensors_blocks')
+                processed_datasets_dict[processing_method] = pre_processing.resampled_dataset
 
             elif processing_method == 'interpolazione':
-                pre_processing.dataframe_interpolation(generate_new_dataset, file_dataset_raw)
-                pre_processing.save_processed_dataset_dict('pickle', DF_DICT_DIR, 'interpolazione')
-                processed_datasets_dict[processing_method] = pre_processing.interpolated_database
+                pre_processing.dataframe_interpolation(raw_dataset)
+                pre_processing.save_processed_dataset_dict('pickle', DF_DICT_DIR, file_dataset_interpolated, 'interpolazione')
+                processed_datasets_dict[processing_method] = pre_processing.interpolated_dataset
 
             # Gestione eventuale salvataggio in formato Excel
             while True:
@@ -179,7 +191,7 @@ while True:
 
                 if save_processed_dataset == 'S':
 
-                    pre_processing.save_processed_dataset_dict('excel', DF_DICT_DIR, processing_method)
+                    pre_processing.save_processed_dataset_dict('excel', DF_DICT_DIR, files_processed_datasets, processing_method)
                     break
 
                 elif save_processed_dataset == 'N':
@@ -193,22 +205,43 @@ while True:
                 else:
                     print(f"      Input inserito non valido. Ripetere la scelta con s, n o exit.")
 
+        # Salvataggio in formato json la lista delle missioni non valide
+        with open(empy_list_file, "w", encoding="utf-8") as f:
+            json.dump(pre_processing.empty_missions_list, f)
         break
 
     elif process_dataset == 'N':
 
         file_exists = True
-        for processing_method in processing_methods:
 
+        # Caricamento dataset processati
+        for processing_method in processing_methods:
             dict_file_path = files_processed_datasets[processing_method]
             if os.path.isfile(dict_file_path) and os.stat(dict_file_path).st_size > 0:
-
+                print(f"    Utilizzo del Dataset elaborato con {processing_method.upper()} precedentemente generato e salvato in {dict_file_path}.")
                 with open(dict_file_path, 'rb') as f:
                     processed_datasets_dict[processing_method] = pickle.load(f)
-
             else:
                 print(f"    Il file {dict_file_path} risulta non presente o vuoto. Ricontrollare o rieseguire l'analisi dei dati grezzi. ")
                 file_exists = False
+
+        # Caricamento lista delle missioni non valide
+        if os.path.isfile(empy_list_file) and os.stat(empy_list_file).st_size > 0:
+            print(f"    Caricamento della lista di missioni non valide precedentemente generato e salvato in {empy_list_file}.")
+            with open(empy_list_file, 'r', encoding='utf-8') as f:
+                pre_processing.empty_missions_list = json.load(f)
+        else:
+            print(f"    Impossibile caricare la lista di missioni non valide dal file {empy_list_file}. Verificare.")
+            file_exists = False
+
+        # Caricamento dataset scomposto a blocchi
+        if os.path.isfile(file_database_sensors) and os.stat(file_database_sensors).st_size > 0:
+            print(f"    Utilizzo del Dataset scomposto per sensori elaborato con resampling precedentemente generato e salvato in {file_database_sensors}.")
+            with open(file_database_sensors, 'rb') as f:
+                pre_processing.sensors_divided_dataset = pickle.load(f)
+        else:
+            print(f"    Impossibile caricare la lista di missioni non valide dal file {empy_list_file}. Verificare.")
+            file_exists = False
 
         # Solo se tutti i file pickle di interesse sono stati letti correttamente si esce dal ciclo
         if file_exists:
@@ -227,6 +260,10 @@ resampled_dataset = processed_datasets_dict['resampling']
 # -----------------------------------------------------
 #        ANALISI WAYPOINTS E TRAIETTORIA IDEALE
 # -----------------------------------------------------
+
+print('\n\n--------------------------------------------------------')
+print('--------- CALCOLO ELEMENTI PER POST-PROCESSING ---------')
+print('--------------------------------------------------------')
 
 # Si gestiste il caricamento o la generazione dei dizionari con le informazioni utili al post-processing delle traiettorie in base a quanto scelto da utente --> se si è eseguita una nuova analisi in una delle due fasi precedenti si rigenera
 while True:
@@ -260,13 +297,14 @@ while True:
 
 
 # Per la definizione delle missioni di test e la scomposizione in singoli percorsi di ognuna si asseconda la scelta fatta per la generazione di nuovi Dataset --> in tal caso è obbligatorio per evitare sfasamenti temporali
+test_missions_dict = {}
 while True:
 
     if generate_new_dataset == 'S' or process_dataset == 'S':
 
         for processing_method in processing_methods:
 
-            post_processing.test_missions_definition(processing_method, ROOT_DIR)
+            post_processing.test_missions_definition(resampled_dataset, ROOT_DIR)
             test_missions_dict = post_processing.test_missions_dict
 
         break
@@ -289,22 +327,49 @@ while True:
 #         TRASFORMAZIONE DATAFRAMES IN TENSORI
 # -----------------------------------------------------
 
-pre_processing.dataframe_to_tensor(process_dataset, test_missions_dict, file_database_sensors)      # Si generano i tensori pytorch --> si genera in output un dizionario in cui per ogni missione sono presenti 3 tensori, uno per ogni frequenza di misurazione presente
-tensor_dict = pre_processing.pytorch_tensor_dict                                                    # Si richiama il dizionario di tensori da usare per la rete neurale --> ogni tensore è una lista ordinata (per sensore) contenente le misurazioni di tutte missioni
+print('\n\n----------------------------------------------------------------------')
+print('--------- DEFINIZIONE TENSORI PYTORCH E NORMALIZZAZIONE DATI ---------')
+print('----------------------------------------------------------------------')
+
+print(f"\n  Trasformazione Dataset processato in tensore pytorch in corso:")
+
+tensor_dict = {}
+if generate_new_dataset == 'S' or process_dataset == 'S':
+
+    pre_processing.dataframe_to_tensor(pre_processing.sensors_divided_dataset, test_missions_dict)      # Si generano i tensori pytorch --> si genera in output un dizionario in cui per ogni missione sono presenti 3 tensori, uno per ogni frequenza di misurazione presente
+    tensor_dict = pre_processing.pytorch_tensor_dict                                                    # Si richiama il dizionario di tensori da usare per la rete neurale --> ogni tensore è una lista ordinata (per sensore) contenente le misurazioni di tutte missioni
+    torch.save(tensor_dict, file_tensor_dict)                                                           # Si salva il dizionario per iterazioni successive
+    with open(file_norm_parameters_dict, 'wb') as f:
+        pickle.dump(pre_processing.normalization_parameters_dict, f)
+
+else:
+
+    if (os.path.isfile(file_tensor_dict) and os.stat(file_tensor_dict).st_size > 0) and (os.path.isfile(file_norm_parameters_dict) and os.stat(file_norm_parameters_dict).st_size > 0):
+
+        print(f"    Caricamento del dizionario contenente il tensore pytorch di ogni missione precedentemente generato e salvato in {file_tensor_dict}.")
+        tensor_dict = torch.load(file_tensor_dict)
+
+        print(f"    Caricamento del dizionario contenente i parametri di normalizzazione di ogni sensore precedentemente generato e salvato in {file_norm_parameters_dict}.")
+        with open(file_norm_parameters_dict, 'rb') as f:
+            pre_processing.normalization_parameters_dict = pickle.load(f)
+
+    else:
+
+        print(f"  Impossibile trovare il file di salvataggio del dizionario dei tensori.")
+
+
+print('\n\n---------------------------------------------------------')
+print('----------------- RECAP PRE-PROCESSING ------------------')
+print('---------------------------------------------------------')
 
 # Si stampa un resoconto del pre-processing con le missioni ritenute non valide e non utilizzate per l'analisi
-if generate_new_dataset == 'S':
-    print(f"\n\nFase di pre-processing delle telemetrie conclusa. Le seguenti missioni sono state escluse dai database prodotti:")
-    print(f"  {pre_processing.empty_missions_list}")
+print(f"\nFase di pre-processing delle telemetrie conclusa. Le seguenti missioni sono state escluse dai database prodotti:")
+print(f"  {pre_processing.empty_missions_list}")
 
 
 # ======================================================
 #           INIZIALIZZAZIONE RETE NEURALE
 # ======================================================
-
-print('\n\n====================================================')
-print('=========== INIZIALIZZAZIONE RETE NEURALE ==========')
-print('====================================================')
 
 # Inizializzazione del modello di rete neurale
 rete_neurale = NavNet(network_config, hidden_size)                  # Si inizializza la rete principale
@@ -318,11 +383,9 @@ scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(rete_neurale.optimizer, m
 #                TRAINING RETE NEURALE
 # ======================================================
 
-print('\n\n-----------------------------------------------------')
-print('----------- FASE DI TRAINING RETE NEURALE -----------')
-print('-----------------------------------------------------')
-
-# Si richiede se si desidera fare il training della rete --> da fare al cambiamento del dataset
+print('\n\n=========================================================')
+print('=============== ADDESTRAMENTO RETE NEURALE ==============')
+print('=========================================================')
 
 while True:
 
@@ -344,6 +407,7 @@ while True:
         loss_val = []
         best_epoch = -1
         best_val_loss = float('inf')
+        data = {}
         for epoch in range(num_epoch):
 
             # Si imposta la rete neurale in modalità training
@@ -360,14 +424,20 @@ while True:
 
             for batch in training_loader:
 
-                DVL_data = batch[0]                 # Batch di dimensioni [32, 10, 3]
-                IMU_data = batch[1]                 # Batch di dimensioni [32, 5, 10] --> contiene i 3 valori IMU, i 4 sensori MOT (FV, FL, FW1, FW2) e i 2 di velocità reference (Vxref, omega_yref)
-                dati_gps = batch[2].squeeze(1)      # Batch di dimensioni [32, 1, 2] --> si vuole avere dimensione [32, 2] per congruenza con output rete neurale --> si elimina una dimensione dalla batch
+                # Si suddividono le batch per ramo della rete neurale
+                for key in network_config:
 
-                data = {'INS': IMU_data, 'DVL': DVL_data}
+                    if key == 'GPS':
+                        data[key] = batch[key].squeeze(1)
+                    else:
+                        data[key] = batch[key]
+
+                #DVL_data = batch[0]                 # Batch di dimensioni [32, 10, 3]
+                #IMU_data = batch[1]                 # Batch di dimensioni [32, 5, 10] --> contiene i 3 valori IMU, i 4 sensori MOT (FV, FL, FW1, FW2) e i 2 di velocità reference (Vxref, omega_yref)
+                #dati_gps = batch[2].squeeze(1)      # Batch di dimensioni [32, 1, 2] --> si vuole avere dimensione [32, 2] per congruenza con output rete neurale --> si elimina una dimensione dalla batch
 
                 # Si richiama la funzione di aggiornamento pesi
-                training_batch_loss = rete_neurale.backpropagation(data, dati_gps)
+                training_batch_loss = rete_neurale.backpropagation(data)
 
                 # Si aggiornano i valori per il calcolo della media dei pesi sulla singola epoca
                 training_epoch_loss += training_batch_loss       # Aggiornamento del valore totale di perdita per l'epoca corrente
@@ -387,16 +457,17 @@ while True:
                 epoch_batches_number = 0
                 for batch in validation_loader:
 
-                    DVL_data = batch[0]
-                    IMU_data = batch[1]
-                    GPS_data = batch[2].squeeze(1)
+                    for key in network_config:
 
-                    data = {'INS': IMU_data, 'DVL': DVL_data}
+                        if key == 'GPS':
+                            data[key] = batch[key].squeeze(1)
+                        else:
+                            data[key] = batch[key]
 
                     NN_displacement_estimation = rete_neurale.forward(data)
 
                     # Calcolo della loss function
-                    validation_batch_loss = rete_neurale.loss_criterion(NN_displacement_estimation, GPS_data)
+                    validation_batch_loss = rete_neurale.loss_criterion(NN_displacement_estimation)
                     validation_epoch_loss += validation_batch_loss
                     epoch_batches_number += 1
 
@@ -439,9 +510,9 @@ while True:
 #             ESECUZIONE RETE NEURALE
 # ======================================================
 
-print('\n\n---------------------------------------------------')
-print('------------- ESECUZIONE RETE NEURALE -------------')
-print('---------------------------------------------------')
+print('\n\n=========================================================')
+print('================ ESECUZIONE RETE NEURALE ================')
+print('=========================================================')
 
 # Indipendentemente dalla scelta effettuata si entra in modalità valutazione sulle missioni scelte come test
 rete_neurale.eval()                                                     # Si imposta la rete neurale in modalità valutazione
@@ -505,13 +576,15 @@ for (trajectory, combination) in test_missions_dict:
         # -----------------------------------------------------
 
         t_iteration = 0
+        data = {}
         for batch in test_loader:
 
-            DVL_data = batch[0]
-            IMU_data = batch[1]
-            GPS_data = batch[2].squeeze(1)
+            for key in network_config:
 
-            data = {'INS': IMU_data, 'DVL': DVL_data}
+                if key == 'GPS':
+                    data[key] = batch[key].squeeze(1)
+                else:
+                    data[key] = batch[key]
 
             NN_displacement_estimation = rete_neurale.forward(data)
 
@@ -520,7 +593,7 @@ for (trajectory, combination) in test_missions_dict:
             #NN_NED_coordinates += NN_displacement_meters
 
             # Si ripete lo stesso procedimento con la batch di iterazione dei dati GPS di partenza
-            GPS_displacement_meters = (GPS_data * GPS_std) + GPS_mean
+            GPS_displacement_meters = (data['GPS'] * GPS_std) + GPS_mean
             GPS_NED_coordinates += GPS_displacement_meters
 
             # -----------------------------------------------------
