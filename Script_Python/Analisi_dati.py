@@ -364,7 +364,7 @@ class PreProcessing:
 
             elif processing_method == 'interpolazione':
                 dataframe_GPS = self.interpolated_dataset[trajectory][combination].copy()
-                dataframe_IMU = self.interpolated_dataset[trajectory][combination][['Pitch [deg]', 'Yaw [deg]']].copy()
+                dataframe_IMU = self.interpolated_dataset[trajectory][combination][['timestamp', 'Pitch [deg]', 'Yaw [deg]']].copy()
 
             if not dataframe_GPS.empty and not dataframe_IMU.empty:
 
@@ -374,11 +374,13 @@ class PreProcessing:
                     if 'Yaw [deg]' in dataframe_IMU.columns and 'Pitch [deg]' in dataframe_IMU.columns:
 
                         # Si converte il valore dello yaw e del pitch preso per ogni istante in radianti
-                        yaw_rad = np.radians(dataframe_IMU['Yaw [deg]'])
+                        gps_mask = dataframe_IMU['timestamp'].isin(dataframe_GPS['timestamp'])      # Maschera booleana --> True nei timestamp che sono presenti anche nel sotto-dataframe associato ai soli valori GPS (quello a frequenza minore)
+                        yaw_deg_values = dataframe_IMU.loc[gps_mask, 'Yaw [deg]'].to_numpy()
+                        yaw_rad = np.radians(yaw_deg_values)
 
                         # Si richiamano i valori di spostamento relativo
-                        Delta_East = dataframe_GPS['Delta_East [m]']
-                        Delta_North = dataframe_GPS['Delta_North [m]']
+                        Delta_East = dataframe_GPS['Delta_East [m]'].to_numpy()
+                        Delta_North = dataframe_GPS['Delta_North [m]'].to_numpy()
 
                         # Si effettua la trasformazione in assi body
                         dataframe_GPS['X_body_ist [m]'] = Delta_North * np.cos(yaw_rad) + Delta_East * np.sin(yaw_rad)
@@ -832,7 +834,7 @@ class PreProcessing:
                 elif processing_method == 'interpolazione':
 
                     with open(output_file_path, 'wb') as f:
-                        pickle.dump(self.resampled_dataset, f)
+                        pickle.dump(self.interpolated_dataset, f)
                         print(f'      Salvataggio del dataframe interpolato in file {output_file_path} eseguito correttamente.')
 
                 else:

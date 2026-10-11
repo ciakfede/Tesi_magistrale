@@ -300,6 +300,8 @@ while True:
 test_missions_dict = {}
 while True:
 
+    print(f"\n  Gestione definizione parametri e intervalli temporali per le missioni di test prescelte:")
+
     if generate_new_dataset == 'S' or process_dataset == 'S':
 
         for processing_method in processing_methods:
@@ -313,14 +315,14 @@ while True:
 
         if os.path.isfile(file_test_missions_dict) and os.stat(file_test_missions_dict).st_size > 0:
 
-            try:
-                with open(file_test_missions_dict, 'rb') as f:
-                    test_missions_dict = pickle.load(f)
+            with open(file_test_missions_dict, 'rb') as f:
+                test_missions_dict = pickle.load(f)
+            print(f"    Caricamento del dizionario contenente le informazioni da file {file_test_missions_dict}.")
+            break
 
-                break
-
-            except FileNotFoundError:
-                raise FileNotFoundError(f"   [ERROR] Errore nell'apertura del file pickle per le missioni di test e i relativi intervalli temporali.")
+        else:
+            print(f"    Caricamento da file non riuscito per le missioni di test e i relativi sotto-intervalli. Ripetere il processing dei dati per rigenerarlo.")
+            sys.exit()
 
 
 # -----------------------------------------------------
@@ -467,7 +469,7 @@ while True:
                     NN_displacement_estimation = rete_neurale.forward(data)
 
                     # Calcolo della loss function
-                    validation_batch_loss = rete_neurale.loss_criterion(NN_displacement_estimation)
+                    validation_batch_loss = rete_neurale.loss_criterion(NN_displacement_estimation, data['GPS'])
                     validation_epoch_loss += validation_batch_loss
                     epoch_batches_number += 1
 
@@ -500,7 +502,6 @@ while True:
     elif do_training == 'EXIT':
         print(f"  Chiusura del programma forzata da utente in corso...")
         sys.exit()
-
 
     else:
         print(f"  Input inserito non valido. Ripetere la selezione con s, n o exit.")
