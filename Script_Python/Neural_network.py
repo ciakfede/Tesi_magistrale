@@ -42,7 +42,7 @@ torch.manual_seed(0)            # Si imposta il valore dei seed di partenza per 
 class Dataset(torch.utils.data.Dataset):
 
     # Si inizializza la struttura comune degli elementi appartenenti alla classe --> in input riceve 3 liste di tensori
-    def __init__(self, tensor_dict, sensor_frequencies, test_missions, mode):
+    def __init__(self, tensor_dict, sensor_frequencies, test_missions, network_config, mode):
 
         self.mode = mode
 
@@ -52,20 +52,20 @@ class Dataset(torch.utils.data.Dataset):
         if mode == 'train':
 
             self.training_batches_list = []                                                             # Nella forma [[tensor(5_IMU), tensor(10_DVL), tensor(1_GPS)], [...], ...] --> struttura ripetuta per tutti i secondi di ogni missione
-            self.unitary_batches_building(tensor_dict, sensor_frequencies, test_missions)
+            self.unitary_batches_building(tensor_dict, sensor_frequencies, test_missions, network_config)
 
         elif mode == 'validazione':
 
             self.validation_batches_list = []                                                           # Nella forma [[tensor(5_IMU), tensor(10_DVL), tensor(1_GPS)], [...], ...] --> struttura ripetuta per tutti i secondi di ogni missione
-            self.unitary_batches_building(tensor_dict, sensor_frequencies, test_missions)
+            self.unitary_batches_building(tensor_dict, sensor_frequencies, test_missions, network_config)
 
         elif mode == 'test':
 
             self.test_batches_dict = {}                                                                 # Nella forma {'Missione1': [[tensor(5_IMU), tensor(10_DVL), tensor(1_GPS)], ...], 'Missione2': []...} --> struttura ripetuta all'interno di ogni missione per tutti i secondi della missione e per tutte le missioni
-            self.unitary_batches_building(tensor_dict, sensor_frequencies, test_missions)
+            self.unitary_batches_building(tensor_dict, sensor_frequencies, test_missions, network_config)
 
     # Funzione che permette di ricevere in input il dizionario dei tensori prodotto e restituire una lista di liste, con le misurazioni normalizzate ricevute per singolo secondo di missione
-    def unitary_batches_building(self, tensor_dict, sensors_frequencies, test_missions):
+    def unitary_batches_building(self, tensor_dict, sensors_frequencies, test_missions, network_config):
 
         for trajectory, mission_dict in tensor_dict.items():
 
@@ -84,8 +84,8 @@ class Dataset(torch.utils.data.Dataset):
                 if (trajectory, combination) in test_missions and self.mode == 'test':
                     if (trajectory, combination) not in self.test_batches_dict:
                         self.test_batches_dict[(trajectory, combination)] = []
-                elif (trajectory, combination) in test_missions and (
-                        self.mode == 'train' or self.mode == 'validazione'):
+
+                elif (trajectory, combination) in test_missions and (self.mode == 'train' or self.mode == 'validazione'):
                     continue
 
                 for second in range(mission_time):
@@ -97,6 +97,8 @@ class Dataset(torch.utils.data.Dataset):
                     batch_is_valid = True
 
                     # Si itera su ogni elemento presente all'interno del dizionario dei sensori, che rappresenta il tensore di ogni gruppo di misurazioni previsto
+                    first_ref_encounter = True
+                    temp_tensor_slice = torch.empty(0)
                     for sensor_name, sensor_tensor in sensors_dict.items():
 
                         try:
@@ -111,16 +113,30 @@ class Dataset(torch.utils.data.Dataset):
                             batch_end_line = (second + 1 + offset) * sensor_frequency       # Ad es. 5/10/1 per t0=0s, 10/20/2 per t1=1s in base al sensore
 
                             # Si isola la porzione di tensore associata a quella durata di misurazioni
-                            porzione_tensore = sensor_tensor[batch_start_line:batch_end_line]
+                            tensor_slice = sensor_tensor[batch_start_line:batch_end_line]
 
                             # Controllo di validità della batch --> serve che il numero sia sempre lo stesso o altrimenti si scarta l'intero secondo
-                            if porzione_tensore.shape[0] != sensor_frequency:
+                            if tensor_slice.shape[0] != sensor_frequency:
                                 batch_is_valid = False
                                 print(f'    [WARNING]: Al secondo {second} della missione {trajectory} - {combination}, il blocco di sensori {sensor_name} presenta un numero di valori diverso dalla frequenza prevista.')
                                 break
 
+                            # Si aggregano le batch associate ai sensori che misurano le azioni ideali di motori e velocità --> se usate appartengono allo stesso ramo --> si aggiunge un check relativo alla configurazione della rete (se REF non è presente si salta e non si inserisce)
+                            if sensor_name == 'MOT' or sensor_name == 'V_ref':
+
+                                sensor_name = 'REF'
+                                if sensor_name not in network_config:
+                                    continue
+
+                                if first_ref_encounter:
+                                    temp_tensor_slice = tensor_slice
+                                    first_ref_encounter = False
+                                    continue
+                                else:
+                                    tensor_slice = torch.cat([temp_tensor_slice, tensor_slice], dim=1)
+
                             # Si aggiunge la porzione del sensore alla lista di batch per il secondo di iterazione
-                            single_second_batches_list[sensor_name] = porzione_tensore
+                            single_second_batches_list[sensor_name] = tensor_slice
 
                         except Exception as e:
                             print(f"    [WARNING] Errore nella fase di creazione del gruppo di batch unitarie per il secondo {second} --> {e}")

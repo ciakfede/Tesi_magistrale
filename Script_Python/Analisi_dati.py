@@ -1055,6 +1055,7 @@ class PreProcessing:
 
                 self.warn_count = 0
                 mission_failed = False
+                first_encounter = True
                 for sensor_name, sensor_dataframe in sensors_dict.items():
 
                     try:
@@ -1077,19 +1078,24 @@ class PreProcessing:
                         # Si genera ora il tensore pytorch
                         tensor = torch.tensor(normalized_values, dtype=torch.float32)
 
-                        # Si concatenano al tensore di IMU anche quelli associati alle azioni propulsive e ai riferimenti di velocità --> hanno la stessa frequenza
-                        if sensor_name == 'MOT' or sensor_name == 'V_ref':
+                        # Si concatenano tra di loro i tensori associati alle azioni propulsive e ai riferimenti di velocità --> hanno la stessa frequenza e si possono considerare azioni di riferimento
+                        #if sensor_name == 'MOT' or sensor_name == 'V_ref':
 
                             # Si richiama il tensore generato in precedenza per il blocco IMU
-                            IMU_tensor = self.pytorch_tensor_dict[trajectory][combination]['IMU']
+                            #if first_encounter:
+                            #    self.pytorch_tensor_dict[trajectory][combination]['REF'] = tensor
+                            #    first_encounter = False
+                            #    continue
+
+                            #temp_tensor = self.pytorch_tensor_dict[trajectory][combination]['REF']
 
                             # Si calcola il tensore combinato, concatenando ogni riga in direzione orizzontale (si affiancano i valori)
-                            combined_tensor = torch.concat([IMU_tensor, tensor], dim=1)
+                            #combined_tensor = torch.concat([temp_tensor, tensor], dim=1)
 
                             # Si sovrascrive il tensore di pytorch per IMU con quello combinato
-                            self.pytorch_tensor_dict[trajectory][combination]['IMU'] = combined_tensor
+                            #self.pytorch_tensor_dict[trajectory][combination]['REF'] = combined_tensor
 
-                        elif sensor_name == 'Depth' or sensor_name == 'DepthVel':
+                        if sensor_name == 'Depth' or sensor_name == 'DepthVel':
                             continue
 
                         # Si salva il tensore nel dizionario in tutti gli altri casi

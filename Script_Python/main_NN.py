@@ -45,7 +45,7 @@ def stima_trapezoidale(velocita, timestamps, ROOT_DIR, pos_iniziale=0):
 batch_size = 32                                                                         # Numero di secondi di missione forniti contemporaneamente alla rete
 batch_size_test = 1                                                                     # Per il test si usa una batch size di 1s --> si ottiene la stima della posizione per ogni secondo di navigazione (coincidenza perfetta con batch GPS)
 num_epoch = 60                                                                          # Numero di epoche di iterazione per l'addestramento
-network_config = {'IMU': 9, 'DVL': 3, 'GPS': 2}                                         # Dizionario di configurazione della rete neurale --> utile per impostare ordine, numero e nome dei rami associati a LSTM e SAM
+network_config = {'IMU': 3, 'DVL':3, 'REF':6, 'GPS': 2}                                         # Dizionario di configurazione della rete neurale --> utile per impostare ordine, numero e nome dei rami associati a LSTM e SAM
 hidden_size = 100                                                                       # Numero di neuroni appartenenti al layer nascosto del LSTM
 
 sensors_frequencies = {'IMU': 5, 'DVL': 10, 'Depth': 5, 'DepthVel': 5, 'MOT': 5, 'V_ref': 5, 'GPS': 1}             # Frequenze associate ai sensori
@@ -396,8 +396,8 @@ while True:
     if do_training == 'S':
 
         # Si richiama la classe Dataset per definire la lunghezza della batch unitaria per ogni blocco di sensori --> successivamente tramite libreria pytorch si generano batch di forma [32, frequenza, numero di colonne]
-        training_dataset = Dataset(tensor_dict, sensors_frequencies, test_missions_dict, mode='train')
-        validation_dataset = Dataset(tensor_dict, sensors_frequencies, test_missions_dict, mode='validazione')
+        training_dataset = Dataset(tensor_dict, sensors_frequencies, test_missions_dict, network_config, mode='train')
+        validation_dataset = Dataset(tensor_dict, sensors_frequencies, test_missions_dict, network_config, mode='validazione')
 
         # Si trasformano i subset definiti nei dataloader necessari alla rete neurale --> si aggregano più blocchi in base alla batch_size definita
         training_loader = torch.utils.data.DataLoader(training_dataset, batch_size=batch_size, shuffle=True)                 # Definizione del dataloader associato al training
@@ -525,7 +525,7 @@ except FileNotFoundError:
     raise FileNotFoundError(f"Il file {weights_save_path}, contenente i pesi della rete neurale, non esiste. Eseguire il training.") from None
 
 # Si richiama la funzione per creare il dizionario contenente le missioni suddivise in batch unitarie
-test_dataset = Dataset(tensor_dict, sensors_frequencies, test_missions_dict, mode='test')
+test_dataset = Dataset(tensor_dict, sensors_frequencies, test_missions_dict, network_config, mode='test')
 
 # -----------------------------------------------------
 #              INIZIALIZZAZIONE VARIABILI
