@@ -127,9 +127,6 @@ processed_datasets_dict = {}                                                # Di
 
 files_processed_datasets = {'resampling': file_dataset_resampled, 'interpolazione': file_dataset_interpolated}
 
-#correlation_dict = {}                                             # Dizionario necessario per accumulare i valori di correlazione calcolati --> forma {metodo: {coppia_valori}...}
-#mean_correlation_dict = {}                                        # Dizionario necessario per accumulare i valori medi su tutte le missioni per i coefficienti --> forma {'resampling': {'Pearson': {}, 'Spearman': {}}, 'interpolazione': {...}}
-
 # Si inizializzano le variabili --> per evitare soft warnings nel seguito
 processing_methods_choice = ''
 processing_choice = ''
@@ -157,8 +154,8 @@ while True:
 
     if generate_new_dataset == 'S':
 
-        pre_processing.csv_analysis(file_config, ROOT_DIR)
-        pre_processing.save_raw_datasets_dict('pickle', DF_DICT_DIR)
+        pre_processing.csv_analysis(file_config, RAW_DF_DIR)
+        pre_processing.save_raw_datasets_dict('pickle', DF_DICT_DIR, file_dataset_raw)
         raw_dataset = pre_processing.raw_dataset
 
         while True:
@@ -167,7 +164,7 @@ while True:
 
             if save_raw_dataset == 'S':
 
-                pre_processing.save_raw_datasets_dict('excel', DF_DICT_DIR)
+                pre_processing.save_raw_datasets_dict('excel', DF_DICT_DIR, file_dataset_raw)
                 break
 
             elif save_raw_dataset == 'N':
@@ -247,7 +244,7 @@ while True:
     process_dataset = input(f"\n  Si vuole procedere con una nuova elaborazione dei dati di telemetria (S/N/EXIT)?").upper()
 
     # Se si è generato un nuovo Dataset grezzo è inevitabile rieseguire anche l'elaborazione dello stesso
-    if generate_new_dataset == 'S':
+    if generate_new_dataset == 'S' and process_dataset == 'N':
         process_dataset = 'S'
 
     if process_dataset == 'S':
@@ -257,12 +254,12 @@ while True:
 
             if processing_method == 'resampling':
                 pre_processing.raw_dataframes_processing(raw_dataset, sensors_frequencies)
-                pre_processing.save_processed_dataset_dict('pickle', DF_DICT_DIR, 'resampling')
+                pre_processing.save_processed_dataset_dict('pickle', DF_DICT_DIR, file_dataset_resampled, 'resampling')
                 processed_datasets_dict[processing_method] = pre_processing.resampled_dataset
 
             elif processing_method == 'interpolazione':
-                pre_processing.dataframe_interpolation(generate_new_dataset, file_dataset_raw)
-                pre_processing.save_processed_dataset_dict('pickle', DF_DICT_DIR, 'interpolazione')
+                pre_processing.dataframe_interpolation(raw_dataset)
+                pre_processing.save_processed_dataset_dict('pickle', DF_DICT_DIR, file_dataset_interpolated, 'interpolazione')
                 processed_datasets_dict[processing_method] = pre_processing.interpolated_dataset
 
             # Gestione eventuale salvataggio in formato Excel
@@ -272,7 +269,7 @@ while True:
 
                 if save_processed_dataset == 'S':
 
-                    pre_processing.save_processed_dataset_dict('excel', DF_DICT_DIR, processing_method)
+                    pre_processing.save_processed_dataset_dict('excel', DF_DICT_DIR, file_dataset_resampled, processing_method)
                     break
 
                 elif save_processed_dataset == 'N':
@@ -286,6 +283,7 @@ while True:
                 else:
                     print(f"      Input inserito non valido. Ripetere la scelta con s, n o exit.")
 
+        break
 
     elif process_dataset == 'N':
 
@@ -297,6 +295,7 @@ while True:
 
                 with open(dict_file_path, 'rb') as f:
                     processed_datasets_dict[processing_method] = pickle.load(f)
+                print(f"    Utilizzo del Dataset elaborato con {processing_method.upper()} precedentemente generato e salvato in {dict_file_path}.")
 
             else:
                 print(f"    Il file {dict_file_path} risulta non presente o vuoto. Ricontrollare o rieseguire l'analisi dei dati grezzi. ")
@@ -312,7 +311,6 @@ while True:
 
     else:
         print(f"    Input inserito non valido. Ripetere la selezione inserendo s, n o exit.")
-
 
 
 # ======================================================

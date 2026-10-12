@@ -175,7 +175,7 @@ class StatisticalAnalysis:
         # Si itera su ogni metodo di processing telemetrie selezionato
         for processing_method in processing_methods:
 
-            dataset_dict = processed_dataframes_dict[processing_method].drop(columns=['UTM_North [m]', 'UTM_East [m]'])
+            dataset_dict = processed_dataframes_dict[processing_method]
 
             # Si itera sui metodi di analisi prescelti
             for correlation_method in correlation_methods:
@@ -188,12 +188,18 @@ class StatisticalAnalysis:
                     self.warn_count = 0
                     for combination, mission_dataframe in missions_dict.items():
 
+                        # Se il DataFrame è vuoto si salta l'analisi della missione
+                        if mission_dataframe.empty:
+                            print(f"     [WARNING] Il DataFrame per la missione {trajectory} - {combination} risulta vuoto --> missione non analizzata a causa di un errore nel pre-processing.")
+                            self.warn_count += 1
+                            continue
+
                         # -----------------------------------------------------
                         #         CALCOLO COEFFICIENTI DI CORRELAZIONE
                         # -----------------------------------------------------
                         try:
                             # Calcolo dei coefficienti di correlazione del metodo di iterazione --> tramite fillna sostituisco tutti i valori NaN (relazioni non trovate) con uno 0
-                            mission_dataframe_copy = mission_dataframe.drop(columns=['timestamp'])
+                            mission_dataframe_copy = mission_dataframe.drop(columns=['timestamp', 'UTM_North [m]', 'UTM_East [m]'])
                             correlation_matrix = mission_dataframe_copy.corr(method=correlation_method)
                         except Exception as e:
                             print(f"    [WARNING] Errore nel calcolo dei coefficienti di correlazione per il metodo di {correlation_method} nella missione {trajectory} - {combination} --> {e}")

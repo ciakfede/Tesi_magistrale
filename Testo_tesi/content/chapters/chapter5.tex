@@ -1,14 +1,4 @@
 
-\chapter{Sviluppo algoritmo di guida}
-
-%%%%% Scaletta %%%%%%%%
-
-% - Spiegazione scelta effettuata e motivazioni
-
-% - Descrizione lavoro fatto
-
-%%%%%%%%%%%%%%%%%%%%%%%
-
 \chapter{Analisi statistica}
 
 Al termine della fase di pre-processing dei dati, presentata nel precedente paragrafo, si è ottenuto un dataset completo, contenente le misurazioni di tutti i sensori equipaggiati sull'AUV ordinate su una griglia temporale comune e uniforme. Prima di poter procedere con la fase di training della rete neurale, tuttavia, data l'enorme mole di dati, si vuole stabilire se esistono delle relazioni o proporzionalità significative tra di essi, in modo tale da ridurre il numero complessivo di variabili fornite in input alla rete. Questa scrematura, inoltre, consente di individuare ed eliminare eventuali misurazioni che, avendo un livello di correlazione con le grandezze target molto basso, non apportano alcun contributo alla predizione della posizione del drone, ma che, al contrario, potrebbero confondere la rete, peggiorandone le prestazioni.  
@@ -25,7 +15,7 @@ Un processo di questo tipo ha necessariamente carattere statistico e, in partico
     \item $\mathbf{-0.3 < r(x, y) < 0.3}$ $\rightarrow$ l'ultimo caso analizzato riguarda le correlazioni deboli, indice di legami tra variabili di entità trascurabile e, probabilmente, associati a fenomeni casuali o occasionali.
 \end{itemize}
 
-Esistono, naturalmente, svariati metodi in grado di stimare tali coefficienti di correlazione, classificati in base al tipo di relazione che si vuole individuare o alla tipologia di dati oggetto di analisi. In questo lavoro di tesi, in particolare, si è scelto di utilizzare due dei metodi più citati nella letteratura scientifica, basati sul lavoro di Pearson e Spearmann e presentati dettagliatamente nel seguito.
+Per stimare questi coefficienti, nel corso degli anni sono stati proposti molteplici metodi, ognuno dei quali è modellato su una specifica tipologia di analisi. Risulta, dunque, fondamentale la selezione del modello per ottenere un risultato ottimale. In questo lavoro di tesi, in particolare, si è scelto di utilizzare due dei metodi più citati nella letteratura scientifica, basati sul lavoro di Pearson e Spearmann. Nei successivi paragrafi si presenta una panoramica più dettagliata di quest'ultimi, basata sulle informazioni contenute nel lavoro di Franzese e Iuliano\cite{Statistical_Analysis}.
 
 \section{Metodo di Pearson}
 

@@ -1,38 +1,56 @@
 
 \chapter{Fondamenti di Machine learning}
 
-Prima di descrivere dettagliatamente il processo che ha portato alla creazione dell'algoritmo di deep learning prescelto, occorre definire in maniera più accurata cosa si intenda con questo termine. Il mondo dell'intelligenza artificiale, infatti, è molto vasto e ramificato e, pertanto, può essere complicato orientarsi al suo interno. 
+Prima di descrivere dettagliatamente il processo che ha portato alla creazione dell'algoritmo di deep learning prescelto, occorre definire in maniera più accurata cosa si intenda con questo termine. Il mondo dell'intelligenza artificiale, infatti, è molto vasto e ramificato e, pertanto, può essere complicato orientarsi al suo interno. In questo capitolo, dunque, si cercherà di presentare in maniera quanto più chiara possibile cosa si intende con IA, machine learning e reti neurali, descrivendone le caratteristiche principali e il principio di funzionamento. 
 
-Più nel concreto, con il termine \textit{Intelligenza Artificiale} (IA) si identifica la branca dell'informatica che si occupa di studiare e sviluppare algoritmi in grado di simulare i processi alla base dell'intelletto umano. Naturalmente, questa definizione è molto generica e include un'ampia gamma di possibili utilizzi pratici. All'interno di questo mondo, una classe di algoritmi molto promettente appartiene all'ambito del \textit{Machine Learning}. La particolarità di quest'ultimi risiede nella capacità di apprendere direttamente dall'analisi dei dati forniti al modello eventuali pattern o relazioni presenti, senza la necessità di definire manualmente specifiche regole di comportamento. Nonostante con questa definizione si sia ristretto il campo di interesse, restano ancora molte ramificazioni al suo interno. Gli algoritmi, infatti, possono differire notevolmente a seconda dello scopo e delle tecniche di addestramento utilizzate. 
+\section{IA e Machine Learning}
 
-Una prima classificazione riguarda proprio il meccanismo di apprendimento alla base dei modelli di ML:
+Più nel concreto, con il termine \textit{Intelligenza Artificiale} si identifica la branca dell'informatica che si occupa di studiare e sviluppare algoritmi in grado di simulare i processi alla base dell'intelletto umano. Naturalmente, questa definizione è molto generica e include un'ampia gamma di possibili utilizzi pratici, dal semplice impiego di regole logiche o sistemi esperti, caratterizzati da un livello di indipendenza molto basso, ad algoritmi capaci di apprendere autonomamente, direttamente dall'analisi dei dati forniti, eventuali relazioni o pattern ricorsivi presenti nel dataset. Proprio quest'ultimi, appartenenti all'ambito del \textit{Machine Learning}, negli ultimi anni hanno subito una enorme diffusione, grazie anche all'evoluzione tecnologica che ha permesso di addestrare modelli su enormi set di dati a costi contenuti. 
 
-    \begin{itemize}
+Nonostante con questa prima distinzione interna all'IA si sia ristretto il campo di interesse, restano ancora molte ramificazioni collegate al Machine Learning. Nel seguito, pertanto, si cerca di addentrarsi in questo mondo, definendo dettagliatamente le principali caratteristiche associate ai vari algoritmi. In particolare, essi sono suddivisibili sulla base delle tecniche di addestramento utilizzate e sull'obiettivo finale, che ne condiziona, ovviamente, la struttura. 
 
-        \item \textit{Supervised Learning}: in questo caso, il processo è guidato dall'esterno, con i valori di output desiderati forniti insieme al resto dei dati. L'algoritmo migliora, quindi, l'accuratezza della previsione cercando di minimizzare l'errore tra output prodotto e desiderato. 
-        
-        \item \textit{Unsupervised Learning}: come si può intuire dal nome stesso, questa tecnica prevede un maggiore grado di autonomia affidato all'algoritmo, che riceve in input i dati senza alcuna indicazione aggiuntiva e identifica pattern ricorsivi o relazioni interne non facilmente individuabili altrimenti.
-        
-        \item \textit{Reinforcement Learning}: 
-        
-    \end{itemize}
+\subsection{Classificazione algoritmi ML}
 
-Una seconda classificazione si può, invece, fare in base allo scopo del modello:
+Per quanto concerne le possibili tecniche di apprendimento impiegate in modelli di Machine Learning, si evidenziano fondamentalmente tre macro-insiemi:
 
     \begin{itemize}
 
-        \item \textit{Classificazione}:
+        \item \textbf{Supervised Learning}: in questo caso, il processo è guidato dall'esterno, con i valori di output desiderati che vengono forniti insieme al resto dei dati. L'algoritmo migliora, quindi, l'accuratezza della previsione cercando di minimizzare l'errore tra output prodotto e desiderato. 
         
-        \item \textit{Regressione}:
+        \item \textbf{Unsupervised Learning}: come si può intuire dal nome stesso, questa tecnica prevede un maggiore grado di autonomia affidato all'algoritmo, che riceve in input i dati senza alcuna indicazione aggiuntiva e identifica pattern ricorsivi o relazioni interne, non facilmente individuabili dall'essere umano.
         
-        \item \textit{Clustering}: questi algoritmi, tipicamente associati a tecniche di unsupervised learning, si prefiggono l'obiettivo di suddividere un set di dati in sottogruppi, legati da una o più caratteristiche comuni. Alcuni esempi di utilizzo possono essere algoritmi di segmentazione della clientela, che permette di suddividere i clienti di un'azienda per età, sesso, abitudini di acquisto, zona geografica..., di image compression, in grado di scomporre un'immagine raccogliendo i pixel caratterizzati da sfumature dello stesso colore, o di document clustering, utile per classificare i documenti secondo la tipologia di appartenenza (sport, politica, arte...). 
+        \item \textbf{Reinforcement Learning}: questa tecnica permette al modello di apprendere e migliorare il proprio comportamento sfruttando un meccanismo di premi e penalità. In sostanza, l'algoritmo produce una sequenza di azioni che portano ad un risultato. Se quest'ultimo si rivela essere soddisfacente si premia la sequenza registrata, altrimenti la si penalizza. Un processo iterativo di questo tipo prosegue finché l'algoritmo non è in grado di individuare nella quasi totalità dei casi la successione migliore nel rispetto di eventuali vincoli imposti.
+        
+        Appare evidente come una simile tecnica sia solitamente impiegata per algoritmi di \emph{game playing}, ad esempio negli scacchi, o di \emph{autonomous navigation}. In questi casi, infatti, si vuole che l'algoritmo produca, rispettivamente, una serie di mosse in grado di condurre il computer allo scacco matto prima dell'avversario umano e un percorso in grado di portare il veicolo in questione a destinazione senza impattare su nessun ostacolo eventualmente presente lungo il percorso. 
         
     \end{itemize}
 
+Una classificazione più completa e dettagliata si può fare tenendo conto dello scopo del modello, per cui si possono individuare sostanzialmente tre classi:
+
+    \begin{itemize}
+
+        \item \textbf{Classificazione}: una grande fetta di problemi in campo finnziario, medico e informatico, più in generale, riguarda la suddivisione di grandi moli di dati all'interno di specifiche classi di appartenenza. Per ottenere risultati soddisfacenti, naturalmente, non è possibile definire manualmente delle condizioni o delle regole in grado di coprire ogni casistica potenzialmente riscontrata. Una soluzione a tale problema può, dunque, essere l'utilizzo di algoritmi in grado di apprendere, tramite tecniche di supervised learning, le proprietà e i pattern che permettono di stabilire la classe più adatta per ogni oggetto di input direttamente dai dati forniti. 
+        
+        Un primo esempio di utilizzo di tecniche simili, si ha con algoritmi di \emph{data recognition}, in cui l'obiettivo è la scomposizione di dati, quali parole scritte, immagini o dialoghi, in specifiche classi, che possono essere, rispettivamente, caratteri alfabetici, tratti di un viso e singole parole. In questo caso, il grado di complessità del sistema impatta significativamente sulle performance dell'algoritmo. Il riconoscimento di un viso, ad esempio, presenta un gran numero di variabili, quali cambiamenti nelle condizioni di luminosità ambientale, nell'inclinazione del viso, presenza di trucco o di elementi esterni (occhiali, piercing...), mentre l'individuazione di singole parole in un dialogo può avere carenze in base al dialetto usato o alla presenza di rumori ambientali di sottofondo. Un altro ambito in cui modelli di questo tipo sono molto usati è quello medico, con algoritmi di \emph{medical diagnosis}, in cui, forniti in input i dati associati ad un paziente, quali età, genere, storia medica e sintomi attuali, si cerca di individuare la malattia che meglio spiega la problematica in atto. In questi casi, ovviamente, la diagnosi può essere fornita dal modello solo se si ha una certezza assoluta, essendo un tema che coinvolge la salute di altri esseri umani. Un'ultimo ambito di interesse riguarda la finanza, con algoritmi di \emph{credit scoring}. Essi considerano il profilo finanziario di un cliente, valutando un eventuale storico, le entrate e i risparmi accumulati per determinare il livello di rischio associato ad un prestito. 
+        
+        Infine, un'interessante conseguenza di un procedimento di questo tipo è la possibilità di ottenere, tramite una sorta di reverse engineering, informazioni sulle caratteristiche comuni di un oggetto che appartiene ad una specifica classe. 
+
+        \item \textbf{Regressione}: una seconda classe di problemi associati al supervised learning, si occupa di determinare uno o più valori numerici a partire da diversi dati forniti in input. Avendo in comune la tecnica di apprendimento con gli algoritmi di classificazione, la struttura di base risulta simile, sebbene l'obiettivo finale differisca. 
+        
+        Anche in questo caso si possono trovare molteplici utilizzi in vari settori. Uno dei più classici riguarda la \emph{navigazione autonoma}, basata sulla stima di uno o più parametri associati allo stato dinamico di un drone autonomo, che sia aereo, terrestre o sottomarino, partendo da misurazioni provenienti da più sensori. Un secondo possibile utilizzo riguarda il \emph{response surface design}, che permette di individuare la configurazione di parametri di un macchinario al fine di ottenere il miglior risultato (ad esempio i settaggi di una macchinetta del caffé). Un ulteriore esempio di utilizzo consiste nella stima del prezzo di un oggetto sulla base di uno storico di valutazioni per elementi uguali o simili. 
+        
+        \item \textbf{Clustering}: questi algoritmi, tipicamente associati a tecniche di unsupervised learning, si prefiggono l'obiettivo di suddividere un set di dati in sottogruppi, legati da una o più caratteristiche comuni. 
+        
+        Una tecnica simile risulta essere molto versatile potendo, dunque, essere utilizzata in campi anche molto differenti. Un primo esempio riguarda la \emph{customer segmentation}, ovvero la suddivisione dei clienti di un'azienda in base a diverse caratteristiche, quali l'età, il genere, le abitudini di acquisto o la zona geografica. Un utilizzo in ambito grafico può riguardare l'\emph{image compression}, che permette di ridurre notevolmente le dimensioni associate ad un'immagine, pur accettando una significativa perdita di dettaglio visivo. Algoritmi simili raggruppano pixel caratterizzati da sfumature di uno stesso colore, associandogli il codice della sfumatura media. Un'altro possibile metodo di riduzione delle dimensioni consiste nell'estrarre da un'immagine le caratteristiche di alto livello che si ripetono (oggetti, textures, persone...), descrivendola solo tramite quest'ultime. Infine, un ultimo impiego preso in considerazione riguarda il \emph{document clustering}, che permette di classificare dei documenti per tematica trattata, quali sport, politica, arte...
+        
+    \end{itemize}
+
+
+\section{Reti neurali}
 
 All'interno del complesso insieme di algoritmi ascrivibili all'ambito del Machine Learning, una delle classi più promettenti al fine di effettuare operazioni di regressione si rivela essere quella delle \emph{reti neurali}. Questi modelli, infatti, data la loro struttura, sono in grado di analizzare enormi quantità di dati non elaborati, identificando autonomamente pattern complessi, spesso fortemente non lineari, ed appredendo da essi. 
 
-L'ispirazione alla base di tali algoritmi proviene dal funzionamento del cervello umano, in grado di analizzare in pochi millisecondi problemi complessi e, sfruttando anche informazioni passate immagazzinate all'interno delle singole sinapsi, generare una risposta ottimale. Naturalmente, replicarne la capacità di ricordare nel tempo grandi quantità di dati e l'elevato numero di interconnessioni, che definiscono con che livello di sofisticatezza si svolgono le operazioni necessarie, è quasi impossibile, data l'enorme potenza di calcolo che sarebbe necessaria. Tuttavia, le reti neurali sono in grado di migliorare con l'esperienza, analogamente al cervello, in una fase definita training e risultano persino più rapide nel processare le informazioni. 
+L'ispirazione alla base di tali algoritmi proviene dal cervello umano, che è in grado di analizzare in pochi millisecondi problemi complessi e, sfruttando anche informazioni passate immagazzinate all'interno delle singole sinapsi, generare una risposta ottimale. Naturalmente, replicarne la capacità di ricordare nel tempo grandi quantità di dati e l'elevato numero di interconnessioni, che determinano con che livello di sofisticatezza si svolgono le operazioni necessarie, è quasi impossibile, data l'enorme potenza di calcolo che sarebbe necessaria. Tuttavia, le reti neurali sono in grado di migliorare con l'esperienza, analogamente al cervello, in una fase definita training, risultando persino più rapide nel processare le informazioni. 
 
 A livello strutturale, quindi, l'elemento elementare risulta essere il \emph{neurone}, in grado di ricevere in input molteplici dati, elaborarli internamente tramite l'utilizzo di una funzione lineare, caratterizzata da specifici pesi e bias, e, in base alla funzione di attivazione prescelta, produrre un output. Solitamente si generano dei cosiddetti \emph{layer di neuroni}, che si interfacciano vicendevolmente. Una rete neurale, per essere definita tale, deve avere almeno due layer fondamentali: l'\emph{input layer}, che riceve direttamente i dati grezzi forniti all'algoritmo, e l'\emph{output layer}, che produce il risultato ricercato. Normalmente, tuttavia, a questi si aggiungono uno o più layer intermedi, definiti \emph{hidden layers}. Essi, infatti, sono necessari per aumentare  la capacità della rete di estrarre relazioni non lineari dai dati, pur aumentando la complessità e la potenza di calcolo associati al modello. Inoltre, in caso siano presenti almeno 3 layer complessivi, non ci si riferisce più all'ambito del semplice machine learning, bensì si entra in quello che viene definito \textbf{deep learning}.   
 
@@ -44,14 +62,12 @@ A livello strutturale, quindi, l'elemento elementare risulta essere il \emph{neu
 \end{figure}
 
 % Qui si potrebbe aggiungere anche uno schema di funzionamento e spiegazione di forward e back propagation
-\section{Funzionamento rete}
 
-
-\section{Elementi rete neurale}
+\subsection{Elementi rete neurale}
 
 Conclusa questa prima introduzione alle reti neurali, presentata schematicamente in \emph{Figura} \ref{fig:DL_struct}, è necessario analizzarne il funzionamento più nel dettaglio, in modo tale da comprendere, anche a livello matematico, come si arriva all'output desiderato. Nelle sezioni che seguiranno, pertanto, verranno descritti e valutati individualmente tutti gli elementi che compongono una rete neurale. 
 
-\subsection{Neuroni}
+\subsubsection{Neuroni}
 
 Come anticipato, l'entità fondamentale di una rete neurale è il neurone, che risulta estremamente simile a livello concettuale rispetto alla controparte biologica, come si può notare dal confronto mostrato in \emph{Figura} \ref{fig:confronto_neuroni}. Più dettagliatamente, un neurone tradizionale riceve informazioni da altri neuroni tramite i dendriti, le elabora internamente e produce un output sotto forma di impulsi eletttrici, trasmessi ad altri elettroni attraverso le sinapsi poste alla fine della coda. Particolare attenzione va riservata al meccanismo di trasmissione delle informazioni, che avviene grazie a dei messaggeri chimici, chiamati \textit{neurotrasmettitori}, generati a partire dal segnale elettrico prima di giungere alle sinapsi. 
 
@@ -80,7 +96,7 @@ All'interno di questa relazione, sviluppata da Rosenblatt per il Perceptron, una
     \end{figure}
 
 
-\subsection{Funzione di attivazione}
+\subsubsection{Funzione di attivazione}
 
 Il risultato della funzione lineare applicata alle informazioni in ingresso al neurone necessita di un ulteriore passaggio prima di essere trasmesso ai layer successivi. Occorre, infatti, normalizzarlo, in modo tale che gli output dei vari neuroni siano confrontabili tra loro. Questa operazione, eseguita grazie ad una funzione di attivazione specifica, inoltre, permette di introdurre una non linearità all'interno della rete neurale, fondamentale per renderla capace di apprendere pattern più complessi.
 
@@ -131,7 +147,7 @@ Durante gli anni sono state proposte numerose funzioni di attivazione, via via p
 
 % Classificazione attivazione
 
-\subsection{Loss function}
+\subsubsection{Loss function}
 
 Nelle precedenti sezioni si sono analizzati nel dettaglio gli elementi alla base della \textit{forward propagation}, che porta la rete neurale a generare l'output desiderato $\hat{y}$. Questo processo, tuttavia, non darebbe risultati accettabili senza l'integrazione della \textit{backpropagation} e la conseguente fase di addestramento della rete. In particolare, l'elemento chiave in questa fase diventa la cosiddetta funzione di perdita, che permette di quantificare l'errore commesso dalla rete in ogni epoca di addestramento. 
 
@@ -212,9 +228,9 @@ In particolare, la stima della rete neurale sul numero di occorrenze, non potend
 
 Tenendo conto dei pregi e dei difetti di ogni funzione presentata in questo paragrafo, oltre che dell'attinenza con l'obiettivo del modello di rete neurale qui considerato, si tengono in considerazione prevalentemente la \textit{L1 Loss}, la \textit{L2 Loss} e la \textit{Log-cosh Loss}. 
 
-\subsection{Optimizer}
+\subsubsection{Optimizer}
 
 
 
 
-\section{Algoritmi tipici}
+\subsection{Algoritmi tipici}
