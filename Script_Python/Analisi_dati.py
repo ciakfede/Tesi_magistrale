@@ -77,6 +77,9 @@ class PreProcessing:
 
         self.min_std = 0.01                         # Soglia minima di deviazione standard per i vari parametri
 
+        # Inizializzo il dizionario che conterrà i valori di yaw
+        self.yaw_dict = {}
+
     # ======================================================
     #            ESTRAZIONE DATI DA FILE CSV
     # ======================================================
@@ -345,6 +348,21 @@ class PreProcessing:
     #                PROCESSING DATAFRAMES
     # ======================================================
 
+    # Funzione che permette di effettuare la conversione inversa b
+    def body_to_NED(self, pos_estimate, t_iteration, trajectory, combination):
+
+        #
+        yaw_rad = self.yaw_dict[trajectory][combination][t_iteration+1]
+        X_body = pos_estimate[:, 0]
+        Y_body = pos_estimate[:, 1]
+
+        Delta_N_estimate = X_body * np.cos(yaw_rad) - Y_body * np.sin(yaw_rad)
+        Delta_E_estimate = X_body * np.sin(yaw_rad) + Y_body * np.cos(yaw_rad)
+
+        NED_pos_estimate = torch.stack([Delta_E_estimate, Delta_N_estimate], dim=1)
+
+        return NED_pos_estimate
+
     # Funzione interna che permette di trasformare le coordinate del drone da valori NED locale ad assi body XY
     def NED_to_body(self, processing_method, trajectory, combination):
 
@@ -377,6 +395,11 @@ class PreProcessing:
                         gps_mask = dataframe_IMU['timestamp'].isin(dataframe_GPS['timestamp'])      # Maschera booleana --> True nei timestamp che sono presenti anche nel sotto-dataframe associato ai soli valori GPS (quello a frequenza minore)
                         yaw_deg_values = dataframe_IMU.loc[gps_mask, 'Yaw [deg]'].to_numpy()
                         yaw_rad = np.radians(yaw_deg_values)
+
+                        # Si salva il vettore yaw se la missione è di test --> per effettuare poi la riconversione della posizione
+                        if trajectory not in self.yaw_dict:
+                            self.yaw_dict[trajectory] = {}
+                        self.yaw_dict[trajectory][combination] = yaw_rad
 
                         # Si richiamano i valori di spostamento relativo
                         Delta_East = dataframe_GPS['Delta_East [m]'].to_numpy()
@@ -926,7 +949,8 @@ class PreProcessing:
 
         # Si eliminano le colonne non necessarie per il training
         if sensor_name == 'GPS':
-            sensor_dataframe = sensor_dataframe.drop(columns=['UTM_North [m]', 'UTM_East [m]', 'NED_North [m]', 'NED_East [m]', 'X_body_ist [m]', 'Y_body_ist [m]'], errors='ignore')
+            #sensor_dataframe = sensor_dataframe.drop(columns=['UTM_North [m]', 'UTM_East [m]', 'NED_North [m]', 'NED_East [m]', 'X_body_ist [m]', 'Y_body_ist [m]'], errors='ignore')
+            sensor_dataframe = sensor_dataframe.drop(columns=['UTM_North [m]', 'UTM_East [m]', 'NED_North [m]', 'NED_East [m]', 'Delta_East [m]', 'Delta_North [m]'], errors='ignore')
 
         elif sensor_name == 'DVL':
             sensor_dataframe = sensor_dataframe.drop(columns=['DVL_Altitude [m]'], errors='ignore')
@@ -946,7 +970,7 @@ class PreProcessing:
         return sensor_dataframe
 
     # Funzione interna incaricata di calcolare il valore medio e la deviazione standard per ogni colonna appartenente a un blocco di sensori
-    def compute_normalization_parameters(self, sensors_blocks_dataset, missioni_test):
+    def compute_normalization_parameters(self, sensors_blocks_dataset, test_missions):
 
         # -----------------------------------------------------
         #         UNIFICAZIONE DATAFRAMES PER SENSORE
@@ -964,7 +988,7 @@ class PreProcessing:
                     continue
 
                 # Si utilizza la missione per la definizione dei valori di normalizzazione solo per le missioni di training --> poi si applicano direttamente a quelle di test per garantire che la rete non abbia in alcun modo informazioni sulle misurazioni future nella fase di test
-                if (trajectory, combination) not in missioni_test:
+                if (trajectory, combination) not in test_missions:
 
                     for sensor_name, sensor_dataframe in sensors_dict.items():
 
@@ -1029,10 +1053,10 @@ class PreProcessing:
         return self
 
     # Funzione incaricata di trasformare i dataframe definiti in tensori pytorch da fornire in input alla rete neurale
-    def dataframe_to_tensor(self, sensors_blocks_dataset, missioni_test):
+    def dataframe_to_tensor(self, sensors_blocks_dataset, test_missions):
 
         # Si richiama la funzione per generare i valori di media e deviazione standard per ogni blocco di missione --> salvati in un dizionario
-        self.compute_normalization_parameters(sensors_blocks_dataset, missioni_test)
+        self.compute_normalization_parameters(sensors_blocks_dataset, test_missions)
 
         for trajectory, combinations_dict in sensors_blocks_dataset.items():
 
@@ -1109,7 +1133,7 @@ class PreProcessing:
                         print(f"      [WARNING] Errore nella creazione del tensore associato al sensore {sensor_name} --> {e}")
                         continue
 
-                print(f'      Tensore associato alla missione {trajectory} - {combination} è stato generato con {self.warn_count} nuovi warnings rilevati, con dimensioni: DVL = {self.pytorch_tensor_dict[trajectory][combination]['DVL'].shape}, IMU = {self.pytorch_tensor_dict[trajectory][combination]['IMU'].shape}, GPS = {self.pytorch_tensor_dict[trajectory][combination]['GPS'].shape}.')
+                print(f'      Tensore associato alla missione {trajectory} - {combination} è stato generato con {self.warn_count} nuovi warnings rilevati, con dimensioni: DVL = {self.pytorch_tensor_dict[trajectory][combination]['DVL'].shape}, IMU = {self.pytorch_tensor_dict[trajectory][combination]['IMU'].shape}, MOT = {self.pytorch_tensor_dict[trajectory][combination]['MOT'].shape}, GPS = {self.pytorch_tensor_dict[trajectory][combination]['GPS'].shape}.')
 
         return self
 

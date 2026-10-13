@@ -208,6 +208,11 @@ while True:
         # Salvataggio in formato json la lista delle missioni non valide
         with open(empy_list_file, "w", encoding="utf-8") as f:
             json.dump(pre_processing.empty_missions_list, f)
+        #break
+
+        # Salvataggio in formato pickle del dizionario degli yaw
+        with open(os.path.join(DF_DICT_DIR, 'Yaw_dict.pkl'), "wb") as f:
+            pickle.dump(pre_processing.yaw_dict, f)
         break
 
     elif process_dataset == 'N':
@@ -232,6 +237,15 @@ while True:
                 pre_processing.empty_missions_list = json.load(f)
         else:
             print(f"    Impossibile caricare la lista di missioni non valide dal file {empy_list_file}. Verificare.")
+            file_exists = False
+
+        # Caricamento del dizionario contenente gli elementi di yaw suddivisi per missione
+        if os.path.isfile(os.path.join(DF_DICT_DIR, 'Yaw_dict.pkl')) and os.stat(os.path.join(DF_DICT_DIR, 'Yaw_dict.pkl')).st_size > 0:
+            print(f"    Caricamento della lista di missioni non valide precedentemente generato e salvato in {os.path.join(DF_DICT_DIR, 'Yaw_dict.pkl')}.")
+            with open(os.path.join(DF_DICT_DIR, 'Yaw_dict.pkl'), 'rb') as f:
+                pre_processing.yaw_dict = pickle.load(f)
+        else:
+            print(f"    Impossibile caricare la lista di missioni non valide dal file {os.path.join(DF_DICT_DIR, 'Yaw_dict.pkl')}. Verificare.")
             file_exists = False
 
         # Caricamento dataset scomposto a blocchi
@@ -567,7 +581,7 @@ for (trajectory, combination) in test_missions_dict:
         # -----------------------------------------------------
 
         # Si itera per ogni batch del test_loader (sono batch_size secondi)
-        GPS_starting_coordinates = resampled_dataset[trajectory][combination][['NED_East [m]', 'NED_North [m]']].iloc[0].to_numpy(dtype=np.float32)      # Definizione della posizione iniziale dal dataframe pandas ricampionato
+        GPS_starting_coordinates = resampled_dataset[trajectory][combination][['NED_East [m]', 'NED_North [m]']].iloc[0].to_numpy(dtype=np.float32)       # Definizione della posizione iniziale dal dataframe pandas ricampionato
         GPS_NED_coordinates = torch.tensor(GPS_starting_coordinates, dtype=torch.float32).unsqueeze(0)                                                    # Trasformazione del vettore posizione in un tensore pytorch --> con unsqueeze si rende compatibile con le dimensioni della batch [1,2]
         NN_NED_coordinates = {}                                                                                                                           # Inizializzazione dizionario per l'immagazzinamento dei valori di posizione per ogni traiettoria della missione --> ha forma {'Traiettoria1': [], 'Traiettoria2': [],....}
         GPS_abs_origin = resampled_dataset[trajectory][combination][['UTM_East [m]', 'UTM_North [m]']].iloc[0].to_numpy(dtype=np.float64)
@@ -590,11 +604,15 @@ for (trajectory, combination) in test_missions_dict:
             NN_displacement_estimation = rete_neurale.forward(data)
 
             # Si ritrasformano i dati in metri non-normalizzati, si sommano al valore di posizione precedente e si aggiungono alla lista complessiva per ottenere la traiettoria
-            NN_displacement_meters = (NN_displacement_estimation * GPS_std) + GPS_mean
+            #NN_displacement_meters = (NN_displacement_estimation * GPS_std) + GPS_mean
+            NN_body_estimation = (NN_displacement_estimation * GPS_std) + GPS_mean
+            NN_displacement_meters = pre_processing.body_to_NED(NN_body_estimation, t_iteration, trajectory, combination)
             #NN_NED_coordinates += NN_displacement_meters
 
             # Si ripete lo stesso procedimento con la batch di iterazione dei dati GPS di partenza
-            GPS_displacement_meters = (data['GPS'] * GPS_std) + GPS_mean
+            #GPS_displacement_meters = (data['GPS'] * GPS_std) + GPS_mean
+            GPS_body_estimation = (data['GPS'] * GPS_std) + GPS_mean
+            GPS_displacement_meters = pre_processing.body_to_NED(GPS_body_estimation, t_iteration, trajectory, combination)
             GPS_NED_coordinates += GPS_displacement_meters
 
             # -----------------------------------------------------
