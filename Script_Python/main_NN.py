@@ -45,8 +45,11 @@ def stima_trapezoidale(velocita, timestamps, ROOT_DIR, pos_iniziale=0):
 batch_size = 32                                                                         # Numero di secondi di missione forniti contemporaneamente alla rete
 batch_size_test = 1                                                                     # Per il test si usa una batch size di 1s --> si ottiene la stima della posizione per ogni secondo di navigazione (coincidenza perfetta con batch GPS)
 num_epoch = 60                                                                          # Numero di epoche di iterazione per l'addestramento
-network_config = {'IMU': 3, 'DVL':3, 'REF': 12, 'GPS': 2}                                # Dizionario di configurazione della rete neurale --> utile per impostare ordine, numero e nome dei rami associati a LSTM e SAM
+network_config = {'IMU': 3, 'DVL':3, 'REF': 6, 'GPS': 2}                                # Dizionario di configurazione della rete neurale --> utile per impostare ordine, numero e nome dei rami associati a LSTM e SAM
 hidden_size = 100                                                                       # Numero di neuroni appartenenti al layer nascosto del LSTM
+
+# Si definisce il dizionario di configurazione per stabilire quali dati non devono essere utilizzati e con quale target (NED/body) --> di IMU si usano sempre tutti quindi si sfrutta questo dizionario per selezionare la modalità (deg o sin/cos)
+data_config = {'target': 'body', 'DVL': ['DVL_Altitude [m]'], 'IMU_format': 'deg', 'MOT': ['Mot_RV [%]', 'Mot_RL [%]'], 'V_ref': ['Ref_Vy [%]', 'Ref_Vz [%]', 'Ref_ωx [%]', 'Ref_ωy [%]']}
 
 sensors_frequencies = {'IMU': 5, 'DVL': 10, 'Depth': 5, 'DepthVel': 5, 'MOT': 5, 'V_ref': 5, 'GPS': 1}             # Frequenze associate ai sensori
 
@@ -208,7 +211,6 @@ while True:
         # Salvataggio in formato json la lista delle missioni non valide
         with open(empy_list_file, "w", encoding="utf-8") as f:
             json.dump(pre_processing.empty_missions_list, f)
-        #break
 
         # Salvataggio in formato pickle del dizionario degli yaw
         with open(os.path.join(DF_DICT_DIR, 'Yaw_dict.pkl'), "wb") as f:
@@ -346,31 +348,48 @@ print('\n\n---------------------------------------------------------------------
 print('--------- DEFINIZIONE TENSORI PYTORCH E NORMALIZZAZIONE DATI ---------')
 print('----------------------------------------------------------------------')
 
-print(f"\n  Trasformazione Dataset processato in tensore pytorch in corso:")
+while True:
 
-tensor_dict = {}
-if generate_new_dataset == 'S' or process_dataset == 'S':
+    new_tensor_conversion = input(f"\nSi vuole convertire nuovamente il Dataset processato in un tensore pytorch (S/N/EXIT)?").upper()
 
-    pre_processing.dataframe_to_tensor(pre_processing.sensors_divided_dataset, test_missions_dict)      # Si generano i tensori pytorch --> si genera in output un dizionario in cui per ogni missione sono presenti 3 tensori, uno per ogni frequenza di misurazione presente
-    tensor_dict = pre_processing.pytorch_tensor_dict                                                    # Si richiama il dizionario di tensori da usare per la rete neurale --> ogni tensore è una lista ordinata (per sensore) contenente le misurazioni di tutte missioni
-    torch.save(tensor_dict, file_tensor_dict)                                                           # Si salva il dizionario per iterazioni successive
-    with open(file_norm_parameters_dict, 'wb') as f:
-        pickle.dump(pre_processing.normalization_parameters_dict, f)
+    # Analogamente a prima se sono stati fatti cambiamenti nel Dataset di origine va effettuata nuovamente la conversione
+    if new_tensor_conversion == 'S' or process_dataset == 'S' and not new_tensor_conversion == 'EXIT':
+        new_tensor_conversion = 'S'
 
-else:
+    if new_tensor_conversion == 'S':
 
-    if (os.path.isfile(file_tensor_dict) and os.stat(file_tensor_dict).st_size > 0) and (os.path.isfile(file_norm_parameters_dict) and os.stat(file_norm_parameters_dict).st_size > 0):
+        pre_processing.dataframe_to_tensor(pre_processing.sensors_divided_dataset, test_missions_dict, data_config)     # Si generano i tensori pytorch --> si genera in output un dizionario in cui per ogni missione sono presenti 3 tensori, uno per ogni frequenza di misurazione presente
+        tensor_dict = pre_processing.pytorch_tensor_dict                                                                # Si richiama il dizionario di tensori da usare per la rete neurale --> ogni tensore è una lista ordinata (per sensore) contenente le misurazioni di tutte missioni
 
-        print(f"    Caricamento del dizionario contenente il tensore pytorch di ogni missione precedentemente generato e salvato in {file_tensor_dict}.")
-        tensor_dict = torch.load(file_tensor_dict)
+        # Si salva il tensore generato e il dizionario contenente i parametri di normalizzazione per iterazioni successive
+        torch.save(tensor_dict, file_tensor_dict)
+        with open(file_norm_parameters_dict, 'wb') as f:
+            pickle.dump(pre_processing.normalization_parameters_dict, f)
 
-        print(f"    Caricamento del dizionario contenente i parametri di normalizzazione di ogni sensore precedentemente generato e salvato in {file_norm_parameters_dict}.")
-        with open(file_norm_parameters_dict, 'rb') as f:
-            pre_processing.normalization_parameters_dict = pickle.load(f)
+        break
+
+    elif new_tensor_conversion == 'N':
+
+        if (os.path.isfile(file_tensor_dict) and os.stat(file_tensor_dict).st_size > 0) and (os.path.isfile(file_norm_parameters_dict) and os.stat(file_norm_parameters_dict).st_size > 0):
+
+            print(f"  Caricamento del dizionario contenente il tensore pytorch di ogni missione precedentemente generato e salvato in {file_tensor_dict}.")
+            tensor_dict = torch.load(file_tensor_dict)
+
+            print(f"  Caricamento del dizionario contenente i parametri di normalizzazione di ogni sensore precedentemente generato e salvato in {file_norm_parameters_dict}.")
+            with open(file_norm_parameters_dict, 'rb') as f:
+                pre_processing.normalization_parameters_dict = pickle.load(f)
+
+            break
+
+        else:
+            print(f"  Impossibile trovare il file di salvataggio del dizionario dei tensori. Eseguire nuovamente la conversione.")
+
+    elif new_tensor_conversion == 'EXIT':
+        print(f"  Chiusura del programma forzata da utente in corso...")
+        sys.exit()
 
     else:
-
-        print(f"  Impossibile trovare il file di salvataggio del dizionario dei tensori.")
+        print(f"  Input inserito non valido. Ripetere la selezione inserendo s, n o exit.")
 
 
 print('\n\n---------------------------------------------------------')
@@ -602,18 +621,25 @@ for (trajectory, combination) in test_missions_dict:
 
             NN_displacement_estimation = rete_neurale.forward(data)
 
-            # Si ritrasformano i dati in metri non-normalizzati, si sommano al valore di posizione precedente e si aggiungono alla lista complessiva per ottenere la traiettoria
-            NN_displacement_meters = (NN_displacement_estimation * GPS_std) + GPS_mean
+            if data_config['target'] == 'NED':
 
-            # Si ripete lo stesso procedimento con la batch di iterazione dei dati GPS di partenza
-            GPS_displacement_meters = (data['GPS'] * GPS_std) + GPS_mean
+                NN_displacement_meters = (NN_displacement_estimation * GPS_std) + GPS_mean
+                GPS_displacement_meters = (data['GPS'] * GPS_std) + GPS_mean
+
+            elif data_config['target'] == 'body':
+
+                NN_body_estimation = (NN_displacement_estimation * GPS_std) + GPS_mean
+                NN_displacement_meters = pre_processing.body_to_NED(NN_body_estimation, t_iteration, trajectory, combination)
+
+                GPS_body_estimation = (data['GPS'] * GPS_std) + GPS_mean
+                GPS_displacement_meters = pre_processing.body_to_NED(GPS_body_estimation, t_iteration, trajectory, combination)
+
+            else:
+                print(f"  [ERROR] Chiave target non inserita correttamente. Ricontrollare nell'intestazione del main.")
+                sys.exit()
+
+            # Si somma lo spostamento unitario calcolato per il target --> si ottiene la traiettoria ideale --> questo si fa sempre a differenza della previsione della rete (se si vuole fare sempre coincidere con l'inizio ideale per evitare errori accumulati)
             GPS_NED_coordinates += GPS_displacement_meters
-
-            # Versione con assi body
-            #NN_body_estimation = (NN_displacement_estimation * GPS_std) + GPS_mean
-            #NN_displacement_meters = pre_processing.body_to_NED(NN_body_estimation, t_iteration, trajectory, combination)
-            #GPS_body_estimation = (data['GPS'] * GPS_std) + GPS_mean
-            #GPS_displacement_meters = pre_processing.body_to_NED(GPS_body_estimation, t_iteration, trajectory, combination)
 
             # -----------------------------------------------------
             #        AGGIORNAMENTO STIMA COORDINATE NED

@@ -128,7 +128,7 @@ class Dataset(torch.utils.data.Dataset):
                                     sensor_name = 'REF'
                                     if sensor_name not in network_config:
                                         continue
-                                elif network_config['IMU'] == 9:
+                                elif network_config['IMU'] == 9 or network_config['IMU'] == 10:
                                     sensor_name = 'IMU'
                                     temp_tensor_slice = single_second_batches_list[sensor_name]
                                     first_ref_encounter = False
@@ -240,9 +240,11 @@ class NavNet(nn.Module):
         # Si applicano i Fully connected layers --> ricevono in input il vettore c concatenato --> devo arrivare a 2 output, che rappresentano gli spostamenti nei due assi (possibile automatizzare aggiungendo più strati)
         input_size_FC = hidden_size * (len(network_config)-1)
         self.FC = nn.Sequential(
-            nn.Linear(input_size_FC, input_size_FC//2),
+            nn.Linear(input_size_FC, 200),
             nn.ReLU(),
-            nn.Linear(input_size_FC//2, 2))
+            nn.Linear(200, hidden_size),
+            nn.ReLU(),
+            nn.Linear(hidden_size, 2))
 
         # Definizione struttura funzione di costo --> si sceglie una Euclidean Loss per restare coerenti con il paper
         self.loss_criterion = nn.MSELoss()

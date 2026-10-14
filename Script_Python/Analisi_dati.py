@@ -77,8 +77,7 @@ class PreProcessing:
 
         self.min_std = 0.01                         # Soglia minima di deviazione standard per i vari parametri
 
-        # Inizializzo il dizionario che conterrà i valori di yaw
-        self.yaw_dict = {}
+        self.yaw_dict = {}                          # Si inizializza il dizionario che conterrà i valori di yaw --> necessario per versione con target in assi body --> sarà nella forma {'traiettoria1': {'comb1': [], 'comb2': []...}, ...}
 
     # ======================================================
     #            ESTRAZIONE DATI DA FILE CSV
@@ -943,34 +942,45 @@ class PreProcessing:
 
     # Funzione interna che permette di gestire l'eliminazione delle colonne dal database in vista dell'uso sulla rete neurale
     @staticmethod
-    def drop_columns(sensor_name, sensor_dataframe):
+    def drop_columns(sensor_name, sensor_dataframe, data_config):
 
         sensor_dataframe = sensor_dataframe.drop(columns=['timestamp'], errors='ignore')
 
-        # Si eliminano le colonne non necessarie per il training
+        cols_to_drop = []
+        if sensor_name in data_config.keys():
+            cols_to_drop = data_config[sensor_name]
+
+        # Si eliminano le colonne non necessarie per il training --> il GPS va trattato separatamente perché ho solo un indicazione sul tipo di target così come l'IMU, che usa sempre tutti gli angoli ma cambia il formato
         if sensor_name == 'GPS':
-            sensor_dataframe = sensor_dataframe.drop(columns=['UTM_North [m]', 'UTM_East [m]', 'NED_North [m]', 'NED_East [m]', 'X_body_ist [m]', 'Y_body_ist [m]'], errors='ignore')
-            #sensor_dataframe = sensor_dataframe.drop(columns=['UTM_North [m]', 'UTM_East [m]', 'NED_North [m]', 'NED_East [m]', 'Delta_East [m]', 'Delta_North [m]'], errors='ignore')
 
-        elif sensor_name == 'DVL':
-            sensor_dataframe = sensor_dataframe.drop(columns=['DVL_Altitude [m]'], errors='ignore')
+            if data_config['target'] == 'NED':
+                sensor_dataframe = sensor_dataframe.drop(columns=['UTM_North [m]', 'UTM_East [m]', 'NED_North [m]', 'NED_East [m]', 'X_body_ist [m]', 'Y_body_ist [m]'], errors='ignore')
+            elif data_config['target'] == 'body':
+                sensor_dataframe = sensor_dataframe.drop(columns=['UTM_North [m]', 'UTM_East [m]', 'NED_North [m]', 'NED_East [m]', 'Delta_East [m]', 'Delta_North [m]'], errors='ignore')
+            else:
+                print(f"      [ERROR] Chiave target non inserita correttamente. Ricontrollare nell'intestazione del main.")
+                sys.exit()
 
-        #elif sensor_name == 'V_ref':
-         #   sensor_dataframe = sensor_dataframe.drop(columns=['Ref_Vy [%]', 'Ref_Vz [%]', 'Ref_ωx [%]', 'Ref_ωy [%]'], errors='ignore')
+        elif sensor_name == 'IMU':
 
-        #elif sensor_name == 'MOT':
-            #sensor_dataframe = sensor_dataframe.drop(columns=['Mot_RV [%]', 'Mot_RL [%]'], errors='ignore')
+            if data_config['IMU_format'] == 'deg':
+                return sensor_dataframe
+            elif data_config['IMU_format'] == 'sin/cos':
+                yaw_rad = np.radians(sensor_dataframe['Yaw [deg]'])
+                sensor_dataframe = sensor_dataframe.drop(columns=['Yaw [deg]'], errors='ignore')
+                sensor_dataframe['Yaw_sin'] = np.sin(yaw_rad)
+                sensor_dataframe['Yaw_cos'] = np.cos(yaw_rad)
+            else:
+                print(f"      [ERROR] Chiave IMU_format non inserita correttamente. Ricontrollare nell'intestazione del main.")
+                sys.exit()
 
-        #elif sensor_name == 'IMU':
-            #yaw_rad = np.radians(sensor_dataframe['Yaw [deg]'])
-            #sensor_dataframe = sensor_dataframe.drop(columns=['Yaw [deg]'], errors='ignore')
-            #sensor_dataframe['Yaw_sin'] = np.sin(yaw_rad)
-            #sensor_dataframe['Yaw_cos'] = np.cos(yaw_rad)
+        else:
+            sensor_dataframe = sensor_dataframe.drop(columns=cols_to_drop, errors='ignore')
 
         return sensor_dataframe
 
     # Funzione interna incaricata di calcolare il valore medio e la deviazione standard per ogni colonna appartenente a un blocco di sensori
-    def compute_normalization_parameters(self, sensors_blocks_dataset, test_missions):
+    def compute_normalization_parameters(self, sensors_blocks_dataset, test_missions, data_config):
 
         # -----------------------------------------------------
         #         UNIFICAZIONE DATAFRAMES PER SENSORE
@@ -998,7 +1008,7 @@ class PreProcessing:
 
                         try:
 
-                            sensor_dataframe_copy = self.drop_columns(sensor_name, sensor_dataframe)
+                            sensor_dataframe_copy = self.drop_columns(sensor_name, sensor_dataframe, data_config)
 
                             # Si aggiunge il dataframe per la missione e il nome del sensore associato a un apposito dizionario --> nella forma {'IMU': [], 'DVL': [], 'GPS': []}
                             if sensor_name not in sensor_dataframes_list:
@@ -1053,10 +1063,10 @@ class PreProcessing:
         return self
 
     # Funzione incaricata di trasformare i dataframe definiti in tensori pytorch da fornire in input alla rete neurale
-    def dataframe_to_tensor(self, sensors_blocks_dataset, test_missions):
+    def dataframe_to_tensor(self, sensors_blocks_dataset, test_missions, data_config):
 
         # Si richiama la funzione per generare i valori di media e deviazione standard per ogni blocco di missione --> salvati in un dizionario
-        self.compute_normalization_parameters(sensors_blocks_dataset, test_missions)
+        self.compute_normalization_parameters(sensors_blocks_dataset, test_missions, data_config)
 
         for trajectory, combinations_dict in sensors_blocks_dataset.items():
 
@@ -1089,7 +1099,7 @@ class PreProcessing:
                             continue
 
                         # Si elimina dal dataframe del singolo sensore la colonna dei timestamp (questo crea automaticamente una copia del dataframe originale)
-                        sensor_dataframe_copy = self.drop_columns(sensor_name, sensor_dataframe)
+                        sensor_dataframe_copy = self.drop_columns(sensor_name, sensor_dataframe, data_config)
 
                         # Si estraggono i valori del dataframe in un array numpy
                         original_values = sensor_dataframe_copy.to_numpy(dtype=np.float32)
@@ -1687,5 +1697,22 @@ class PostProcessing:
         output_file_path = os.path.join(OUTPUT_FOLDER_PATH, 'Loss_function.pdf')
 
         plt.savefig(output_file_path, bbox_inches='tight')
-        #plt.show()
         plt.close()
+
+    # Funzione che permette di valutare per ogni missione la media dell'errore RMSE e in generale la media complessiva
+    def mean_parameters_calculation(self, ROOT_DIR, path_name):
+
+        # Si definisce il percorso di output del file
+        INPUT_FOLDER_PATH = os.path.join(ROOT_DIR, 'Risultati_NN')
+        os.makedirs(INPUT_FOLDER_PATH, exist_ok=True)
+        input_file_path = os.path.join(INPUT_FOLDER_PATH, f"NN_evaluations_info.txt")
+
+        # Si apre in modalità lettura il file
+        with open(input_file_path, 'r') as f:
+
+            # Si legge riga per riga il file --> se si incontra un blocco di 3 righe in cui 2 iniziano con "=" si è all'inizio di una nuova iterazione --> ogni volta che si incontra un "-" si ha un nuovo percorso/traiettoria (ogni 4 percorsi)
+            for line in f.readlines():
+                continue
+
+        return self
+
