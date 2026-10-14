@@ -15,41 +15,63 @@ Un processo di questo tipo ha necessariamente carattere statistico e, in partico
     \item $\mathbf{-0.3 < r(x, y) < 0.3}$ $\rightarrow$ l'ultimo caso analizzato riguarda le correlazioni deboli, indice di legami tra variabili di entità trascurabile e, probabilmente, associati a fenomeni casuali o occasionali.
 \end{itemize}
 
-Per stimare questi coefficienti, nel corso degli anni sono stati proposti molteplici metodi, ognuno dei quali è modellato su una specifica tipologia di analisi. Risulta, dunque, fondamentale la selezione del modello per ottenere un risultato ottimale. In questo lavoro di tesi, in particolare, si è scelto di utilizzare due dei metodi più citati nella letteratura scientifica, basati sul lavoro di Pearson e Spearmann. Nei successivi paragrafi si presenta una panoramica più dettagliata di quest'ultimi, basata sulle informazioni contenute nel lavoro di Franzese e Iuliano\cite{Statistical_Analysis}.
+Per stimare questi coefficienti, nel corso degli anni sono stati proposti molteplici metodi, ognuno dei quali è modellato su una specifica tipologia di analisi. Risulta, dunque, fondamentale la selezione del modello per ottenere un risultato ottimale. In questo lavoro di tesi, in particolare, si è scelto di impiegare due dei metodi più citati nella letteratura scientifica, basati sul lavoro di Pearson e Spearmann. Nei successivi paragrafi si presenta, quindi, una panoramica più dettagliata di quest'ultimi, basata sulle informazioni contenute nel lavoro di Franzese e Iuliano\cite{Statistical_Analysis}.
 
 \section{Metodo di Pearson}
 
-Questo metodo, sviluppato inizialmente da August Bravais e presentato nella sua forma attuale da Karl Pearson nel 1896, risulta essere ancora oggi uno dei più efficaci per stimare e quantificare la correlazione esistente tra due variabili. Dal punto di vista matematico, il calcolo del coefficiente si basa su una relazione dipendente sia dalla covarianza che dalla deviazione standard ($\sigma_{x,y}$) associate alle due grandezze, identificate genericamente con $x$ e $y$:
-    
-    \begin{center}
-        \begin{math}
-            \displaystyle r_{p} (x, y) = \frac{\text{covarianza}(x, y)}{\sigma_{x} \sigma_{y}} = \frac{\sum_{i} (x_{i} - \bar{x})(y_{i} - \bar{y})}{\sqrt{\sum_{i}(x_{i} - \bar{x})^{2}} \sqrt{\sum_{i}(y_{i} - \bar{y})^{2}}} \ \ \ (4.1)
-        \end{math}
-    \end{center}
+Il primo metodo trattato, sviluppato inizialmente da August Bravais e presentato nella sua forma attuale da Karl Pearson nel 1896, risulta essere ancora oggi uno dei più efficaci per stimare e quantificare la correlazione esistente tra due variabili. Dal punto di vista matematico, il calcolo del coefficiente si basa su una relazione dipendente sia dalla covarianza che dalla deviazione standard ($\sigma_{x,y}$) associate alle due grandezze, identificate genericamente con $x$ e $y$:
 
-Nonostante le ottime prestazioni e la relativa semplicità di calcolo associate al metodo, sono presenti diverse limitazioni dal punto di vista dell'applicabilità. Le grandezze, infatti, devono essere continue, quantificabili, caratterizzate da una distribuzione di probabilità normale e associate agli stessi casi, ovvero per ogni istante temporale deve essere presente una misurazione di entrambi i sensori. Inoltre, un coefficiente di correlazione simile, risulta essere sensibile alla presenza di outliers nei dati e, pertanto, si rende necessario valutare opportunamente questo aspetto. Infine, occorre tenere presente che questa tecnica è applicabile unicamente a proporzionalità di tipo lineare. 
+    \begin{equation}
+        \displaystyle r_{p} (x, y) = \frac{\text{covarianza}(x, y)}{\sigma_{x} \sigma_{y}} = \frac{\sum_{i} (x_{i} - \bar{x})(y_{i} - \bar{y})}{\sqrt{\sum_{i}(x_{i} - \bar{x})^{2}} \sqrt{\sum_{i}(y_{i} - \bar{y})^{2}}}
+        \label{eq:pearson}
+    \end{equation}
+
+Nonostante le ottime prestazioni e la relativa semplicità di calcolo, sono presenti diverse limitazioni dal punto di vista dell'applicabilità. Le grandezze, infatti, devono essere continue, quantificabili, caratterizzate da una distribuzione di probabilità normale e associate agli stessi casi, ovvero per ogni istante temporale deve essere presente una misurazione di entrambi i sensori. Inoltre, un coefficiente di correlazione simile, risulta essere sensibile alla presenza di outliers nei dati e, pertanto, si rende necessario valutare opportunamente questo aspetto. Infine, occorre tenere presente che questa tecnica permette di individuare correttamente unicamente proporzionalità di tipo lineare.
 
 % Potrebbe aver senso mettere qui una verifica della distribuzion dei dati per verificare sia normale
 
 \section{Metodo di Spearman}
 
-In questo caso, l'obiettivo del metodo non è più l'individuazione diretta di una relazione lineare tra le variabili, bensì si cerca di stabilire con che grado di accuratezza la relazione tra i dati si può approssimare tramite una funzione monotona. Dal punto di vista matematico, il calcolo del coefficiente è, sostanzialmente, un'evoluzione rispetto a quanto proposto da Pearson, con l'utilizzo dei ranghi delle variabili, $r$ e $s$, al posto delle variabili stesse: 
+In questo caso, l'obiettivo del metodo non è più l'individuazione diretta di una relazione lineare tra le variabili, bensì diventa la ricerca del grado di accuratezza con cui una funzione monotona riesce ad approssimare la relazione esistente tra i dati. Dal punto di vista matematico, il calcolo del coefficiente è, sostanzialmente, un'evoluzione rispetto a quanto proposto da Pearson, con l'utilizzo dei ranghi delle variabili, $r$ e $s$, al posto delle variabili stesse: 
 
-    \begin{center}
-        \begin{math}
-            \displaystyle r_{s} (x, y) = \frac{\text{covarianza}(r, s)}{\sigma_{r} \sigma_{s}} = \frac{\sum_{i} (r_{i} - \bar{r})(s_{i} - \bar{s})}{\sqrt{\sum_{i}(r_{i} - \bar{r})^{2}} \sqrt{\sum_{i}(s_{i} - \bar{s})^{2}}} \ \ \ (4.2)
-        \end{math}
-    \end{center}
+    \begin{equation}
+        \displaystyle r_{s} (x, y) = \frac{\text{covarianza}(r, s)}{\sigma_{r} \sigma_{s}} = \frac{\sum_{i} (r_{i} - \bar{r})(s_{i} - \bar{s})}{\sqrt{\sum_{i}(r_{i} - \bar{r})^{2}} \sqrt{\sum_{i}(s_{i} - \bar{s})^{2}}}
+        \label{eq:spearman}
+    \end{equation}
 
-Dal punto di vista applicativo, uno dei principali vantaggi rispetto al metodo di Pearson risiede nella maggiore versatilità che lo caratterizza. Per poter effettuare un'analisi di Spearman, infatti, occorre verificare unicamente che i dati siano quantitativi o qualitativi ordinali, legati da una proporzionalità monotona e associati ai medesimi casi. D'altro canto, tale metodo fornisce un'informazione solo parziale rispetto alle relazioni esistenti tra le variabili, non consentendo di valutare nel dettaglio il tipo di proporzionalità.  
+Uno dei principali vantaggi rispetto al metodo di Pearson risiede nella maggiore versatilità che lo caratterizza. Per poter effettuare un'analisi di Spearman, infatti, occorre verificare unicamente che i dati siano quantitativi o qualitativi ordinali, legati da una proporzionalità monotona e associati ai medesimi casi. D'altro canto, tale metodo fornisce un'informazione solo parziale rispetto alle relazioni esistenti tra le variabili, non consentendo di valutare nel dettaglio il tipo di proporzionalità.  
 
 \section{Discussione risultati analisi}
 
-Tenendo conto delle potenzialità e delle limitazioni associate a ciascun metodo, emergono chiaramente le ragioni che hanno portato all'utilizzo combinato di entrambi. Una volta appurato che le condizioni di applicabilità sono rispettate per i dati di telemetria raccolti, confrontando i valori dei coefficienti ottenuti dai due metodi si possono catturare tutte le relazioni monotone presenti e verificare, allo stesso tempo, se sono o meno lineari. Se una coppia di variabili presenta un risconntro per entrambe le analisi ma il coefficiente di correlazione di Pearson supera in modulo quello di Spearman, infatti, la proporzionalità è necessariamente monotona lineare. Viceversa, se la coppia è caratterizzata da un alto coefficiente di Spearman e un basso, o assente, coefficiente di Pearson, la relazione è sicuramente non lineare, seppur monotona.
+Tenendo conto delle potenzialità e delle limitazioni associate a ciascun metodo, emergono chiaramente le ragioni che hanno portato all'utilizzo combinato di entrambi. Una volta appurato che le condizioni di applicabilità sono rispettate per i dati di telemetria raccolti, confrontando i valori dei coefficienti ottenuti dalle due analisi si possono catturare tutte le relazioni monotone presenti e verificare, allo stesso tempo, l'eventuale linearità. Se una coppia di variabili presenta un riscontro per entrambe le analisi ma il coefficiente di correlazione di Pearson supera in modulo quello di Spearman, infatti, la proporzionalità è necessariamente monotona lineare. Viceversa, se la coppia è caratterizzata da un alto coefficiente di Spearman e un basso, o assente, coefficiente di Pearson, la relazione è sicuramente non lineare, seppur monotona.
     
-Al fine di valutare al meglio la proporzionalità tra misurazioni, si è scelto di calcolare la media dei coefficienti di correlazione sulla totalità delle missioni considerate. I risultati sono riassunti nella seguente heatmap e all'interno della tabella (citare tabella inserita in appendice): 
+Al fine di valutare al meglio le proporzionalità presenti tra le misurazioni, si è scelto di effettuare l'analisi su ogni missione singolarmente e, solo in seguito, calcolare la media dei coefficienti di correlazione. In questo modo, infatti, si riesce ad analizzare in maniera chiara ed immediata il comportamento globale, pur potendo esaminare eventuali variazioni locali.
 
-% Inserire la heatmap delle medie 
+    \begin{figure}[!htb]
+
+        \centering
+        \includegraphics[width=0.8\linewidth]{images/Analisi_statistica/Heatmap_medie_pearson_res.pdf}
+        \caption{Heatmap correlazioni di Pearson medie}
+        \label{fig:pearson_res}
+
+    \end{figure}
+
+        \begin{figure}[!htb]
+
+        \centering
+        \includegraphics[width=0.8\linewidth]{images/Analisi_statistica/Heatmap_medie_spearman_res.pdf}
+        \caption{Heatmap correlazioni di Spearman medie}
+        \label{fig:spearman_res}
+
+    \end{figure}
+
+I risultati di questa analisi sono presentati sia in formato grafico, all'interno delle \emph{Figure} \ref{fig:pearson_res} e \ref{fig:spearman_res}, che in formato tabulare, in \emph{Tabella} \ref{tab:analisi_correlazione}. Da un esame approfondito di quanto prodotto, emergono diverse correlazioni significative, piò o meno prevedibili dal punto di vista teorico. Inoltre, alcune di queste permettono persino di comprendere meglio le logiche alla base dell'algoritmo di navigazione implementato nel simulatore.
+
+Concentrandosi sulle azioni propulsive, infatti, si evidenzia una correlazione negativa quasi-lineare tra i propulsori laterali, indice di un attivazione discorde perfettamente sincronizzata. Questo comportamento è del tutto naturale al fine di massimizzare l'impatto dell'azione propulsiva sull'imbardata del drone. Analogamente, esiste una correlazione quasi-lineare molto forte tra essi e il riferimento di velocità angolare $\omega_{z}$. Un comportamento sincronizzato si osserva anche per i propulsori verticali, sebbene in questo l'azione sia concorde. Tuttavia, non entrambi i motori si attivano con la medesima intensità, non essendo presente una correlazione perfetta. Questo si ripercuote anche sulla velocità in direzione z, sia dal punto di vista della componente DVL che quella ideale, e sul riferimento di velocità angolare $\omega_{y}$. In particolare, il propulsore posteriore risulta leggermente più impattante sullo stato del velivolo. Analizzando, infine, i propulsori longitudinali, si osserva tra essi una proporzionalità positiva quasi-lineare, del tutto prevedibile. Il medesimo legame si verifica anche tra i propulsori e le velocità lungo l'asse x del drone, sia in termini di DVL che di riferimento ideale. 
+
+Analizzando, poi, le correlazioni tra le variabili target e le misurazioni associate ai vari sensori, è possibile valutare quali possono avere un maggiore impatto sulla rete neurale. In particolare, le componenti della posizione che risultano maggiormente connesse ai restanti valori di input sono quelle espresse in assi body. Per quanto riguarda l'asse $X_{body}$, si evidenziano proporzionalità positive di tipo lineare o quasi-lineare con le componenti di velocità longitudinale e con i due propulsori posteriori. Dal punto di vista dell'asse $Y_{body}$, invece, le proporzionalità che si osservano sono legate alla velocità angolare ideale misurata attorno al medesimo asse, ai motori laterali, con direzione alternata, e alla componente di velocità misurata dal DVL.
+
+Alla luce di queste considerazioni % Dire quali sensori si mantengono e quali no
 
 Analizzando nel dettaglio quanto emerge da entrambe le analisi effettuate, emerge chiaramente che le principali relazioni sono: 
 

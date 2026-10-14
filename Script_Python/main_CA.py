@@ -20,11 +20,11 @@ from Analisi_statistica import StatisticalAnalysis              # Raccolta funzi
 
 
 # Funzione per la creazione della tabella riassuntiva con tutti i coefficienti medi per la tesi --> li salva successivamente in un file di testo
-def tabella_tesi(storico_coppie_medie):
+def tabella_tesi(storico_coppie_medie, ROOT_DIR):
 
     print(f'\nGenerazione e salvataggio della tabella per Latex in corso:')
 
-    percorso_file = os.path.join('Risultati_analisi', 'Tabella_riassuntiva_Latex.txt')
+    percorso_file = os.path.join(ROOT_DIR, 'Risultati_analisi_statistica', 'Tabella_riassuntiva_Latex.txt')
 
     # Si apre il file in modalità append e si genera l'intestazione della sezione dei valori medi
     with open(percorso_file, "a", encoding="utf-8") as f:
@@ -388,8 +388,7 @@ while True:
         print(f'    Input non valido. Ripetere la scelta selezionando s, n o exit.')
 
 
-
-
+tabella_tesi(analysis.mean_correlations_dict, ROOT_DIR)
 
 # Condizione di verifica per l'ingresso nel ciclo --> la lista deve contenere elementi e il metodo di gestione dati deve essere interpolazione (altrimenti avrei troppi NaN)
 #if tutte_le_tabelle and processing_method == 'interpolazione':
