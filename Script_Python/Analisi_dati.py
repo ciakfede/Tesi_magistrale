@@ -949,17 +949,17 @@ class PreProcessing:
 
         # Si eliminano le colonne non necessarie per il training
         if sensor_name == 'GPS':
-            #sensor_dataframe = sensor_dataframe.drop(columns=['UTM_North [m]', 'UTM_East [m]', 'NED_North [m]', 'NED_East [m]', 'X_body_ist [m]', 'Y_body_ist [m]'], errors='ignore')
-            sensor_dataframe = sensor_dataframe.drop(columns=['UTM_North [m]', 'UTM_East [m]', 'NED_North [m]', 'NED_East [m]', 'Delta_East [m]', 'Delta_North [m]'], errors='ignore')
+            sensor_dataframe = sensor_dataframe.drop(columns=['UTM_North [m]', 'UTM_East [m]', 'NED_North [m]', 'NED_East [m]', 'X_body_ist [m]', 'Y_body_ist [m]'], errors='ignore')
+            #sensor_dataframe = sensor_dataframe.drop(columns=['UTM_North [m]', 'UTM_East [m]', 'NED_North [m]', 'NED_East [m]', 'Delta_East [m]', 'Delta_North [m]'], errors='ignore')
 
         elif sensor_name == 'DVL':
             sensor_dataframe = sensor_dataframe.drop(columns=['DVL_Altitude [m]'], errors='ignore')
 
-        elif sensor_name == 'V_ref':
-            sensor_dataframe = sensor_dataframe.drop(columns=['Ref_Vy [%]', 'Ref_Vz [%]', 'Ref_ωx [%]', 'Ref_ωz [%]'], errors='ignore')
+        #elif sensor_name == 'V_ref':
+         #   sensor_dataframe = sensor_dataframe.drop(columns=['Ref_Vy [%]', 'Ref_Vz [%]', 'Ref_ωx [%]', 'Ref_ωy [%]'], errors='ignore')
 
-        elif sensor_name == 'MOT':
-            sensor_dataframe = sensor_dataframe.drop(columns=['Mot_RV [%]', 'Mot_RL [%]'], errors='ignore')
+        #elif sensor_name == 'MOT':
+            #sensor_dataframe = sensor_dataframe.drop(columns=['Mot_RV [%]', 'Mot_RL [%]'], errors='ignore')
 
         #elif sensor_name == 'IMU':
             #yaw_rad = np.radians(sensor_dataframe['Yaw [deg]'])
