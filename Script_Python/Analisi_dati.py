@@ -23,6 +23,8 @@ from sklearn.metrics import mean_squared_error  # Libreria per l'utilizzo della 
 import matplotlib.pyplot as plt                 # Libreria per la gestione dell'ambiente grafico
 import utm                                      # Libreria per la gestione della conversione di coordinate espresse in gradi (WGS84)
 import sys                                      # Libreria che permette di interagire con il Runtime di Python
+import re
+
 
 pd.set_option('display.max_columns', None)              # Visualizza tutte le colonne (nessun limite al numero)
 pd.set_option('display.max_colwidth', None)             # Visualizza tutto il contenuto della cella (evita di troncare stringhe lunghe)
@@ -1112,23 +1114,6 @@ class PreProcessing:
                         # Si genera ora il tensore pytorch
                         tensor = torch.tensor(normalized_values, dtype=torch.float32)
 
-                        # Si concatenano tra di loro i tensori associati alle azioni propulsive e ai riferimenti di velocità --> hanno la stessa frequenza e si possono considerare azioni di riferimento
-                        #if sensor_name == 'MOT' or sensor_name == 'V_ref':
-
-                            # Si richiama il tensore generato in precedenza per il blocco IMU
-                            #if first_encounter:
-                            #    self.pytorch_tensor_dict[trajectory][combination]['REF'] = tensor
-                            #    first_encounter = False
-                            #    continue
-
-                            #temp_tensor = self.pytorch_tensor_dict[trajectory][combination]['REF']
-
-                            # Si calcola il tensore combinato, concatenando ogni riga in direzione orizzontale (si affiancano i valori)
-                            #combined_tensor = torch.concat([temp_tensor, tensor], dim=1)
-
-                            # Si sovrascrive il tensore di pytorch per IMU con quello combinato
-                            #self.pytorch_tensor_dict[trajectory][combination]['REF'] = combined_tensor
-
                         if sensor_name == 'Depth' or sensor_name == 'DepthVel':
                             continue
 
@@ -1179,6 +1164,8 @@ class PostProcessing:
         self.NN_recap_dict = {}             # Dizionario contenente i valori di recap delle prestazioni delle reti neurali
 
         self.first_mission = True           # Variabile booleana per l'intestazione del file di testo sull'errore RMSE
+
+        self.mean_values_dict = {}
 
     # ======================================================
     #       DEFINIZIONE WAYPOINTS E TRAIETTORIE IDEALI
@@ -1700,19 +1687,229 @@ class PostProcessing:
         plt.close()
 
     # Funzione che permette di valutare per ogni missione la media dell'errore RMSE e in generale la media complessiva
-    def mean_parameters_calculation(self, ROOT_DIR, path_name):
+    def mean_parameters_calculation(self, ROOT_DIR):
 
-        # Si definisce il percorso di output del file
+        # Si definisce il percorso di input del file
         INPUT_FOLDER_PATH = os.path.join(ROOT_DIR, 'Risultati_NN')
         os.makedirs(INPUT_FOLDER_PATH, exist_ok=True)
         input_file_path = os.path.join(INPUT_FOLDER_PATH, f"NN_evaluations_info.txt")
 
-        # Si apre in modalità lettura il file
+        # Si definisce il percorso di output del file
+        OUTPUT_FOLDER_PATH = os.path.join(ROOT_DIR, 'Risultati_NN')
+        os.makedirs(OUTPUT_FOLDER_PATH, exist_ok=True)
+        output_file_path = os.path.join(OUTPUT_FOLDER_PATH, f"NN_mean_metrics_evaluation.txt")
+
+        # Si inizializzano i parametri per la raccolta dati --> la chiave è la combinazione presente nel testo mentre la stringa associata diventa la chiave del dizionario successivo
+        metrics = {"RMSE in direzione East": "RMSE_E",
+                   "RMSE in direzione North": "RMSE_N",
+                   "RMSE complessivo": "RMSE_tot",
+                   "Delta_East finale": "Delta_E",
+                   "Delta_North finale": "Delta_N",
+                   "Delta_tot finale": "Delta_tot"}
+        number = r"[-+]?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?"
+
+        # Si scelgono le metriche da rappresentare nei grafici (un grafico per ogni missione e per ogni metrica elencata)
+        plot_metrics = ["RMSE_E", "RMSE_N", "RMSE_tot", "Delta_tot"]
+        metric_titles = {"RMSE_E": "RMSE East", "RMSE_N": "RMSE North", "RMSE_tot": "RMSE complessivo",
+                         "Delta_E": "Delta East finale", "Delta_N": "Delta North finale",
+                         "Delta_tot": "Delta tot finale"}
+
+        # -----------------------------------------------------
+        #         ESTRAZIONE DATI DAL FILE DI TESTO
+        # -----------------------------------------------------
+
         with open(input_file_path, 'r') as f:
 
+            # Si impostano i pattern tipici per l'inizio di una differente versione e all'interno di questa per ogni traiettoria
+            new_iter_pattern = re.compile(r"\s*RIASSUNTO\s+VALORI\s+DI\s+RMSE\s+\(TEST\s+v(\d+\.\d+\.\d+)\)", re.IGNORECASE)
+            new_path_pattern = re.compile(r"\s*PARAMETRI\s+DI\s+PERFORMANCE\s+PER\s+\((.*?)\)\s+-\s+(Percorso_\d+):", re.IGNORECASE)
+            data_pattern = re.compile(rf"^\s*({'|'.join(map(re.escape, metrics))}):\s*({number})\s*m\s*$", re.IGNORECASE)
+
             # Si legge riga per riga il file --> se si incontra un blocco di 3 righe in cui 2 iniziano con "=" si è all'inizio di una nuova iterazione --> ogni volta che si incontra un "-" si ha un nuovo percorso/traiettoria (ogni 4 percorsi)
+            test_missions = ['T1', 'T2', 'T3', 'T4']
+            values_dict = {}
+            iteration_key = None
             for line in f.readlines():
-                continue
+
+                # Si cerca il pattern di inizio missione --> si inizializza la chiave all'interno del dizionario
+                new_iteration = new_iter_pattern.search(line)
+                if new_iteration:
+                    iteration_key = new_iteration.group(1)
+                    if iteration_key not in values_dict:
+                        values_dict[iteration_key] = {}
+                    continue
+
+                # Si cerca il pattern di inizio percorso --> si estraggono la tupla che indica la missione e il tag del percorso effettuato
+                new_path = new_path_pattern.search(line)
+                if new_path:
+
+                    # Si salva la tupla associata alla missione per iterazioni future e si aggiorna il contatore del percorso
+                    mission_id = tuple(re.findall(r"'([^']+)'", new_path.group(1)))
+
+                    # Se sono nelle missioni di test voglio avere come indice solamente l'indice di traiettoria --> altrimenti nascerebbero 4 chiavi diverse per ognuno, avendo un solo percorso a simulazione
+                    mission_key = mission_id[0] if mission_id[0] in test_missions else mission_id
+
+                    # Si inizializza il dizionari che conterrà i dati estratti
+                    if mission_key not in values_dict[iteration_key]:
+                        values_dict[iteration_key][mission_key] = {}
+                    if 'global_metrics' not in values_dict[iteration_key]:
+                        values_dict[iteration_key]['global_metrics'] = {}
+                    if 'semi_global_metrics' not in values_dict[iteration_key]:
+                        values_dict[iteration_key]['semi_global_metrics'] = {}
+                    if 'only_test_metrics' not in values_dict[iteration_key]:
+                        values_dict[iteration_key]['only_test_metrics'] = {}
+
+                # Se la linea coincide con un possibile pattern dei dati si entra nella condizione --> si salvano
+                data = data_pattern.match(line)
+                if data and iteration_key is not None:
+                    data_key = metrics[data.group(1)]
+
+                    # Si aggiunge il dato alla lista della missione opportuna
+                    if data_key not in values_dict[iteration_key][mission_key]:
+                        values_dict[iteration_key][mission_key][data_key] = []
+                    values_dict[iteration_key][mission_key][data_key].append(float(data.group(2)))
+
+                    # Si aggiunge il dato alla lista unica contenente i dati di tutte le missioni --> utile per avere una panoramica completa
+                    if data_key not in values_dict[iteration_key]['global_metrics']:
+                        values_dict[iteration_key]['global_metrics'][data_key] = []
+                    values_dict[iteration_key]['global_metrics'][data_key].append(float(data.group(2)))
+
+                    # Si aggiunge alla lista contenente tutte le missioni a eccezione di quelle di test --> in modo da avere un indice sulle sole missioni di addestramento
+                    if mission_key not in test_missions:
+                        if data_key not in values_dict[iteration_key]['semi_global_metrics']:
+                            values_dict[iteration_key]['semi_global_metrics'][data_key] = []
+                        values_dict[iteration_key]['semi_global_metrics'][data_key].append(float(data.group(2)))
+
+                    # Si aggiunge alla lista contenente le sole missioni di test
+                    if mission_key in test_missions:
+                        if data_key not in values_dict[iteration_key]['only_test_metrics']:
+                            values_dict[iteration_key]['only_test_metrics'][data_key] = []
+                        values_dict[iteration_key]['only_test_metrics'][data_key].append(float(data.group(2)))
+
+
+        # -----------------------------------------------------
+        #         CALCOLO VALORI MEDI DEI PARAMETRI
+        # -----------------------------------------------------
+
+        for iteration_key, iteration_dict in values_dict.items():
+
+            if iteration_key not in self.mean_values_dict:
+                self.mean_values_dict[iteration_key] = {}
+
+            for mission_key, mission_dict in iteration_dict.items():
+
+                if mission_key not in self.mean_values_dict[iteration_key]:
+                    self.mean_values_dict[iteration_key][mission_key] = {}
+
+                for data_key, data_list in mission_dict.items():
+
+                    # Si effettua la media dei 4 valori presenti per ogni missione e per ogni metrica considerata
+                    mean_value = np.mean(data_list)
+
+                    # Si aggiorna il dizionario associato
+                    self.mean_values_dict[iteration_key][mission_key][data_key] = mean_value
+
+
+        # -----------------------------------------------------
+        #         SCRITTURA PARAMETRI SUL FILE DI TESTO
+        # -----------------------------------------------------
+
+        with open(output_file_path, 'w') as f:
+
+            f.write("\n             VALUTAZIONE MEDIE METRICHE DI VALUTAZIONE\n\n")
+
+            for iteration_key, iteration_dict in self.mean_values_dict.items():
+
+                f.write(f"\n" + "-" * 80)
+                f.write(f"\n  Parametri per iterazione {iteration_key}\n")
+                f.write(f"-" * 80 + "\n")
+
+                for mission_key, mission_dict in iteration_dict.items():
+
+                    if mission_key == 'global_metrics' or mission_key == 'semi_global_metrics':
+                        continue
+
+                    f.write(f"\n    Missione: {mission_key}\n")
+
+                    for data_key, mean_value in mission_dict.items():
+
+                        f.write(f"      {data_key}: {mean_value}\n")
+
+                # Prima di passare alla iterazione successiva si stampano i valori di media complessiva per ogni parametro
+                f.write(f"\n    Medie complessive sulla totalità delle missioni di addestramento:\n")
+                for data_key, mean_value in self.mean_values_dict[iteration_key]['semi_global_metrics'].items():
+                    f.write(f"      {data_key}: {mean_value}\n")
+
+                f.write(f"\n    Medie complessive sulla totalità delle missioni di test:\n")
+                for data_key, mean_value in self.mean_values_dict[iteration_key]['only_test_metrics'].items():
+                    f.write(f"      {data_key}: {mean_value}\n")
+
+                f.write(f"\n    Medie complessive sulla totalità delle missioni:\n")
+                for data_key, mean_value in self.mean_values_dict[iteration_key]['global_metrics'].items():
+                    f.write(f"      {data_key}: {mean_value}\n")
+
+
+        # -----------------------------------------------------
+        #           RAPPRESENTAZIONE GRAFICA MEDIE
+        # -----------------------------------------------------
+
+        # Le versioni sul grafico seguono l'ordine in cui compaiono nel file
+        versions = list(self.mean_values_dict.keys())
+
+        # Si raccolgono tutte le chiavi presenti (missioni, 'T1'..., 'global_metrics', 'semi_global_metrics') mantenendo l'ordine di comparsa
+        all_mission_keys = []
+        for iteration_key in versions:
+            for mission_key in self.mean_values_dict[iteration_key]:
+                if mission_key not in all_mission_keys:
+                    all_mission_keys.append(mission_key)
+
+        for plot_metric in plot_metrics:
+
+            # Si crea una sottocartella per ogni metrica
+            PLOT_FOLDER_PATH = os.path.join(ROOT_DIR, 'Risultati_NN', 'Grafici_medie', plot_metric)
+            os.makedirs(PLOT_FOLDER_PATH, exist_ok=True)
+
+            for mission_key in all_mission_keys:
+
+                # Si estrae la media della metrica per ogni versione (nan se la versione non contiene la missione)
+                values = [self.mean_values_dict[it].get(mission_key, {}).get(plot_metric, np.nan) for it in versions]
+                if np.all(np.isnan(values)):
+                    continue
+
+                # Si definiscono titolo e nome del file a seconda del tipo di chiave
+                if mission_key == 'global_metrics':
+                    plot_title, file_name = "Tutte le missioni", "global"
+                elif mission_key == 'semi_global_metrics':
+                    plot_title, file_name = "Missioni di addestramento (test esclusi)", "semi_global"
+                elif mission_key == 'only_test_metrics':
+                    plot_title, file_name = "Missioni di test", "test_missions"
+                elif isinstance(mission_key, tuple):
+                    plot_title, file_name = f"Missione {'_'.join(mission_key)}", '_'.join(mission_key)
+                else:
+                    plot_title, file_name = f"Missione di test {mission_key}", mission_key
+
+                # Si crea il grafico a barre con la media per ogni versione
+                fig, ax = plt.subplots(figsize=(10, 4.5))
+                bars = ax.bar(range(len(versions)), values, color="tab:blue")
+
+                # Si evidenzia in verde la versione con il valore minore (migliore)
+                bars[int(np.nanargmin(values))].set_color("tab:green")
+
+                # Si scrive il valore sopra ogni barra
+                for x, value in enumerate(values):
+                    if not np.isnan(value):
+                        ax.text(x, value, f"{value:.2f}", ha="center", va="bottom", fontsize=8)
+
+                ax.set_xticks(range(len(versions)))
+                ax.set_xticklabels([f"v{it}" for it in versions], rotation=45)
+                ax.set_ylabel(f"{metric_titles[plot_metric]} [m]")
+                ax.set_title(f"{plot_title} - valore medio - {metric_titles[plot_metric]}")
+                ax.grid(axis="y", alpha=0.3)
+                fig.tight_layout()
+
+                # Si salva il grafico e si chiude la figura per liberare memoria
+                fig.savefig(os.path.join(PLOT_FOLDER_PATH, f"{file_name}_{plot_metric}.pdf"), dpi=150)
+                plt.close(fig)
 
         return self
 
