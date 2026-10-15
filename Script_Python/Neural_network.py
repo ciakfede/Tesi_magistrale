@@ -240,11 +240,9 @@ class NavNet(nn.Module):
         # Si applicano i Fully connected layers --> ricevono in input il vettore c concatenato --> devo arrivare a 2 output, che rappresentano gli spostamenti nei due assi (possibile automatizzare aggiungendo più strati)
         input_size_FC = hidden_size * (len(network_config)-1)
         self.FC = nn.Sequential(
-            nn.Linear(input_size_FC, 200),
+            nn.Linear(input_size_FC, input_size_FC // 2),
             nn.ReLU(),
-            nn.Linear(200, hidden_size),
-            nn.ReLU(),
-            nn.Linear(hidden_size, 2))
+            nn.Linear(input_size_FC // 2, 2))
 
         # Definizione struttura funzione di costo --> si sceglie una Euclidean Loss per restare coerenti con il paper
         self.loss_criterion = nn.MSELoss()
