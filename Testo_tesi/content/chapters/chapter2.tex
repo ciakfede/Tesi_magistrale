@@ -7,7 +7,7 @@ Prima di descrivere dettagliatamente il processo che ha portato alla creazione d
 
 Più nel concreto, con il termine \textit{Intelligenza Artificiale} si identifica la branca dell'informatica che si occupa di studiare e sviluppare algoritmi in grado di simulare i processi alla base dell'intelletto umano. Naturalmente, questa definizione è molto generica e include un'ampia gamma di possibili utilizzi pratici, dal semplice impiego di regole logiche o sistemi esperti, caratterizzati da un livello di indipendenza molto basso, ad algoritmi capaci di apprendere autonomamente, direttamente dall'analisi dei dati forniti, eventuali relazioni o pattern ricorsivi presenti nel dataset. Proprio quest'ultimi, appartenenti all'ambito del \textit{Machine Learning}, negli ultimi anni hanno subito una enorme diffusione, grazie anche all'evoluzione tecnologica che ha permesso di addestrare modelli su enormi set di dati a costi contenuti. 
 
-Nonostante con questa prima distinzione interna all'IA si sia ristretto il campo di interesse, restano ancora molte ramificazioni collegate al Machine Learning. Nel seguito, pertanto, si cerca di addentrarsi in questo mondo, definendo dettagliatamente le principali caratteristiche associate ai vari algoritmi. In particolare, essi sono suddivisibili sulla base delle tecniche di addestramento utilizzate e sull'obiettivo finale, che ne condiziona, ovviamente, la struttura. 
+Nonostante con questa prima distinzione interna all'IA si sia ristretto il campo di interesse, restano ancora molte ramificazioni collegate al Machine Learning. Nel seguito, pertanto, si cerca di addentrarsi in questo mondo, definendo dettagliatamente le principali caratteristiche associate ai vari algoritmi. In particolare, come suggerito all'interno del lavoro di Alpaydin\cite{ML_Introduction}, due possibili classificazioni sono legate alla tecnica di addestramento impiegata e al target del modello, che ne condiziona, ovviamente, la struttura. 
 
 \subsection{Classificazione algoritmi ML}
 
@@ -17,9 +17,9 @@ Per quanto concerne le possibili tecniche di apprendimento impiegate in modelli 
 
         \item \textbf{Supervised Learning}: in questo caso, il processo è guidato dall'esterno, con i valori di output desiderati che vengono forniti insieme al resto dei dati. L'algoritmo migliora, quindi, l'accuratezza della previsione cercando di minimizzare l'errore tra output prodotto e desiderato. 
         
-        \item \textbf{Unsupervised Learning}: come si può intuire dal nome stesso, questa tecnica prevede un maggiore grado di autonomia affidato all'algoritmo, che riceve in input i dati senza alcuna indicazione aggiuntiva e identifica pattern ricorsivi o relazioni interne, non facilmente individuabili dall'essere umano.
+        \item \textbf{Unsupervised Learning}: come si può intuire dal nome stesso, questa metodologia prevede un maggiore grado di autonomia affidato all'algoritmo, che riceve in input i dati senza alcuna indicazione aggiuntiva e identifica pattern ricorsivi o relazioni interne, non facilmente individuabili dall'essere umano.
         
-        \item \textbf{Reinforcement Learning}: questa tecnica permette al modello di apprendere e migliorare il proprio comportamento sfruttando un meccanismo di premi e penalità. In sostanza, l'algoritmo produce una sequenza di azioni che portano ad un risultato. Se quest'ultimo si rivela essere soddisfacente si premia la sequenza registrata, altrimenti la si penalizza. Un processo iterativo di questo tipo prosegue finché l'algoritmo non è in grado di individuare nella quasi totalità dei casi la successione migliore nel rispetto di eventuali vincoli imposti.
+        \item \textbf{Reinforcement Learning}: l'ultima tecnica presentata 0permette al modello di apprendere e migliorare il proprio comportamento sfruttando un meccanismo di premi e penalità. In sostanza, l'algoritmo produce una sequenza di azioni che portano ad un risultato. Se quest'ultimo si rivela essere soddisfacente si premia la sequenza registrata, altrimenti la si penalizza. Un processo iterativo di questo tipo prosegue finché l'algoritmo non è in grado di individuare nella quasi totalità dei casi la successione migliore nel rispetto di eventuali vincoli imposti.
         
         Appare evidente come una simile tecnica sia solitamente impiegata per algoritmi di \emph{game playing}, ad esempio negli scacchi, o di \emph{autonomous navigation}. In questi casi, infatti, si vuole che l'algoritmo produca, rispettivamente, una serie di mosse in grado di condurre il computer allo scacco matto prima dell'avversario umano e un percorso in grado di portare il veicolo in questione a destinazione senza impattare su nessun ostacolo eventualmente presente lungo il percorso. 
         
@@ -31,7 +31,7 @@ Una classificazione più completa e dettagliata si può fare tenendo conto dello
 
         \item \textbf{Classificazione}: una grande fetta di problemi in campo finnziario, medico e informatico, più in generale, riguarda la suddivisione di grandi moli di dati all'interno di specifiche classi di appartenenza. Per ottenere risultati soddisfacenti, naturalmente, non è possibile definire manualmente delle condizioni o delle regole in grado di coprire ogni casistica potenzialmente riscontrata. Una soluzione a tale problema può, dunque, essere l'utilizzo di algoritmi in grado di apprendere, tramite tecniche di supervised learning, le proprietà e i pattern che permettono di stabilire la classe più adatta per ogni oggetto di input direttamente dai dati forniti. 
         
-        Un primo esempio di utilizzo di tecniche simili, si ha con algoritmi di \emph{data recognition}, in cui l'obiettivo è la scomposizione di dati, quali parole scritte, immagini o dialoghi, in specifiche classi, che possono essere, rispettivamente, caratteri alfabetici, tratti di un viso e singole parole. In questo caso, il grado di complessità del sistema impatta significativamente sulle performance dell'algoritmo. Il riconoscimento di un viso, ad esempio, presenta un gran numero di variabili, quali cambiamenti nelle condizioni di luminosità ambientale, nell'inclinazione del viso, presenza di trucco o di elementi esterni (occhiali, piercing...), mentre l'individuazione di singole parole in un dialogo può avere carenze in base al dialetto usato o alla presenza di rumori ambientali di sottofondo. Un altro ambito in cui modelli di questo tipo sono molto usati è quello medico, con algoritmi di \emph{medical diagnosis}, in cui, forniti in input i dati associati ad un paziente, quali età, genere, storia medica e sintomi attuali, si cerca di individuare la malattia che meglio spiega la problematica in atto. In questi casi, ovviamente, la diagnosi può essere fornita dal modello solo se si ha una certezza assoluta, essendo un tema che coinvolge la salute di altri esseri umani. Un'ultimo ambito di interesse riguarda la finanza, con algoritmi di \emph{credit scoring}. Essi considerano il profilo finanziario di un cliente, valutando un eventuale storico, le entrate e i risparmi accumulati per determinare il livello di rischio associato ad un prestito. 
+        Un primo esempio di utilizzo di tecniche simili, si ha con algoritmi di \emph{data recognition}, in cui l'obiettivo è la scomposizione di dati, quali parole scritte, immagini o dialoghi, in specifiche classi, che possono essere, rispettivamente, caratteri alfabetici, tratti di un viso e singole parole. In questo caso, il grado di complessità del sistema impatta significativamente sulle performance dell'algoritmo. Il riconoscimento di un viso, ad esempio, presenta un gran numero di variabili, quali cambiamenti nelle condizioni di luminosità ambientale, nell'inclinazione del viso, presenza di trucco o di elementi esterni (occhiali, piercing...), mentre l'individuazione di singole parole in un dialogo può avere carenze in base al dialetto usato o alla presenza di rumori ambientali di sottofondo. Un altro ambito in cui modelli di questo tipo sono molto usati è quello medico, con algoritmi di \emph{medical diagnosis}, in cui, forniti in input i dati associati ad un paziente quali età, genere, storia medica e sintomi attuali, si cerca di individuare la malattia che meglio spiega la problematica in atto. In questi casi, ovviamente, la diagnosi può essere fornita dal modello solo sotto la supervisione di un medico, avendo impatti diretti sulla salute di altri esseri umani. Un'ultimo ambito di interesse riguarda la finanza, con algoritmi di \emph{credit scoring}. Essi considerano il profilo finanziario di un cliente, valutando un eventuale storico, le entrate e i risparmi accumulati per determinare il livello di rischio associato ad un prestito. 
         
         Infine, un'interessante conseguenza di un procedimento di questo tipo è la possibilità di ottenere, tramite una sorta di reverse engineering, informazioni sulle caratteristiche comuni di un oggetto che appartiene ad una specifica classe. 
 
@@ -41,18 +41,20 @@ Una classificazione più completa e dettagliata si può fare tenendo conto dello
         
         \item \textbf{Clustering}: questi algoritmi, tipicamente associati a tecniche di unsupervised learning, si prefiggono l'obiettivo di suddividere un set di dati in sottogruppi, legati da una o più caratteristiche comuni. 
         
-        Una tecnica simile risulta essere molto versatile potendo, dunque, essere utilizzata in campi anche molto differenti. Un primo esempio riguarda la \emph{customer segmentation}, ovvero la suddivisione dei clienti di un'azienda in base a diverse caratteristiche, quali l'età, il genere, le abitudini di acquisto o la zona geografica. Un utilizzo in ambito grafico può riguardare l'\emph{image compression}, che permette di ridurre notevolmente le dimensioni associate ad un'immagine, pur accettando una significativa perdita di dettaglio visivo. Algoritmi simili raggruppano pixel caratterizzati da sfumature di uno stesso colore, associandogli il codice della sfumatura media. Un'altro possibile metodo di riduzione delle dimensioni consiste nell'estrarre da un'immagine le caratteristiche di alto livello che si ripetono (oggetti, textures, persone...), descrivendola solo tramite quest'ultime. Infine, un ultimo impiego preso in considerazione riguarda il \emph{document clustering}, che permette di classificare dei documenti per tematica trattata, quali sport, politica, arte...
+        Una tecnica simile risulta essere molto versatile potendo, dunque, essere utilizzata in campi anche molto differenti. Un primo esempio riguarda la \emph{customer segmentation}, ovvero la suddivisione dei clienti di un'azienda in base a diverse caratteristiche, quali l'età, il genere, le abitudini di acquisto o la zona geografica. Un utilizzo in ambito grafico può riguardare l'\emph{image compression}, che permette di ridurre notevolmente le dimensioni associate ad un'immagine, al costo di una significativa perdita di dettaglio visivo. Algoritmi simili raggruppano i pixel caratterizzati da sfumature di uno stesso colore, associandoli al relativo valore medio. Un altro possibile metodo di riduzione delle dimensioni consiste nell'estrarre da un'immagine le caratteristiche di alto livello che si ripetono (oggetti, textures, persone...), descrivendola solo tramite quest'ultime. Infine, un ultimo impiego preso in considerazione riguarda il \emph{document clustering}, che permette di classificare dei documenti per tematica trattata, quali sport, politica, arte...
         
     \end{itemize}
+
+Tenendo conto della classificazione introdotta, appare evidente che, per la stima della posizione di un drone autonomo in dead-reckoning, la migliore soluzione sia l'uso di un modello di regressione addestrato con supervised learning. All'interno di questo ambito esistono, naturalmente, vari algoritmi che si possono impiegare, con livelli di complessità e prestazioni molto differenti. % Introduzione dei principali algoritmi 
 
 
 \section{Reti neurali}
 
-All'interno del complesso insieme di algoritmi ascrivibili all'ambito del Machine Learning, una delle classi più promettenti al fine di effettuare operazioni di regressione si rivela essere quella delle \emph{reti neurali}. Questi modelli, infatti, data la loro struttura, sono in grado di analizzare enormi quantità di dati non elaborati, identificando autonomamente pattern complessi, spesso fortemente non lineari, ed appredendo da essi. 
+Oltre a questi algoritmi di stampo più classico, negli ultimi anni si è verificata una rapida diffusione di una nuova classe di modelli di Machine Learning: le reti neurali\cite{NN_Introduction}. Esse, infatti, data la loro struttura, sono in grado di analizzare enormi quantità di dati non elaborati, identificando autonomamente pattern complessi, spesso fortemente non lineari, ed appredendo da essi. 
 
-L'ispirazione alla base di tali algoritmi proviene dal cervello umano, che è in grado di analizzare in pochi millisecondi problemi complessi e, sfruttando anche informazioni passate immagazzinate all'interno delle singole sinapsi, generare una risposta ottimale. Naturalmente, replicarne la capacità di ricordare nel tempo grandi quantità di dati e l'elevato numero di interconnessioni, che determinano con che livello di sofisticatezza si svolgono le operazioni necessarie, è quasi impossibile, data l'enorme potenza di calcolo che sarebbe necessaria. Tuttavia, le reti neurali sono in grado di migliorare con l'esperienza, analogamente al cervello, in una fase definita training, risultando persino più rapide nel processare le informazioni. 
+L'ispirazione alla base di tali algoritmi proviene dal cervello umano, un organo capace di analizzare in pochi millisecondi problemi estremamente complessi e, sfruttando anche informazioni passate, immagazzinate all'interno delle singole sinapsi, generare una risposta ottimale. Naturalmente, replicarne la capacità di ricordare nel tempo grandi quantità di dati e l'elevato numero di interconnessioni, che determinano il livello di sofisticatezza delle soluzioni ipotizzate, è quasi impossibile, data l'enorme potenza di calcolo necessaria. Nonostante queste limitazioni, le reti neurali riescono a migliorare con l'esperienza, affinando la propria capacità predittiva e riuscendo, pertanto, a processare al meglio problemi mai incontrati durante l'addestramento.
 
-A livello strutturale, quindi, l'elemento elementare risulta essere il \emph{neurone}, in grado di ricevere in input molteplici dati, elaborarli internamente tramite l'utilizzo di una funzione lineare, caratterizzata da specifici pesi e bias, e, in base alla funzione di attivazione prescelta, produrre un output. Solitamente si generano dei cosiddetti \emph{layer di neuroni}, che si interfacciano vicendevolmente. Una rete neurale, per essere definita tale, deve avere almeno due layer fondamentali: l'\emph{input layer}, che riceve direttamente i dati grezzi forniti all'algoritmo, e l'\emph{output layer}, che produce il risultato ricercato. Normalmente, tuttavia, a questi si aggiungono uno o più layer intermedi, definiti \emph{hidden layers}. Essi, infatti, sono necessari per aumentare  la capacità della rete di estrarre relazioni non lineari dai dati, pur aumentando la complessità e la potenza di calcolo associati al modello. Inoltre, in caso siano presenti almeno 3 layer complessivi, non ci si riferisce più all'ambito del semplice machine learning, bensì si entra in quello che viene definito \textbf{deep learning}.   
+L'elemento elementare di una rete neurale risulta essere il \emph{neurone}, in grado di ricevere in input molteplici parametri, elaborarli e, come si vedrà più dettagliatamente in seguito, produrre un output. Solitamente, in una struttura complessa, questi neuroni vengono aggregati all'interno dei cosiddetti \emph{layer}, in grado di interfacciarsi vicendevolmente. Come appare logico, per poter funzionare correttamente, una rete deve possedere almeno due layer fondamentali: l'\emph{input layer}, che riceve direttamente i dati grezzi forniti all'algoritmo, e l'\emph{output layer}, che produce il risultato ricercato. Normalmente, tuttavia, a questi si aggiungono uno o più layer intermedi, definiti \emph{hidden layers}. Essi, infatti, sono necessari per aumentare la capacità della rete di estrarre relazioni non lineari dai dati, sebbene ciò comporti un incremento della complessità e della potenza di calcolo associati al modello. Inoltre, in caso siano presenti più di 3 layer complessivi, si entra nell'ambito del \textbf{deep learning}.   
 
 \begin{figure}[!htb]
     \centering
@@ -61,25 +63,26 @@ A livello strutturale, quindi, l'elemento elementare risulta essere il \emph{neu
     \label{fig:DL_struct}
 \end{figure}
 
-% Qui si potrebbe aggiungere anche uno schema di funzionamento e spiegazione di forward e back propagation
+Un algoritmo di deep learning, dunque, si basa su un processo di \emph{forward propagation}, che porta ad un elaborazione dei dati forniti in ingresso, andando dall'input layer all'output layer. In questo processo i parametri subiscono varie trasformazioni in funzione di alcune costanti numeriche, definite come pesi e bias, associate ad ogni singolo collegamento tra neuroni, e della cosiddetta funzione di attivazione, in grado di aggiungere non linearità al modello. La capacità di apprendere dai dati stessi autonomamente è legata ad un secondo meccanismo, noto come \emph{backward propagation}, che permette di modificare i pesi ad ogni passo di iterazione nella direzione di minimizzazione dell'errore. Questo è un processo estremamente complesso e delicato, essendo fondamentale per le prestazioni associate al modello. Le criticità che si possono verificare, in particolare, saranno discusse approfonditamente nel seguito. 
 
 \subsection{Elementi rete neurale}
 
-Conclusa questa prima introduzione alle reti neurali, presentata schematicamente in \emph{Figura} \ref{fig:DL_struct}, è necessario analizzarne il funzionamento più nel dettaglio, in modo tale da comprendere, anche a livello matematico, come si arriva all'output desiderato. Nelle sezioni che seguiranno, pertanto, verranno descritti e valutati individualmente tutti gli elementi che compongono una rete neurale. 
+Conclusa questa prima introduzione alle reti neurali, di cui una rappresentazione schematica è presentata in \emph{Figura} \ref{fig:DL_struct}, è necessario analizzarne il funzionamento più nel dettaglio, in modo tale da comprendere, anche a livello matematico, come si arriva all'output desiderato. Nelle sezioni che seguiranno, pertanto, verranno descritti e valutati individualmente tutti gli elementi che compongono una rete neurale. 
 
 \subsubsection{Neuroni}
 
-Come anticipato, l'entità fondamentale di una rete neurale è il neurone, che risulta estremamente simile a livello concettuale rispetto alla controparte biologica, come si può notare dal confronto mostrato in \emph{Figura} \ref{fig:confronto_neuroni}. Più dettagliatamente, un neurone tradizionale riceve informazioni da altri neuroni tramite i dendriti, le elabora internamente e produce un output sotto forma di impulsi eletttrici, trasmessi ad altri elettroni attraverso le sinapsi poste alla fine della coda. Particolare attenzione va riservata al meccanismo di trasmissione delle informazioni, che avviene grazie a dei messaggeri chimici, chiamati \textit{neurotrasmettitori}, generati a partire dal segnale elettrico prima di giungere alle sinapsi. 
+Come anticipato, l'entità fondamentale di una rete è il neurone, che risulta concettualmente identico rispetto alla controparte biologica, come si può notare dal confronto mostrato in \emph{Figura} \ref{fig:confronto_neuroni}. Più dettagliatamente, un neurone tradizionale riceve informazioni da altri neuroni tramite i dendriti, le elabora internamente e produce un output sotto forma di impulsi elettrici, trasmessi ad altri elettroni attraverso le sinapsi poste alla fine della coda. Particolare attenzione va riservata al meccanismo di trasmissione delle informazioni, che avviene grazie a dei messaggeri chimici, chiamati \textit{neurotrasmettitori}, rilasciati, in risposta al segnale elettrico, dalle vescicole sinaptiche poste lungo l'assone. 
 
-Un neurone artificiale, pur non necessitando della presenza di tutti questi elementi complessi, è in grado di replicare fedelmente il comportamento appena descritto. Ogni neurone, infatti, riceve informazioni da tutti i neuroni del layer che lo precede, le elabora tramite l'utilizzo di una funzione lineare e di una funzione di attivazione e produce un singolo output, trasmesso al layer successivo. Naturalmente, analogamente a ciò che avviene nel cervello umano, non tutti i percorsi tra neuroni impattano allo stesso modo per giungere al miglior output possibile. Ogni connessione, pertanto, presenta uno specifico peso $w_{i}$, determinato durante la fase di apprendimento della rete. 
+Un neurone artificiale, pur non necessitando della presenza di tutti questi elementi complessi, è in grado di replicare fedelmente il comportamento appena descritto. Ogni neurone, infatti, riceve informazioni da tutti i neuroni del layer antecedente, le elabora tramite l'utilizzo di una funzione lineare e di una funzione di attivazione e produce un singolo output, trasmesso al layer successivo. Naturalmente, analogamente a ciò che avviene nel cervello umano, non tutti i percorsi tra neuroni impattano allo stesso modo per giungere al miglior output possibile. Per tenere conto di ciò, ad ogni connessione è associato uno specifico peso $w_{i}$, determinato durante la fase di apprendimento della rete. 
 
 Un neurone, pertanto, produce un primo output $z$ effettuando una somma pesata degli $n$ valori ricevuti in input:
 
-    \begin{center}
-        $z = \sum_{i=1}^{n} w_{i}*x_{i} + b$ \ \ \ $(2.1)$
-    \end{center}
+    \begin{equation}
+        z = \sum_{i=1}^{n} w_{i}*x_{i} + b
+        \label{eq:linear_function}
+    \end{equation}
 
-All'interno di questa relazione, sviluppata da Rosenblatt per il Perceptron, una delle prime reti neurali, compare un termine aggiuntivo oltre ai pesi, noto come \textit{bias}. Anch'esso viene modificato durante la fase di addestramento della rete al fine di ottimizzare il risultato del modello. 
+All'interno di questa relazione, implementata efficacemente in una rete neurale per la prima volta da Rosenblatt all'interno del Perceptron, una rete elementare sviluppata nel 1957, compare anche un termine costante, noto come \textit{bias}. Anch'esso viene modificato durante la fase di addestramento della rete al fine di ottimizzare il risultato del modello, sebbene abbia un impatto inferiore rispetto ai pesi sul risultato complessivo. 
 
     \begin{figure}[!htb]
         \centering
@@ -98,58 +101,88 @@ All'interno di questa relazione, sviluppata da Rosenblatt per il Perceptron, una
 
 \subsubsection{Funzione di attivazione}
 
-Il risultato della funzione lineare applicata alle informazioni in ingresso al neurone necessita di un ulteriore passaggio prima di essere trasmesso ai layer successivi. Occorre, infatti, normalizzarlo, in modo tale che gli output dei vari neuroni siano confrontabili tra loro. Questa operazione, eseguita grazie ad una funzione di attivazione specifica, inoltre, permette di introdurre una non linearità all'interno della rete neurale, fondamentale per renderla capace di apprendere pattern più complessi.
+Il valore ottenuto della funzione lineare applicata alle informazioni in ingresso al neurone necessita di un ulteriore passaggio prima di essere trasmesso ai layer successivi. Occorre, infatti, normalizzarlo, in modo tale che gli output dei vari neuroni siano confrontabili tra loro. Questa operazione, eseguita grazie ad una funzione di attivazione specifica, inoltre, permette di introdurre una non linearità all'interno della rete neurale, fondamentale per renderla capace di apprendere pattern più complessi.
 
-Durante gli anni sono state proposte numerose funzioni di attivazione, via via più sofisticate, nel tentativo di incrementare l'efficacia e la velocità del processo di addestramento, oltre a migliorare le prestazioni complessive delle reti. Nel seguito si presentano alcune delle funzioni più utilizzate ed efficaci all'interno della letteratura:
+Durante gli anni sono state proposte numerose funzioni di attivazione, via via più sofisticate, nel tentativo di incrementare l'efficacia e la velocità del processo di addestramento, oltre a migliorare le prestazioni complessive della rete. Nel seguito si presentano alcune delle funzioni più efficaci e, di conseguenza, più utilizzate in letteratura, facendo riferimento al lavoro di Rasamoelina et al.\cite{Activation_function}:
 
 \begin{itemize}
 
     \item \textbf{Threshold}: funzione estremamente semplice, che restituisce 1 se l'output lineare $z$ è maggiore di zero o 0 altrimenti:
     
     \begin{center}
-        \begin{math}
-            Y = \begin{cases}
+        \begin{equation}
+            Y(z) = \begin{cases}
                 1 \ se \ \sum_{i=1}^{n} + b  > 0 \\
                 0 \ se \ \sum_{i=1}^{n} + b  < 0
-            \end{cases} \ \ \ (2.2)
-        \end{math}
+            \end{cases}
+            \label{eq:threshold}
+        \end{equation}
     \end{center}
     
     Data la sua natura, essa risulta sufficiente per i casi in cui l'obiettivo si basa su segnali di tipo binario ma non indicata quando si cercano pattern complessi o non lineari.
     
     \item \textbf{Sigmoid}: un modo per superare le limitazioni della threshold function, consiste nel rendere graduale la variazione tra gli estremi dell'intervallo, che resta pari a [0, 1]. In particolare, l'output $Y$ è determinato a partire dal valore $z$ tramite la seguente relazione:
     
-        \begin{center}
-            $Y = \sigma (z) = \displaystyle \frac{1}{1 + e^{-z}}$ \ \ \ (2.3)
-        \end{center}
+        \begin{equation}
+            Y(z) = \sigma (z) = \displaystyle \frac{1}{1 + e^{-z}}
+            \label{eq:sigmoid}
+        \end{equation}
     
     Nonostante il miglioramento prestazionale evidente, restano alcune importanti criticità. L'input, infatti, viene ancora compresso in un intervallo molto piccolo e, inoltre, la derivata della funzione risulta essere eccessivamente graduale, portando a problemi di \textit{vanishing gradient}.
 
     % Parlare potenzialmente l'uso dell'inizializzazione ortogonale dei pesi per ottenere migliori prestazioni
 
-    \item \textbf{Hyperbolic Tangent}: tenendo conto delle criticità riscontrate nella sigmoid function, si è arrivati ad una sua evoluzione, contraddistinta da un dominio più ampio, pari a [-1, +1], ed una derivata più ripida:
+    \item \textbf{Hyperbolic Tangent}: tenendo conto delle criticità riscontrate nella sigmoid function, si è proposta ad una sua evoluzione, contraddistinta da un codominio più ampio, pari a [-1, +1], ed una derivata più ripida:
     
-        \begin{center}
-            $Y = \text{tanh}(z) = \displaystyle \frac{1}{1 + e^{-2z}} - 1$ \ \ \ (2.4)
-        \end{center}
+        \begin{equation}
+            Y(z) = \text{tanh}(z) = \displaystyle \frac{1}{1 + e^{-2z}} - 1
+            \label{eq:hyperbolic}
+        \end{equation}
     
-    Ad ogni modo, neanche questa formulazione riesce a risolvere completamente i problemi riscontrati con le precedenti funzioni. 
+    Ad ogni modo, sebbene ci siano dei passi avanti, questa formulazione non permette di risolvere completamente i problemi riscontrati con le precedenti funzioni. 
 
-    \item \textbf{ReLu}: per ottenere significativi miglioramenti, dunque, si è reso necessario cambiare approccio al problema, giungendo in questo modo ad una funzione caratterizzata da un dominio notevolmente più grande, potendo l'output $Y$ assumere valori compresi tra [0, $+\inf$], e una derivata pari a 1 per l'intero dominio:
+    \item \textbf{ReLu}: per ottenere significativi miglioramenti, dunque, si è reso necessario cambiare approccio al problema, giungendo ad una funzione caratterizzata da un codominio notevolmente più esteso, potendo l'output $Y$ assumere valori compresi tra [0, $+\infty$], e da una derivata pari a 1 per l'intero dominio:
     
-        \begin{center}
-            $Y = max(0, z)$ \ \ \ (2.5)
-        \end{center}
+        \begin{equation}
+            Y(z) = max(0, z)
+            \label{eq:Relu}
+        \end{equation}
     
-    Data l'estrema semplicità e le elevate prestazioni associate, questa funzione risulta essere la più impiegata. Nonostante ciò, non è esente da problematiche, quali il \textit{dying ReLu}. Trasformando in 0 tutti i valori negativi, infatti, si può arrivare ad un effetto a catena che porta, infine, ad avere un tasso di apprendimento nullo.
+    Data l'estrema semplicità e le elevate prestazioni associate, questa funzione risulta essere la più impiegata, nonostante non sia esente da problematiche, la più rilevante delle quali è il \textit{dying ReLu}. Trasformando in 0 tutti i valori negativi, infatti, si può arrivare ad un effetto a catena che porta, infine, ad un appiattimento sul valore nullo dell'intera rete.
+
+    \item \textbf{Parametric Leaky ReLu}: nel tentativo di ridurre o persino eliminare il problema del dying ReLu, si è proposta l'introduzione di un termine aggiuntivo alla formulazione classica, vista in \ref{eq:Relu}:
+    
+        \begin{equation}
+            Y(z) = max(0, z) + \alpha * min(0, z)
+            \label{eq:Leaky_Relu}
+        \end{equation}
+
+    La presenza del coefficiente $\alpha$ consente, infatti, di ottenere un valore non nullo di $Y$ anche nei casi in cui l'input $z$ è negativo, senza perdere nessuno dei vantaggi associati alla funzione di attivazione tradizionale. Questo parametro, inoltre, può essere reso variabile, permettendo alla rete di selezionare il valore più adatto direttamente durante la fase di addestramento. 
+    
+    \item \textbf{Exponential Linear Unit}: al fine di migliorare ulteriormente il concetto della Parametric ReLu, nel lavoro di Clevert et al.\cite{ELU} è stato presentato un approccio che permette di trasformare i valori negativi di $z$ tramite l'utilizzo di una funzione esponenziale:
+    
+        \begin{equation}
+            Y(z) = max(0, z) + min(0, \alpha * (e^{-z} - 1))
+            \label{eq:ELU}
+        \end{equation}
+
+    Una formulazione simile consente allo stesso tempo di ottenere un'estensione del codominio, con $Y$ che può assumere valori nell'intervallo [-1, $+\infty$] con una variazione più graduale rispetto al caso tradizionale, e una derivata non più nulla o costante nella parte negativa del dominio. Anche in questo caso, inoltre, il parametro $\alpha$ può essere reso apprendibile dalla rete. 
+
+    \item \textbf{Swish}: questa funzione, sviluppata recentemente tramite l'utilizzo di reinforcement learning, si discosta significativamente da quelle presentate fino ad ora, essendo non monotona:
+    
+        \begin{equation}
+            Y(z) = \displaystyle \frac{z}{1 + e^{-z}}
+            \label{eq:Swish}
+        \end{equation}
+
+    Seppur presenti un codominio molto simile a quello caratterizzante le ReLu, la particolare formulazione utilizzata porta la funzione ad avere un punto di minimo, che rappresenta il limite inferiore del codominio stesso, per un valore di $z$ leggermente negativo che, pertanto, non coincide con il limite inferiore del dominio.  
     
 \end{itemize}
 
-% Classificazione attivazione
 
 \subsubsection{Loss function}
 
-Nelle precedenti sezioni si sono analizzati nel dettaglio gli elementi alla base della \textit{forward propagation}, che porta la rete neurale a generare l'output desiderato $\hat{y}$. Questo processo, tuttavia, non darebbe risultati accettabili senza l'integrazione della \textit{backpropagation} e la conseguente fase di addestramento della rete. In particolare, l'elemento chiave in questa fase diventa la cosiddetta funzione di perdita, che permette di quantificare l'errore commesso dalla rete in ogni epoca di addestramento. 
+Nelle precedenti sezioni si sono analizzati nel dettaglio gli elementi alla base della \textit{forward propagation}, necessari per produrre l'output desiderato $\hat{y}$. Questo processo, tuttavia, non darebbe risultati accettabili senza l'integrazione della \textit{backpropagation} e la conseguente fase di addestramento della rete. In particolare, l'elemento chiave in questa fase diventa la cosiddetta funzione di perdita, che permette di quantificare l'errore commesso dalla rete in ogni epoca di addestramento. 
 
 Naturalmente, esistono numerose tipologie di funzioni, ognuna delle quali presenta delle caratteristiche che la rendono più o meno adatta all'utilizzo per specifici problemi. La scelta della loss function, pertanto, è un aspetto fondamentale per il successo dell'addestramento della rete e per le prestazioni complessive del modello.
 
@@ -159,9 +192,9 @@ Come introdotto all'interno del paper di Terven et al.\cite{LF_review_Terven}, e
 
         \item \textbf{Convessità}: una funzione convessa garantisce che ogni minimo locale sia anche un minimo globale, semplificando il processo di ottimizzazione e riducendo la probabilità di rimanere bloccati in soluzioni subottimali.
 
-        \item \textbf{Differenziabilità}: l'esistenza di una derivata continua è fondamentale, in particolare per algoritmi di deep learning, che basano il loro processo di apprendimento sul metodo del gradiente.
+        \item \textbf{Differenziabilità}: l'esistenza di una derivata continua è fondamentale, in particolare per algoritmi di deep learning, che basano il loro processo di apprendimento su metodi del gradiente.
 
-        \item \textbf{Robustezza}: una funzione robusta permette di gestire efficacemente gli outlier, solitamente presenti in grandi dataset, evitando che essi influenzino le prestazioni complessive della rete.
+        \item \textbf{Robustezza}: una funzione robusta permette di gestire efficacemente gli outlier, solitamente presenti all'interno dei grandi dataset, evitando che essi influenzino le prestazioni complessive della rete.
 
         \item \textbf{Gradualità}: questa proprietà è strettamente collegata alla differenziabilità. Una funzione caratterizzata da una derivata graduale consente di ottenere un processo di ottimizzazione più stabile e veloce, evitando oscillazioni eccessive durante l'addestramento.
 
@@ -169,66 +202,114 @@ Come introdotto all'interno del paper di Terven et al.\cite{LF_review_Terven}, e
 
     \end{itemize}
 
-Come anticipato, nel corso degli anni sono state sviluppate numerose loss function, pensate per adattarsi al meglio ai vari ambiti di utilizzo degli algoritmi di machine learning. All'interno di questo lavoro di tesi, tuttavia, verranno analizzate solo alcune di quelle più utilizzate e performanti in relazione ai problemi di regressione, essendo maggiormente attinenti al tipo di analisi svolta. 
+Come anticipato, nel corso degli anni sono state sviluppate numerose funzioni, pensate per adattarsi al meglio ai vari ambiti di utilizzo degli algoritmi di machine learning. All'interno di questo lavoro di tesi, tuttavia, verranno analizzate solo alcune di quelle più impiegate e performanti in relazione ai problemi di regressione, essendo maggiormente attinenti al tipo di analisi svolta. 
 
-La prima funzione presentata, nominata solitamente \textbf{L2 Loss}, è basata sul \textbf{Mean Squared Error (MSE)}. A livello matematico, dunque, è definita come la media del quadrato della differenza tra il valore predetto dalla rete e quello reale, come mostrato in \emph{(2.6)}:
+La prima funzione presentata, definita solitamente \textbf{L2 Loss}, è basata sul \textbf{Mean Squared Error (MSE)}. A livello matematico, dunque, è formulata come la media del quadrato della differenza tra il valore predetto dalla rete e quello reale, come mostrato in \ref{eq:L2}:
 
-        \begin{center}
-            $MSE = \displaystyle \frac{\sum_{i=1}^{N} (y_i - \hat{y}_i)^2}{N}$ \ \ \ $(2.6)$
-        \end{center}
+        \begin{equation}
+            MSE = \displaystyle \frac{\sum_{i=1}^{N} (y_i - \hat{y}_i)^2}{N}
+            \label{eq:L2}
+        \end{equation}
 
-L'MSE presenta numerosi pregi, tra cui la semplicità di implementazione, la differenziabilità e la convessità, che la rendono la scelta preferenziale per la maggior parte dei problemi di regressione. Tuttavia, l'utilizzo del quadrato porta ad una notevole amplificazione degli errori grandi, rendendo la funzione molto sensibile agli outlier. Questa caratteristica, ad ogni modo, la rende preferibile per problemi in cui si vogliono penalizzare gli errori pià grandi a discapito di quelli piccoli. Infine, occorre tenere in considerazione la dipendenza dalle unità di misura dei dati, che rende difficile il confronto tra modelli diversi.
+Il MSE presenta numerosi pregi, tra cui la semplicità di implementazione, la differenziabilità e la convessità, che lo rendono la scelta preferenziale per la maggior parte dei problemi di regressione. Tuttavia, l'utilizzo del quadrato porta ad una notevole amplificazione degli errori elevati, rendendo la funzione molto sensibile agli outlier. Occorre, inoltre, considerare che l'errore così stimato è proporzionale alle unità di misura dei dati, portando notevoli difficoltà nel confronto di differenti modelli.
 
-Una seconda funzione molto usata, detta \textbf{L1 Loss}, è basata sul \textbf{Mean Absolute Error (MAE)}; a differenza della precedente, calcola la media del valore assoluto della differenza tra il valore predetto e quello reale, come mostrato in \emph{(2.7)}:
+Una seconda funzione molto usata, detta \textbf{L1 Loss}, è basata sul \textbf{Mean Absolute Error (MAE)}; a differenza della precedente, calcola la media del valore assoluto della differenza tra il valore predetto e quello reale, come mostrato in \ref{eq:L1}:
 
-        \begin{center}
-            $MAE = \displaystyle \frac{\sum_{i=1}^{N} |y_i - \hat{y}_i|}{N}$ \ \ \ $(2.7)$
-        \end{center}
+        \begin{equation}
+            MAE = \displaystyle \frac{\sum_{i=1}^{N} |y_i - \hat{y}_i|}{N}
+            \label{eq:L1}
+        \end{equation}
 
-Il MAE risulta essere, quindi, meno sensibile agli outlier, diventando una scelta quasi obbligata per problemi caratterizzati da un gran numero di misurazioni fuori scala, e più bilanciato nella penalizzazione degli errori. Tuttavia, la derivata presenta una discontinuità in 0 e, in generale, è meno graduale rispetto a quella dell'MSE, rendendo più complesso e lungo il processo di ottimizzazione.
+Il MAE risulta essere, quindi, meno sensibile agli outlier e più bilanciato nella penalizzazione degli errori, diventando una scelta quasi obbligata per problemi caratterizzati da un gran numero di misurazioni fuori scala. Tuttavia, la derivata presenta una discontinuità per $y_{i} = \hat{y}_{i}$ e, in generale, è meno graduale rispetto a quella del MSE, rendendo più complesso e lungo il processo di ottimizzazione. Per ovviare a questa problematica, sono solitatemente utilizzati metodi del sottogradiente, in grado di compensare la presenza della discontinuità.
 
-Un'evoluzione quasi diretta delle funzioni fino a qui presentate è la \textbf{Huber Loss}, in grado di combinare i pregi di entrambe, riducendone i difetti. Essa, infatti, si comporta come la L1 Loss per valori di errore grandi e come la L2 Loss per valori piccoli, come mostrato in \emph{(2.8)}:
+Un'evoluzione quasi diretta delle funzioni fino a qui presentate è la \textbf{Huber Loss}, in grado di combinare i pregi di entrambe, riducendone allo stesso tempo i difetti. Essa, infatti, si comporta come la L1 Loss per stime dell'errore grandi e come la L2 Loss per valori piccoli, come mostrato in \ref{eq:Huber}:
 
-    \begin{center}
-        $L_{\text{Huber}} (y, \hat{y}) = \begin{cases}
-            \displaystyle \frac{1}{2}(y_i - \hat{y}_i)^2, & \text{se } |y_i - \hat{y}_i| \leq \delta\\
-            \delta |y_i - \hat{y}_i| - \displaystyle \frac{1}{2}\delta^2, & \text{altrimenti}
-        \end{cases}$ \ \ \ $(2.8)$
-    \end{center}
+    \begin{equation}
+        L_{\text{Huber}} (y, \hat{y}) = \begin{cases}
+            \displaystyle \frac{1}{2}(y - \hat{y})^2 & \text{se } |y - \hat{y}| \leq \delta\\
+            \delta |y - \hat{y}| - \displaystyle \frac{1}{2}\delta^2 & \text{se } |y - \hat{y}| > \delta
+        \end{cases}
+        \label{eq:Huber}
+    \end{equation}
 
-Questo comportamento consente, infatti, di ottenere una derivata continua e graduale per gli errori più piccoli (tipico dell'MSE) e di ridurre allo stesso tempo la sensibilità agli outlier, usando un approccio lineare per gli errori più grandi (tipico del MAE). Tuttavia, tale approccio introduce alcune complessità all'interno del modello. E', infatti, necessario definire il valore del parametro $\delta$, che stabilisce il punto di transizione tra i due comportamenti. Questa scelta può influenzare significativamente le prestazioni della rete e richiede, pertanto, un'attenta valutazione in base al problema specifico e alla distribuzione degli errori. Inoltre, resta presente un punto di non differenziabilità per $|y_{i} - \hat{y}_{i}| = \delta$, che rende necessario l'utilizzo di un gradiente opportuno.
+Questo comportamento consente di ottenere una derivata continua e graduale per gli errori più piccoli (tipico dell'MSE) e di ridurre allo stesso tempo la sensibilità agli outlier, usando una proporzionalità lineare per gli errori più grandi (tipico del MAE). Tuttavia, tale approccio introduce alcune complessità all'interno del modello. E', infatti, necessario definire il valore del parametro $\delta$, che stabilisce il punto di transizione tra i due comportamenti. Questa scelta può influenzare significativamente le prestazioni della rete e richiede, pertanto, un'attenta valutazione in base al problema specifico e alla distribuzione degli errori. Inoltre, resta presente un punto di non differenziabilità per $|y_{i} - \hat{y}_{i}| = \delta$, che rende necessario l'utilizzo di un metodo del sottogradiente o un metodo del gradiente tradizionale definito a tratti.
 
 Uno dei più recenti sviluppi in questo campo di ricerca è rappresentato dalla \textbf{Log-cosh Loss function}, basata sull'utilizzo del logaritmo del coseno iperbolico per la misura dell'errore:
 
-    \begin{center}
-        $L_{\text{Log-cosh}} (y, \hat{y}) = \displaystyle \frac{\sum_{i=1}^{N} \log(\cosh(y_i - \hat{y}_i))}{N}$ \ \ \ $(2.9)$
-    \end{center}
+    \begin{equation}
+        L_{\text{Log-cosh}} (y, \hat{y}) = \displaystyle \frac{\sum_{i=1}^{N} \log(\cosh(y_i - \hat{y}_i))}{N}
+    \end{equation}
 
-Essa, consente di migliorare ulteriormente il comportamento associato alla Huber Loss. L'utilizzo del logaritmo, infatti, permette di contenere l'aumento del coseno iperbolico per valori di errore grandi, riducendo la sensibilità della funzione agli outliers. Allo stesso tempo, la derivata risulta molto graduale e continua su tutto il dominio, eliminando anche il singolo punto di discontinuità presente nella precedente funzione. Inoltre, la particolare combinazione di funzioni utilizzata permette di mantenere anche una buona sensibilità ai piccoli errori. Tendenzialmente, dunque, una funzione analoga si presta a reti neurali molto complesse.
+Tale funzione consente di migliorare ulteriormente il comportamento caratteristico della Huber Loss. L'utilizzo del logaritmo, infatti, permette di contenere l'aumento del coseno iperbolico per valori di errore grandi, riducendo la sensibilità della funzione agli outliers. Allo stesso tempo, la derivata risulta molto graduale e continua su tutto il dominio, eliminando anche il singolo punto di discontinuità presente nella precedente funzione. Allo stesso tempo, la particolare combinazione di funzioni utilizzata permette di mantenere anche una buona sensibilità ai piccoli errori. Tendenzialmente, dunque, una funzione analoga si presta a reti neurali molto complesse.
 
-Una delle funzioni indubbiamente più particolari risulta essere la \textbf{Quantile Loss}, basata sull'utilizzo di un parametro \emph{q}, che determina il comportamento della rete rispetto alle predizioni effettuate:
+In molti problemi, la stima di un singolo valore non risulta sufficiente al fine di impiegarlo consapevolmente nel processo. Per questi casi, può risultare utile coadiuvare questa predizione con i quantili inferiori e superiori. A livello di funzione di perdita, queste necessità si traducono nella \textbf{Quantile Loss}, basata sull'utilizzo di un parametro \emph{q}, che determina il comportamento della rete rispetto alle predizioni effettuate:
 
-    \begin{center}
-        $L_{\text{quantile}} (y, \hat{y}) = q * \text{max}(y-\hat{y}, 0) + (1-q) * \text{max}(\hat{y}-y, 0)$ \ \ \ $(2.10)$
-    \end{center}
+    \begin{equation}
+        L_{\text{quantile}} (y, \hat{y}) = q * \text{max}(y-\hat{y}, 0) + (1-q) * \text{max}(\hat{y}-y, 0)
+        \label{eq:Quantile}
+    \end{equation}
 
-Come si può intuire dalla formulazione matematica alla base della funzione, una sottostima dell'output target è proporzionale a \emph{q}, mentre una sovrastima risulta legata a \emph{(1-q)}. Pertanto, imponendo un parametro $q > 0.5$,  si tendono ad evidenziare gli effetti del primo termine. Analogamente a quanto visto per la L1 Loss, la funzione presenta un punto di non derivabilità per $y-\hat{y} = \hat{y} - y = 0$, che necessita di essere opportunamente gestito tramite appositi algoritmi di discesa del gradiente. E', poi, interessante osservare che per valori di $q = 0.5$, si ottiene una formulazione coincidente con il MAE.
+Come si può intuire dalla formulazione matematica alla base della funzione, una sottostima dell'output target è proporzionale a \emph{q}, mentre una sovrastima risulta legata a \emph{(1-q)}. Pertanto, imponendo un parametro $q > 0.5$, si tendono ad evidenziare gli effetti del primo termine, viceversa, per valori inferiori a questa soglia, si attribuisce maggiore importanza al secondo. Analogamente a quanto visto per la L1 Loss, la funzione presenta un punto di non derivabilità per $y-\hat{y} = \hat{y} - y = 0$, che richiede una gestione opportuna, solitamente tramite appositi algoritmi di discesa del gradiente. E', poi, interessante osservare che per valori di $q = 0.5$, si ottiene una formulazione coincidente con il MAE.
 
-Infine, l'ultima funzione presa in considerazione è la \textbf{Poisson Loss}, solitamente utilizzata per algoritmi di stima delle occorrenze di un determinato evento in un periodo specificato. Matematicamente, infatti, è basata sul concetto di \textit{distribuzione di Poisson}:
+Infine, l'ultima funzione presa in considerazione è la \textbf{Poisson Loss}, solitamente utilizzata per algoritmi di stima delle occorrenze di un determinato evento in un periodo specificato. Matematicamente, dunque, è basata sul concetto di \textit{distribuzione di Poisson}:
 
-    \begin{center}
-        $L_{\text{Poisson}}(y, \hat{y}) = \displaystyle \frac{\sum_{i=1}^{N} \hat{y}_{i} - y_{i} log(\hat{y}_{i})}{N}$ \ \ \ $(2.11)$
-    \end{center}
+    \begin{equation}
+        L_{\text{Poisson}}(y, \hat{y}) = \displaystyle \frac{\sum_{i=1}^{N} \hat{y}_{i} - y_{i} log(\hat{y}_{i})}{N}
+        \label{eq:Poisson}
+    \end{equation}
 
-In particolare, la stima della rete neurale sul numero di occorrenze, non potendo assumere valori negativi, si calcola come:
+In particolare, la stima della rete neurale sul numero di occorrenze, non potendo assumere valori negativi, deve essere calcolata sfruttando una opportuna funzione, solitamente non lineare. Una delle più usate risulta essere di carattere esponenziale:
 
-    \begin{center}
-        $\hat{y}_{i} = e^{w*x_{i} + b}$ \ \ \ $(2.12)$ 
-    \end{center}
+    \begin{equation}
+        \hat{y}_{i} = e^{w*x_{i} + b}
+        \label{eq:Poisson_pred}
+    \end{equation}
 
-Tenendo conto dei pregi e dei difetti di ogni funzione presentata in questo paragrafo, oltre che dell'attinenza con l'obiettivo del modello di rete neurale qui considerato, si tengono in considerazione prevalentemente la \textit{L1 Loss}, la \textit{L2 Loss} e la \textit{Log-cosh Loss}. 
+Naturalmente, per un problema di regressione come quello considerato all'interno di questa tesi, le ultime due funzioni introdotte risultano essere le meno indicate e, pertanto, nell'analisi comparativa di ottimizzazione della rete neurale, presentata nel paragrato xxxx, non verranno prese in considerazione.
+
+\subsubsection{Iperparametri\cite{Hyperparameters}}
+
+Al fine di garantire la massima efficienza ed efficacia del processo di apprendimento di una rete neurale, selezionare la funzione di perdita opportuna non è sufficiente. Esistono, infatti, diverse variabili che, se impostate correttamente, permettono di minimizzare la funzione stessa, portando ad addestramenti notevolmente più rapidi e a capacità predittive superiori. 
+
+In particolare, le prestazioni della rete sono rappresentabili da due valori: il bias e la varianza. Il bias identifica la divergenza tra le previsioni di un modello e la realtà, diventando un indice dell'accuratezza della rete stessa. Appare, dunque, evidente la necessità di mantenere un basso valore del parametro. La varianza, invece, rappresenta la sensibilità di un modello a set di dati non incontrati durante l'addestramento. Per garantire che la rete abbia efficacemente generalizzato i dati occorre, pertanto, garantire un valore piccolo dell'indice.
+
+Tipicamente, per ottenere elevati valori di accuratezza e coerenza, si può agire su diversi elementi di alto livello della rete, definiti iperparametri: 
+
+    \begin{itemize}
+
+        \item \textbf{Learning Rate}: parametro che determina le dimensioni di ogni passo fatto dalla rete nella direzione di minimizzazione della loss function. Un valore relativamente elevato di questa variabile permette di aumentare la velocità della fase di addestramento, pur esponendo la rete ad una maggiore instabilità dell'algoritmo di discesa del gradiente utilizzato e al rischio di overshooting del minimo globale o locale ricercato. Tipicamente, pertanto, si predilige l'uso di ratei più piccoli. 
+        
+        \item \textbf{Decay rate}: questa variabile, strettamente connessa al learning rate, permette di gestire ratei variabili. Solitamente, infatti, in una rete complessa addestrata su un grande set di dati, si predilige l'uso di passi di apprendimento relativamente elevati nelle prime iterazioni, andando a ridurne gradualmente il valore. In questo modo, si è in grado di ottenere un compromesso tra stabilità e velocità dell'algoritmo di discesa. Naturalmente, ciò aggiunge complessità al modello, con un parametro aggiuntivo da valutare opportunamente. 
+        
+        \item \textbf{Batch size}: un elemento fondamentale negli algoritmi di discesa del gradiente, è il batch, che rappresenta il numero di campioni di dati elaborati dalla rete prima di aggiornare i pesi. Tipicamente valori più elevati, nonostante consentano di velocizzare l'addestramento, portano a prestazioni complessive inferiori. Tuttavia, la selezione opportuna del tasso di apprendimento e del relativo decadimento può mitigare questa problematica. 
+        
+        \item \textbf{Numero di epoche}: questo parametro rappresenta il numero di volte in cui la rete viene esposta all'intero Dataset durante il processo di addestramento. Un numero di iterazioni più elevato può portare ad un miglioramento delle prestazioni della rete, esponendola, tuttavia, ad un maggiore rischio di overfitting, oltre ad un costo computazionale superiore. 
+        
+        \item \textbf{Numero di nodi e di hidden layers}: questi parametri, già presentati nell'introduzione alle reti neurali, possono portare a variazioni notevoli di performance del modello. Tendezialmente, un maggior numero di questi elementi incrementa la capacità della rete di estrarre e rappresentare relazioni complesse tra i dati, seppur ciò porti ad un significativo aumento del costo computazionale. 
+        
+    \end{itemize}
+
+Non tutti i parametri possono essere definiti sperimentalmente, data la moltitudine di possibili combinazioni da valutare. A questo scopo, dunque, si sono introdotti degli algoritmi in grado di % Riassunto di algoritmi di ricerca delle migliroi condizioni
+
 
 \subsubsection{Optimizer}
+
+L'ultimo elemento considerato, fondamentale per determinare la rapidità e la stabilità del processo di addestramento e, spesso, anche la capacità del modello di generalizzare le relazioni tra i dati, è il metodo di discesa del gradiente con le sue possibili implementazioni pratiche note come optimizer (o algoritmi di ottimizzazione). L'apprendimento di una rete neurale, infatti, si basa sull'aggiornamento dei pesi ad ogni epoca di iterazione, in base al gradiente della loss function relativo ai pesi stessi stimato. In letteratura esistono, fondamentalmente, tre metodi di discesa, ognuno dei quali presenta pregi e criticità differenti:
+
+    \begin{itemize}
+
+        \item \textbf{Batch gradient descent}: la prima tecnica presentata si basa sul calcolo di un errore unico mediato sull'intero Dataset, aggiornando, dunque, i pesi solo dopo aver valutato tutti i dati. Data la sua natura, il metodo risulta solitamente stabile e molto efficace computazionalmente, nonostante necessiti di immagazzinare una grande quantità di dati ad ogni epoca. Tuttavia, spesso porta all'individuazione di un punto di minimo locale, associato a prestazioni inferiori rispetto a quello globale. 
+        
+        \item \textbf{Stochastic gradient descent}: in questo secondo metodo l'aggiornamento dei parametri avviene ad ogni campione del Dataset preso in considerazione. Questo, ovviamente, porta a una maggiore velocità del processo e minor spazio occupato in memoria, nonostante aumenti l'instabilità e il rischio di rumore nel gradiente. Proprio questa caratteristica, però, può aiutare a superare il punto di minimo locale, giungendo infine a quello globale.
+        
+        \item \textbf{Mini-batch gradient descent}: l'ultima tecnica risulta essere una combinazione dei metodi precedentemente presentati. Il Dataset, infatti, viene scomposto in batch di dimensioni inferiori, valutate separatamente all'interno della stessa epoca di addestramento. In questo modo si individua un compromesso tra l'efficienza computazionale e la stabilità del batch gradient method e la velocità dell'SGD.
+        
+    \end{itemize}
+
+All'interno di una rete neurale, solitamente, si utilizzano delle varianti di uno di questi metodi, in grado di tenere in considerazione più variabili.
+
+
+
 
 
 
