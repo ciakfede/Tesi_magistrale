@@ -11,7 +11,27 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%
 
+Nei precedenti capitoli, è stata presentata una panoramica dettagliata sulla teoria alla base del machine learning e si sono introdotte alcune architetture neurali, considerate lo stato dell'arte in merito al dead-reckoning di droni subacquei. Questi elementi, tuttavia, sono inutili senza un solido Dataset alla base. La capacità di generalizzare adeguatamente la dinamica associata all'AUV, infatti, dipende dalla varietà dei dati forniti in input alla rete. Un passo fondamentale, inoltre, consiste nell'elaborare i dati grezzi, ottenuti dalla simulazione, uniformando il passo temporale pur mantenendo allo stesso tempo l'attinenza con la fisica del problema. 
+
 \section{Preparazione simulatore}
+
+Il Dataset utilizzato in questo lavoro di tesi è stato generato sfruttando un simulatore del drone X300, fornito dalla GraalTech, non avendo possibilità di eseguire una campagna di test con un modello reale del drone. Sebbene l'utilizzo di un approccio virtuale presenti alcuni vantaggi, quali una maggiore semplicità e immediatezza nella raccolta e nell'analisi dei dati, non può ritensersi esente da criticità, che possono portare a prestazioni della rete sovrastimate. La qualità e la stabilità dei dati misurati dai vari sensori montati a bordo, oltre alla precisione del target GPS, infatti, difficilmente risultano replicabili in condizioni reali. 
+
+In un ambiente virtuale, inoltre, risulta quasi inevitabile introdurre alcune semplificazioni all'interno del modello, sia del drone che dell'ecosistema, in questo caso marittimo, in cui esso si trova a dover operare. Questo può portare, quindi, a una perdita di realismo del sistema. In riferimento all'ambiente, in particolare, il simulatore offre alcune possibilità di personalizzazione che, tuttavia, risultano spesso rigide e non sufficienti:
+
+    \begin{itemize}
+
+        \item \textit{Fondale}: il primo parametro modificabile risulta essere proprio il fondale,per cui è possibile specificare la massima profondità al di sotto del livello del mare e la morfologia, che può essere più regolare o più frastagliata. Questo consente di simulare varie condizioni in cui il drone può trovarsi ad operare, soprattutto verificando la qualità e la stabilità delle misurazioni del DVL.
+
+        \item \textit{Correnti}: un elemento particolarmente critico è la corrente, la cui intensità e direzione possono variare repentinamente, generando errori nell'algoritmo di guida e navigazione del drone. Risulta, dunque, evidente l'impatto che può avere su una rete neurale se non opportunamente considerata. 
+        
+        \item \textit{Oggetti}: all'interno del simulatore, inoltre, risulta possibile introdurre oggetti di varie dimensioni e a varie profondità, avendo in questo modo la possibilità di verificare le capacità del drone di riconoscere e reagire a situazioni impreviste. All'interno di questo lavoro di tesi non si sfrutta questo elemento, dovendo verificare unicamente le capacità dell'algoritmo di prevedere la posizione del drone e non eventuali logiche di controllo.  
+        
+    \end{itemize}
+
+
+
+
 
 Per una prima valutazione delle correlazioni statistiche e delle prestazioni della rete neurale, come si è visto, è stato utilizzato un dataset prodotto internamente all'azienda e basato su un'unica traiettoria rettilinea, ripetuta in diverse condizioni ambientali e di navigazione. Data la natura stessa del dataset, tuttavia, non risulta possibile dimostrare le effettive prestazioni della rete in traiettorie più articolate, simili a quelle che il drone si troverà ad affrontare in missioni reali. 
 
