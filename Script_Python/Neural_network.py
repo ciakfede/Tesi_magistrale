@@ -88,6 +88,16 @@ class Dataset(torch.utils.data.Dataset):
                 elif (trajectory, combination) in test_missions and (self.mode == 'train' or self.mode == 'validazione'):
                     continue
 
+                elif (trajectory, combination) not in test_missions and self.mode == 'test':
+                    continue
+
+                # Se la modalità non è validazione si saltano tutte le missioni non definite a questo scopo --> non cambia a livello di risultato ma si risparmia costo computazionale
+                if (trajectory, combination) in self.validation_missions_dict and self.mode != 'validazione':
+                    continue
+
+                elif (trajectory, combination) not in self.validation_missions_dict and self.mode == 'validazione':
+                    continue
+
                 for second in range(mission_time):
 
                     # Si inizializza un dizionario vuoto che conterrà n tensori --> un tensore per ogni blocco sensori contenente le relative misurazioni di 1 secondo
@@ -187,6 +197,42 @@ class Dataset(torch.utils.data.Dataset):
             return 1
 
 
+# Classe che permette di implementare la loss function Log-Cosh
+class LogCoshLoss(nn.Module):
+    def __init__(self):
+        super(LogCoshLoss, self).__init__()
+
+    def forward(self, y_pred, y_true):
+        diff = y_pred - y_true
+        return torch.mean(diff + nn.functional.softplus(-2.0 * diff) - torch.log(torch.tensor(2.0)))
+
+class MixedLpNavLoss(nn.Module):
+
+    def __init__(self, w_cum=0.1, a_s=0.05, a_t=0.05, p=1.0, q=1.0, w_dir=0.0, eps=1e-3):
+        super().__init__()
+        self.w_cum, self.a_s, self.a_t, self.p, self.q, self.w_dir, self.eps = w_cum, a_s, a_t, p, q, w_dir, eps
+
+    # Utilizzo della norma p elevata al grado p --> come specificato nel lavoro di Fournier-Oldenburg
+    def lp(self, x, p):
+        return ((x**2 + self.eps**2) ** (p / 2)).mean()
+
+    # Funzione di esecuzione del calcolo della loss effettivo --> richiede in input media e std del GPS, la batch GPS normalizzata, l'output della rete e lo yaw
+    def forward(self, y_hat, y, yaw, v_dvl, mu, sigma):
+
+        # y_hat, y: [B,K,2] normalizzati (body: X, Y); yaw: [B,K] rad; v_dvl: [B,K,2] spostamento DVL in m (body)
+        m_hat, m = y_hat * sigma + mu, y * sigma + mu
+        c, s = torch.cos(yaw), torch.sin(yaw)
+
+        def to_ned(d):                        # stessa convenzione di body_to_NED: output [E, N]
+            return torch.stack([d[..., 0]*s + d[..., 1]*c, d[..., 0]*c - d[..., 1]*s], -1)
+
+        phi_d   = F.mse_loss(y_hat, y)                                          # misfit per passo (attuale)
+        phi_cum = F.mse_loss(to_ned(m_hat).cumsum(1), to_ned(m).cumsum(1))      # misfit sulla posizione (G = somma cumulata)
+        phi_s   = self.lp(m_hat - v_dvl, self.p)                                # smallness rispetto al DVL
+        phi_t   = self.lp(y_hat[:, 1:] - y_hat[:, :-1], self.q)                 # smoothness temporale
+        cross   = (m_hat[..., 0]*v_dvl[..., 1] - m_hat[..., 1]*v_dvl[..., 0]).pow(2).mean()
+        return phi_d + self.w_cum*phi_cum + self.a_s*phi_s + self.a_t*phi_t + self.w_dir*cross
+
 # Si definisce la classe utilizzata per il Simplified Attention Mechanism --> trattata come classe per non appesantire troppo il codice della NavNet --> prodotto in output un vettore dim(hidden_layer)*1
 class SimplifiedAttentionMechanism(nn.Module):
 
@@ -242,7 +288,9 @@ class NavNet(nn.Module):
         self.FC = nn.Sequential(
             nn.Linear(input_size_FC, input_size_FC // 2),
             nn.ReLU(),
-            nn.Linear(input_size_FC // 2, 2))
+            nn.Linear(input_size_FC // 2, input_size_FC // 4),
+            nn.ReLU(),
+            nn.Linear(input_size_FC // 4, 2))
 
         # Definizione struttura funzione di costo --> si sceglie una Euclidean Loss per restare coerenti con il paper
         self.loss_criterion = nn.MSELoss()

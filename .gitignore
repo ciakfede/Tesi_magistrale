@@ -31,3 +31,5 @@ venv/
 
 # File specifici
 NavNet_weights.pkl
+main_NN_claude.py
+Neural_network_claude.py

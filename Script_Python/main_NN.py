@@ -2,17 +2,23 @@
               FEDERICO CECCHINI
             ANNO ACCADEMICO 2025/26             """
 
-'''
+'''All'interno del main si gestiscono le scelte legate al pre-processing e l'esecuzione della rete neurale --> il tutto 
+   è gestito tramite scelta dell'utente --> in ordine si chiede se si vogliono eseguire le seguenti operazioni:
+     - nuova estrazione dati da file csv --> se non fatta si usa il Dataset salvato in precedenza come dizionario pickle
+     - nuova elaborazione del Dataset --> se non fatta si usa il Dataset salvato come dizionario pickle --> se però si è fatta 
+       una nuova estrazione a prescindere dalla scelta questo processo viene rieseguito
+     - generazione del dizionario associato ai waypoints --> utile solo in caso di creazione nuove traiettorie
+     - generazione dizionario delle missioni di test e definizione intervalli temporali delle singole traiettorie --> rieseguito se 
+       cambiano i Dataset delle fasi precedenti o se si cambia il file con l'elenco delle missioni
+     - conversione Dataset in tensori pytorch --> rieseguibile se ci sono cambiamenti nella funzione di base o se ci sono cambiamenti
+       nelle fasi precedenti
+   Successivamente si entra nell'esecuzione della rete neurale --> il training è opzionale a scelta dall'utente 
+   La fase di esecuzione standard e il post-processing dei dati prodotti avviene automaticamente
 
-All'interno del main si effettuano le seguenti operazioni in ordine:
-    - pre-processing dei dati, ottenendo i tensori utili per la rete neurale --> tiene conto delle differenti frequenze dei sensori:
-        -- 10 Hz per DVL
-        -- 5 Hz per IMU e REF
-        -- 1 Hz per GPS
-    - definizione delle batch di iterazione per la rete neurale --> tramite class Dataset si definisce la singola batch per ogni blocco e poi si uniscono insieme
-    - esecuzione rete neurale per la stima della posizione
-    - ciclo di addestramento sui dati per l'ottimizzazione dei pesi utilizzati
-                                                                                                            '''
+   Ci sono diverse opzioni di personalizzazione della rete --> per cambiare la batch_size dei campioni forniti in training o la hidden size dei layer
+   LSTM basta agire sulle opportune variabili presenti. Per cambiare le misurazioni considerate dalla rete occorre modificare il dizionario opportuno, 
+   adeguando anche le dimensioni e il numero di rami della rete. Per questi cambiamenti non occorre rieseguire l'elaborazione poiché vengono 
+   effettuati direttamente al momento della creazione delle batch a inizio training.                                                            '''
 
 import os                                   # Libreria per l'utilizzo di Python integrato nel sistema
 import torch                                # Libreria per il Deep Learning
@@ -45,7 +51,7 @@ batch_size = 32                                                                 
 batch_size_test = 1                                                                     # Per il test si usa una batch size di 1s --> si ottiene la stima della posizione per ogni secondo di navigazione (coincidenza perfetta con batch GPS)
 num_epoch = 60                                                                          # Numero di epoche di iterazione per l'addestramento
 network_config = {'IMU': 9, 'DVL':3, 'GPS': 2}                                # Dizionario di configurazione della rete neurale --> utile per impostare ordine, numero e nome dei rami associati a LSTM e SAM
-hidden_size = 100                                                                       # Numero di neuroni appartenenti al layer nascosto del LSTM
+hidden_size = 200                                                                       # Numero di neuroni appartenenti al layer nascosto del LSTM
 
 # Si definisce il dizionario di configurazione per stabilire quali dati non devono essere utilizzati e con quale target (NED/body) --> di IMU si usano sempre tutti quindi si sfrutta questo dizionario per selezionare la modalità (deg o sin/cos)
 data_config = {'target': 'body', 'DVL': ['DVL_Altitude [m]'], 'IMU_format': 'deg', 'MOT': ['Mot_RV [%]', 'Mot_RL [%]'], 'V_ref': ['Ref_Vy [%]', 'Ref_Vz [%]', 'Ref_ωx [%]', 'Ref_ωy [%]']}
@@ -90,6 +96,8 @@ print('===================================================')
 # Si richiamano le classi associate al pre-processing e al post-processing
 pre_processing = PreProcessing()
 post_processing = PostProcessing()
+
+#post_processing.mean_parameters_calculation(ROOT_DIR)
 
 print(f"\nSelezione parametri di pre-processing:")
 
@@ -688,7 +696,6 @@ for (trajectory, combination) in test_missions_dict:
             figure_title = f'Confronto tra posizione target e predette per la missione {mission}'
             post_processing.real_trajectories_plot(GPS_coordinates_list, NN_coordinates_list, GPS_abs_origin, mission, path_name, figure_title, ROOT_DIR)
 
-post_processing.mean_parameters_calculation(ROOT_DIR)
 
 
 
