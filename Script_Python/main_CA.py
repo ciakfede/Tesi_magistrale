@@ -18,7 +18,6 @@ from Analisi_statistica import StatisticalAnalysis              # Raccolta funzi
     Infine, si procede con un'analisi PCA.
     Per cambiare i metodi usati per il processing dei DataFrame o per l'analisi statistica occorre cambiare le liste presenti nella fase di inizializzazione delle variabili'''
 
-
 # Funzione per la creazione della tabella riassuntiva con tutti i coefficienti medi per la tesi --> li salva successivamente in un file di testo
 def tabella_tesi(storico_coppie_medie, ROOT_DIR):
 

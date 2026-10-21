@@ -288,6 +288,10 @@ class NavNet(nn.Module):
         self.FC = nn.Sequential(
             nn.Linear(input_size_FC, input_size_FC // 2),
             nn.ReLU(),
+            #nn.Linear(input_size_FC // 2, input_size_FC // 4),
+            #nn.ReLU(),
+            #nn.Linear(input_size_FC // 4, input_size_FC // 6),
+            #nn.ReLU(),
             nn.Linear(input_size_FC // 2, 2))
 
         # Definizione struttura funzione di costo --> si sceglie una Euclidean Loss per restare coerenti con il paper

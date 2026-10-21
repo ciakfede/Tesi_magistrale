@@ -24,6 +24,8 @@ import matplotlib.pyplot as plt                 # Libreria per la gestione dell'
 import utm                                      # Libreria per la gestione della conversione di coordinate espresse in gradi (WGS84)
 import sys                                      # Libreria che permette di interagire con il Runtime di Python
 import re
+import seaborn as sns                           # Libreria per la gestione dei box plot e dei violin plot più curati
+from matplotlib.lines import Line2D
 
 
 pd.set_option('display.max_columns', None)              # Visualizza tutte le colonne (nessun limite al numero)
@@ -1163,9 +1165,11 @@ class PostProcessing:
 
         self.NN_recap_dict = {}             # Dizionario contenente i valori di recap delle prestazioni delle reti neurali
 
-        self.first_mission = True           # Variabile booleana per l'intestazione del file di testo sull'errore RMSE
+        self.first_mission = True           # Variabile booleana per l'intestazione del file di testo sull'errore RMSE --> se impostata a False si salta il blocco di intestazione con la versione della rete
 
-        self.mean_values_dict = {}
+        self.raw_values_dict = {}           # Dizionario che permette di immagazzinare i valori puri di ogni componente di errore (RMSE e Delta finale) per ogni missione e per ogni versione della rete --> nella forma {'v3.0.1': {('0', '1'): {('Percorso_1'): {'RMSE_E': val, 'RMSE_N': val, ... }, ('Percorso_2'): {}, ...}, 'v3.0.2': {}, ...}
+
+        self.mean_values_dict = {}          # Dizionario che permette di immagazzinare i valori medi di ogni componente di errore (RMSE e Delta finale) per ogni missione e per ogni versione della rete --> nella forma {'v3.0.1': {('0', '1'): {'RMSE_E': val, 'RMSE_N': val, ... }}, 'v3.0.2': {}, ...}
 
     # ======================================================
     #       DEFINIZIONE WAYPOINTS E TRAIETTORIE IDEALI
@@ -1570,8 +1574,6 @@ class PostProcessing:
         # Si trasformano le liste di tensori in array numpy --> in modo da poter effettuare operazioni matematiche vettoriali
         GPS_coordinates_array = torch.cat(GPS_coordinates, dim=0).cpu().numpy()
         NN_coordinates_array = torch.cat(NN_coordinates, dim=0).cpu().numpy()
-        # GPS_coordinates_array = np.array([t.detach().cpu().numpy().flatten() for t in GPS_coordinates])
-        # NN_coordinates_array = np.array([t.detach().cpu().numpy().flatten() for t in NN_coordinates])
 
         # Si calcola l'errore RMSE per gli assi East e North separatamente
         self.NN_recap_dict['RMSE_E'] = np.sqrt(mean_squared_error(GPS_coordinates_array[:, 0], NN_coordinates_array[:, 0]))
@@ -1686,8 +1688,224 @@ class PostProcessing:
         plt.savefig(output_file_path, bbox_inches='tight')
         plt.close()
 
+    # ======================================================
+    #   ANALISI DETTAGLIATA DELLE CONFIGURAZIONI POSSIBILI
+    # ======================================================
+
+    # Funzione interna per la creazione dei grafici a barre che permettono di confrontare le varie versioni della rete
+    def bar_graph_plot(self, ROOT_DIR):
+
+        # Si scelgono le metriche da rappresentare nei grafici (un grafico per ogni missione e per ogni metrica elencata) e la conversione delle chiavi delle metriche nel testo da stampare in grafico
+        metrics_dict = {"RMSE": {"RMSE_E": "RMSE East", "RMSE_N": "RMSE North", "RMSE_tot": "RMSE complessivo"},
+                        "Delta": {"Delta_E": "Delta East finale", "Delta_N": "Delta North finale", "Delta_tot": "Delta tot finale"}}
+
+        # Si genera un nuovo dizionario avente come chiave le missioni (tuple per missioni di training, stringhe per missioni di test e valori complessivi) --> a ognuna si associa una lista di tuple (chiave iterazione, valore medio)
+        values_dict = {}
+        for iteration_key, version_dict in self.mean_values_dict.items():
+
+            for mission_key, mission_dict in version_dict.items():
+
+                if mission_key not in values_dict:
+                    values_dict[mission_key] = {}
+
+                for metric_key, mean_value in mission_dict.items():
+
+                    if metric_key not in values_dict[mission_key]:
+                        values_dict[mission_key][metric_key] = []
+                    values_dict[mission_key][metric_key].append((iteration_key, mean_value))
+
+        # Si itera su ogni metrica di cui si vuole ottenere un grafico --> ognuna ha la propria cartella separata --> in ogni cartella sono contenuti i grafici di ogni chiave missione
+        for plot_key, metrics in metrics_dict.items():
+
+            # Si crea una sottocartella per ogni metrica
+            PLOT_FOLDER_PATH = os.path.join(ROOT_DIR, 'Risultati_NN', 'Evaluation_metrics_analysis', plot_key)
+            os.makedirs(PLOT_FOLDER_PATH, exist_ok=True)
+
+            # Per ogni chiave di missione si definisce un grafico differente
+            for mission_key, mission_dict in values_dict.items():
+
+                # Si inizializza l'ambiente grafico associato --> ci sono 3 grafici per classe
+                #fig, axis = plt.subplots(2, 2, figsize=(10, 4.5))
+
+                # Si inizializza l'ambiente grafico --> si definiscono separatamente fig e griglia poiché ho un numero di assi dispari --> posso avere più controllo sull'impaginazione
+                fig = plt.figure(figsize=(20, 12), layout='constrained')
+                gs = fig.add_gridspec(2, 4)
+                axis = [fig.add_subplot(gs[0, 0:2]), fig.add_subplot(gs[0, 2:4]), fig.add_subplot(gs[1, 1:3])]
+
+                # Si definisce il titolo del grafico complessivo --> occorre impostare un titolo specifico per le metriche riassuntive
+                if mission_key == 'test_missions':
+                    fig_name, fig_title = f"{plot_key}_test_missions.pdf", f"Valori medi {plot_key.upper()} sulle missioni di test"
+                elif mission_key == 'training_missions':
+                    fig_name, fig_title = f"{plot_key}_training_missions.pdf", f"Valori medi {plot_key.upper()} sulle missioni di training"
+                elif mission_key == 'total_missions':
+                    fig_name, fig_title = f"{plot_key}_total_missions.pdf", f"Valori medi {plot_key.upper()} su tutte le missioni"
+                elif isinstance(mission_key, tuple):
+                    fig_name, fig_title = f"{plot_key}_{mission_key[0]}_{mission_key[1]}.pdf", f"Valori medi {plot_key.upper()} sulla missione {mission_key[0]} - {mission_key[1]}"
+                else:
+                    fig_name, fig_title = f"{plot_key}_{mission_key}.pdf", f"Valori medi {plot_key.upper()} sulla missione {mission_key}"
+
+                fig.suptitle(fig_title, **self.title_font)
+
+                # Si modificano i parametri di ogni grafico (nome asse y, titolo grafico...)
+                for ax, (metric, axis_title) in zip(axis, metrics.items()):
+
+                    # Si estrae la lista di tuple (chiave versione, valore medio) della missione di iterazione per ogni metrica considerata
+                    values_tuple = mission_dict[metric]
+                    values = [v[1] for v in values_tuple]
+
+                    # Si inizializza il grafico a barre --> ci sono tanti elementi quante versioni di rete e ogni tab ha il colore blu
+                    bar_graph = ax.bar(range(len(values_tuple)), values, color='tab:blue')
+
+                    # Si evidenzia in verde la versione migliore della rete
+                    try:
+                        bar_graph[int(np.nanargmin(values))].set_color("tab:green")
+                    except ValueError:
+                        raise ValueError(f"  [ERROR] Array dei valori medi associato alla missione {mission_key} e alla metrica {metric} risulta essere composto solo da NaN.") from None
+
+                    # Si scrive il valore sopra ogni barra --> si centra orizzontalmente rispetto alla barra, e si posiziona vicino alla fine della barra
+                    for i, (version, value) in enumerate(values_tuple):
+                        ax.text(i, value, f"{value:.2f}", ha='center', va='bottom', fontsize= 9, rotation= 45)
+
+                    # Si definiscono i parametri associati agli assi di ogni subplot
+                    ax.set_xticks(range(len(values_tuple)))
+                    ax.set_xticklabels([f"v{version}" for version, _ in values_tuple], rotation=45, fontdict=self.axis_font)
+                    ax.set_ylabel(f"{metric} [m]", fontdict=self.axis_font)
+                    ax.set_title(f"Mean value {axis_title}", fontdict=self.axis_font)
+                    ax.grid(axis="y", alpha=0.3)
+
+                # Si salva il grafico e si chiude la figura per liberare memoria
+                fig.savefig(os.path.join(PLOT_FOLDER_PATH, fig_name), dpi=150)
+                plt.close(fig)
+
+        return self
+
+    # Funzione interna per la creazione dei box plot, utili per confrontare la distribuzione dei valori di errore (e non solo il valore medio) tra le varie versioni della rete
+    def box_plot(self, ROOT_DIR, metric_groups=("RMSE",)):
+
+        highlight_best = False
+
+        # Si scelgono le metriche da rappresentare --> stessa struttura usata per i grafici a barre (per aggiungere i Delta basta passare metric_groups=("RMSE", "Delta"))
+        metrics_dict = {"RMSE": {"RMSE_E": "RMSE East", "RMSE_N": "RMSE North", "RMSE_tot": "RMSE complessivo"},
+                        "Delta": {"Delta_E": "Delta East finale", "Delta_N": "Delta North finale",
+                                  "Delta_tot": "Delta tot finale"}}
+
+        # Si genera un nuovo dizionario avente come chiave le missioni --> a ognuna si associa, per ogni metrica, una lista di tuple (chiave iterazione, lista dei valori grezzi)
+        values_dict = {}
+        for iteration_key, version_dict in self.raw_values_dict.items():
+
+            for mission_key, mission_dict in version_dict.items():
+
+                if mission_key not in values_dict:
+                    values_dict[mission_key] = {}
+
+                for metric_key, raw_values in mission_dict.items():
+
+                    if metric_key not in values_dict[mission_key]:
+                        values_dict[mission_key][metric_key] = []
+                    values_dict[mission_key][metric_key].append((iteration_key, raw_values))
+
+        for plot_key in metric_groups:
+
+            metrics = metrics_dict[plot_key]
+
+            # Si crea una sottocartella per ogni metrica --> separata da quella dei grafici a barre per non sovrascrivere i file
+            PLOT_FOLDER_PATH = os.path.join(ROOT_DIR, 'Risultati_NN', 'Evaluation_metrics_analysis', 'Box_plot', plot_key)
+            os.makedirs(PLOT_FOLDER_PATH, exist_ok=True)
+
+            # Per ogni chiave di missione si definisce un grafico differente
+            for mission_key, mission_dict in values_dict.items():
+
+                # Si inizializza l'ambiente grafico con la stessa impaginazione dei grafici a barre
+                fig = plt.figure(figsize=(20, 12), layout='constrained')
+                gs = fig.add_gridspec(2, 4)
+                axis = [fig.add_subplot(gs[0, 0:2]), fig.add_subplot(gs[0, 2:4]), fig.add_subplot(gs[1, 1:3])]
+
+                # Si definisce il titolo del grafico complessivo
+                if mission_key == 'test_missions':
+                    fig_name, fig_title = f"{plot_key}_boxplot_test_missions.pdf", f"Distribuzione {plot_key.upper()} sulle missioni di test"
+                elif mission_key == 'training_missions':
+                    fig_name, fig_title = f"{plot_key}_boxplot_training_missions.pdf", f"Distribuzione {plot_key.upper()} sulle missioni di training"
+                elif mission_key == 'total_missions':
+                    fig_name, fig_title = f"{plot_key}_boxplot_total_missions.pdf", f"Distribuzione {plot_key.upper()} su tutte le missioni"
+                elif isinstance(mission_key, tuple):
+                    fig_name, fig_title = f"{plot_key}_boxplot_{mission_key[0]}_{mission_key[1]}.pdf", f"Distribuzione {plot_key.upper()} sulla missione {mission_key[0]} - {mission_key[1]}"
+                else:
+                    fig_name, fig_title = f"{plot_key}_boxplot_{mission_key}.pdf", f"Distribuzione {plot_key.upper()} sulla missione {mission_key}"
+
+                fig.suptitle(fig_title, **self.title_font)
+
+                for ax, (metric, axis_title) in zip(axis, metrics.items()):
+
+                    # Si estraggono le versioni con almeno un valore valido --> si scartano eventuali NaN/inf (es. versioni con training divergente)
+                    versions, samples = [], []
+                    for version, raw_values in mission_dict.get(metric, []):
+                        valid_values = np.asarray(raw_values, dtype=float)
+                        valid_values = valid_values[np.isfinite(valid_values)]
+                        if valid_values.size > 0:
+                            versions.append(version)
+                            samples.append(valid_values)
+
+                    if not samples:
+                        print(f"  [WARNING] Nessun valore valido per la missione {mission_key} e la metrica {metric}: grafico non generato.")
+                        ax.set_axis_off()
+                        continue
+
+                    # Per le singole missioni ci sono solo 4 valori per versione --> si mostrano i punti reali al posto degli outlier
+                    few_samples = max(len(s) for s in samples) <= 10
+
+                    # Si inizializza il box plot --> ogni scatola è una versione, con baffi a 1.5 IQR, mediana (linea nera) e media (rombo bianco)
+                    box_plot = ax.boxplot(samples, positions=range(len(samples)), widths=0.6, patch_artist=True,
+                                          showmeans=True, showfliers=not few_samples,
+                                          medianprops=dict(color='black', linewidth=1.5),
+                                          meanprops=dict(marker='D', markerfacecolor='white', markeredgecolor='black', markersize=4),
+                                          flierprops=dict(marker='o', markersize=3, alpha=0.5))
+
+                    # Ogni scatola ha il colore blu --> si evidenzia in verde la versione con la mediana minore
+                    for box in box_plot['boxes']:
+                        box.set_facecolor('tab:blue')
+                        box.set_edgecolor('black')
+
+                    if highlight_best:
+                        box_plot['boxes'][int(np.argmin([np.median(s) for s in samples]))].set_facecolor('tab:green')
+
+                    # Se i campioni sono pochi si sovrappongono i singoli valori con una piccola dispersione orizzontale (seed fisso per riproducibilità)
+                    if few_samples:
+                        rng = np.random.default_rng(0)
+                        for i, s in enumerate(samples):
+                            ax.scatter(i + rng.uniform(-0.12, 0.12, size=len(s)), s, s=14, color='black', alpha=0.7,
+                                       zorder=3)
+
+                    # Si definiscono i parametri associati agli assi di ogni subplot
+                    ax.set_xticks(range(len(versions)))
+                    ax.set_xticklabels([f"v{version}" for version in versions], rotation=45, fontdict=self.axis_font)
+                    ax.set_ylabel(f"{metric} [m]", fontdict=self.axis_font)
+                    ax.set_title(f"Distribution {axis_title}", fontdict=self.axis_font)
+
+                    log_grid = False
+                    if log_grid:
+                        ax.set_yscale('log')
+                        ax.grid(axis='y', which='both', alpha=0.3)
+                    else:
+                        ax.grid(axis="y", alpha=0.3)
+
+                # Si usa lo spazio libero in basso a destra della griglia per la legenda
+                legend_ax = fig.add_subplot(gs[1, 3])
+                legend_ax.set_axis_off()
+                legend_ax.legend(handles=[Line2D([0], [0], color='black', linewidth=1.5, label='Mediana'),
+                                          Line2D([0], [0], marker='D', color='w', markerfacecolor='white',
+                                                 markeredgecolor='black', markersize=6, label='Media'),
+                                          Line2D([0], [0], marker='s', color='w', markerfacecolor='tab:green',
+                                                 markersize=9, label='Mediana minore')],
+                                 loc='center', frameon=False)
+
+                # Si salva il grafico e si chiude la figura per liberare memoria
+                fig.savefig(os.path.join(PLOT_FOLDER_PATH, fig_name), dpi=150)
+                plt.close(fig)
+
+        return self
+
     # Funzione che permette di valutare per ogni missione la media dell'errore RMSE e in generale la media complessiva
-    def mean_parameters_calculation(self, ROOT_DIR):
+    def eval_metrics_analysis(self, ROOT_DIR):
 
         # Si definisce il percorso di input del file
         INPUT_FOLDER_PATH = os.path.join(ROOT_DIR, 'Risultati_NN')
@@ -1708,12 +1926,6 @@ class PostProcessing:
                    "Delta_tot finale": "Delta_tot"}
         number = r"[-+]?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?"
 
-        # Si scelgono le metriche da rappresentare nei grafici (un grafico per ogni missione e per ogni metrica elencata)
-        plot_metrics = ["RMSE_E", "RMSE_N", "RMSE_tot", "Delta_tot"]
-        metric_titles = {"RMSE_E": "RMSE East", "RMSE_N": "RMSE North", "RMSE_tot": "RMSE complessivo",
-                         "Delta_E": "Delta East finale", "Delta_N": "Delta North finale",
-                         "Delta_tot": "Delta tot finale"}
-
         # -----------------------------------------------------
         #         ESTRAZIONE DATI DAL FILE DI TESTO
         # -----------------------------------------------------
@@ -1727,7 +1939,6 @@ class PostProcessing:
 
             # Si legge riga per riga il file --> se si incontra un blocco di 3 righe in cui 2 iniziano con "=" si è all'inizio di una nuova iterazione --> ogni volta che si incontra un "-" si ha un nuovo percorso/traiettoria (ogni 4 percorsi)
             test_missions = ['T1', 'T2', 'T3', 'T4']
-            values_dict = {}
             iteration_key = None
             for line in f.readlines():
 
@@ -1735,8 +1946,8 @@ class PostProcessing:
                 new_iteration = new_iter_pattern.search(line)
                 if new_iteration:
                     iteration_key = new_iteration.group(1)
-                    if iteration_key not in values_dict:
-                        values_dict[iteration_key] = {}
+                    if iteration_key not in self.raw_values_dict:
+                        self.raw_values_dict[iteration_key] = {}
                     continue
 
                 # Si cerca il pattern di inizio percorso --> si estraggono la tupla che indica la missione e il tag del percorso effettuato
@@ -1750,14 +1961,14 @@ class PostProcessing:
                     mission_key = mission_id[0] if mission_id[0] in test_missions else mission_id
 
                     # Si inizializza il dizionari che conterrà i dati estratti
-                    if mission_key not in values_dict[iteration_key]:
-                        values_dict[iteration_key][mission_key] = {}
-                    if 'global_metrics' not in values_dict[iteration_key]:
-                        values_dict[iteration_key]['global_metrics'] = {}
-                    if 'semi_global_metrics' not in values_dict[iteration_key]:
-                        values_dict[iteration_key]['semi_global_metrics'] = {}
-                    if 'only_test_metrics' not in values_dict[iteration_key]:
-                        values_dict[iteration_key]['only_test_metrics'] = {}
+                    if mission_key not in self.raw_values_dict[iteration_key]:
+                        self.raw_values_dict[iteration_key][mission_key] = {}
+                    if 'total_missions' not in self.raw_values_dict[iteration_key]:
+                        self.raw_values_dict[iteration_key]['total_missions'] = {}
+                    if 'training_missions' not in self.raw_values_dict[iteration_key]:
+                        self.raw_values_dict[iteration_key]['training_missions'] = {}
+                    if 'test_missions' not in self.raw_values_dict[iteration_key]:
+                        self.raw_values_dict[iteration_key]['test_missions'] = {}
 
                 # Se la linea coincide con un possibile pattern dei dati si entra nella condizione --> si salvano
                 data = data_pattern.match(line)
@@ -1765,33 +1976,33 @@ class PostProcessing:
                     data_key = metrics[data.group(1)]
 
                     # Si aggiunge il dato alla lista della missione opportuna
-                    if data_key not in values_dict[iteration_key][mission_key]:
-                        values_dict[iteration_key][mission_key][data_key] = []
-                    values_dict[iteration_key][mission_key][data_key].append(float(data.group(2)))
+                    if data_key not in self.raw_values_dict[iteration_key][mission_key]:
+                        self.raw_values_dict[iteration_key][mission_key][data_key] = []
+                    self.raw_values_dict[iteration_key][mission_key][data_key].append(float(data.group(2)))
 
                     # Si aggiunge il dato alla lista unica contenente i dati di tutte le missioni --> utile per avere una panoramica completa
-                    if data_key not in values_dict[iteration_key]['global_metrics']:
-                        values_dict[iteration_key]['global_metrics'][data_key] = []
-                    values_dict[iteration_key]['global_metrics'][data_key].append(float(data.group(2)))
+                    if data_key not in self.raw_values_dict[iteration_key]['total_missions']:
+                        self.raw_values_dict[iteration_key]['total_missions'][data_key] = []
+                    self.raw_values_dict[iteration_key]['total_missions'][data_key].append(float(data.group(2)))
 
                     # Si aggiunge alla lista contenente tutte le missioni a eccezione di quelle di test --> in modo da avere un indice sulle sole missioni di addestramento
                     if mission_key not in test_missions:
-                        if data_key not in values_dict[iteration_key]['semi_global_metrics']:
-                            values_dict[iteration_key]['semi_global_metrics'][data_key] = []
-                        values_dict[iteration_key]['semi_global_metrics'][data_key].append(float(data.group(2)))
+                        if data_key not in self.raw_values_dict[iteration_key]['training_missions']:
+                            self.raw_values_dict[iteration_key]['training_missions'][data_key] = []
+                        self.raw_values_dict[iteration_key]['training_missions'][data_key].append(float(data.group(2)))
 
                     # Si aggiunge alla lista contenente le sole missioni di test
                     if mission_key in test_missions:
-                        if data_key not in values_dict[iteration_key]['only_test_metrics']:
-                            values_dict[iteration_key]['only_test_metrics'][data_key] = []
-                        values_dict[iteration_key]['only_test_metrics'][data_key].append(float(data.group(2)))
+                        if data_key not in self.raw_values_dict[iteration_key]['test_missions']:
+                            self.raw_values_dict[iteration_key]['test_missions'][data_key] = []
+                        self.raw_values_dict[iteration_key]['test_missions'][data_key].append(float(data.group(2)))
 
 
         # -----------------------------------------------------
         #         CALCOLO VALORI MEDI DEI PARAMETRI
         # -----------------------------------------------------
 
-        for iteration_key, iteration_dict in values_dict.items():
+        for iteration_key, iteration_dict in self.raw_values_dict.items():
 
             if iteration_key not in self.mean_values_dict:
                 self.mean_values_dict[iteration_key] = {}
@@ -1814,7 +2025,7 @@ class PostProcessing:
         #         SCRITTURA PARAMETRI SUL FILE DI TESTO
         # -----------------------------------------------------
 
-        with open(output_file_path, 'w') as f:
+        with open(output_file_path, 'w', encoding='utf-8') as f:
 
             f.write("\n             VALUTAZIONE MEDIE METRICHE DI VALUTAZIONE\n\n")
 
@@ -1826,7 +2037,7 @@ class PostProcessing:
 
                 for mission_key, mission_dict in iteration_dict.items():
 
-                    if mission_key == 'global_metrics' or mission_key == 'semi_global_metrics':
+                    if mission_key == 'total_missions' or mission_key == 'training_missions' or mission_key == 'test_missions':
                         continue
 
                     f.write(f"\n    Missione: {mission_key}\n")
@@ -1836,16 +2047,16 @@ class PostProcessing:
                         f.write(f"      {data_key}: {mean_value}\n")
 
                 # Prima di passare alla iterazione successiva si stampano i valori di media complessiva per ogni parametro
-                f.write(f"\n    Medie complessive sulla totalità delle missioni di addestramento:\n")
-                for data_key, mean_value in self.mean_values_dict[iteration_key]['semi_global_metrics'].items():
+                f.write(f"\n    Medie complessive sul totalità delle missioni di addestramento:\n")
+                for data_key, mean_value in self.mean_values_dict[iteration_key]['training_missions'].items():
                     f.write(f"      {data_key}: {mean_value}\n")
 
                 f.write(f"\n    Medie complessive sulla totalità delle missioni di test:\n")
-                for data_key, mean_value in self.mean_values_dict[iteration_key]['only_test_metrics'].items():
+                for data_key, mean_value in self.mean_values_dict[iteration_key]['test_missions'].items():
                     f.write(f"      {data_key}: {mean_value}\n")
 
                 f.write(f"\n    Medie complessive sulla totalità delle missioni:\n")
-                for data_key, mean_value in self.mean_values_dict[iteration_key]['global_metrics'].items():
+                for data_key, mean_value in self.mean_values_dict[iteration_key]['total_missions'].items():
                     f.write(f"      {data_key}: {mean_value}\n")
 
 
@@ -1853,63 +2064,15 @@ class PostProcessing:
         #           RAPPRESENTAZIONE GRAFICA MEDIE
         # -----------------------------------------------------
 
-        # Le versioni sul grafico seguono l'ordine in cui compaiono nel file
-        versions = list(self.mean_values_dict.keys())
+        # Si genera il grafico a barre
+        self.bar_graph_plot(ROOT_DIR)
 
-        # Si raccolgono tutte le chiavi presenti (missioni, 'T1'..., 'global_metrics', 'semi_global_metrics') mantenendo l'ordine di comparsa
-        all_mission_keys = []
-        for iteration_key in versions:
-            for mission_key in self.mean_values_dict[iteration_key]:
-                if mission_key not in all_mission_keys:
-                    all_mission_keys.append(mission_key)
+        # Si genera il box plot
+        self.box_plot(ROOT_DIR)
 
-        for plot_metric in plot_metrics:
+        # Si genera il grafico a violino
 
-            # Si crea una sottocartella per ogni metrica
-            PLOT_FOLDER_PATH = os.path.join(ROOT_DIR, 'Risultati_NN', 'Grafici_medie', plot_metric)
-            os.makedirs(PLOT_FOLDER_PATH, exist_ok=True)
 
-            for mission_key in all_mission_keys:
-
-                # Si estrae la media della metrica per ogni versione (nan se la versione non contiene la missione)
-                values = [self.mean_values_dict[it].get(mission_key, {}).get(plot_metric, np.nan) for it in versions]
-                if np.all(np.isnan(values)):
-                    continue
-
-                # Si definiscono titolo e nome del file a seconda del tipo di chiave
-                if mission_key == 'global_metrics':
-                    plot_title, file_name = "Tutte le missioni", "global"
-                elif mission_key == 'semi_global_metrics':
-                    plot_title, file_name = "Missioni di addestramento (test esclusi)", "semi_global"
-                elif mission_key == 'only_test_metrics':
-                    plot_title, file_name = "Missioni di test", "test_missions"
-                elif isinstance(mission_key, tuple):
-                    plot_title, file_name = f"Missione {'_'.join(mission_key)}", '_'.join(mission_key)
-                else:
-                    plot_title, file_name = f"Missione di test {mission_key}", mission_key
-
-                # Si crea il grafico a barre con la media per ogni versione
-                fig, ax = plt.subplots(figsize=(10, 4.5))
-                bars = ax.bar(range(len(versions)), values, color="tab:blue")
-
-                # Si evidenzia in verde la versione con il valore minore (migliore)
-                bars[int(np.nanargmin(values))].set_color("tab:green")
-
-                # Si scrive il valore sopra ogni barra
-                for x, value in enumerate(values):
-                    if not np.isnan(value):
-                        ax.text(x, value, f"{value:.2f}", ha="center", va="bottom", fontsize=8)
-
-                ax.set_xticks(range(len(versions)))
-                ax.set_xticklabels([f"v{it}" for it in versions], rotation=45)
-                ax.set_ylabel(f"{metric_titles[plot_metric]} [m]")
-                ax.set_title(f"{plot_title} - valore medio - {metric_titles[plot_metric]}")
-                ax.grid(axis="y", alpha=0.3)
-                fig.tight_layout()
-
-                # Si salva il grafico e si chiude la figura per liberare memoria
-                fig.savefig(os.path.join(PLOT_FOLDER_PATH, f"{file_name}_{plot_metric}.pdf"), dpi=150)
-                plt.close(fig)
 
         return self
 

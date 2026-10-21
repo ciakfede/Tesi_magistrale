@@ -31,16 +31,6 @@ import sys                                  # Libreria che permette di interagir
 import pickle                               # Libreria per la gestione del formato di salvataggio pickle
 import json                                 # libreria per la gestione del formato di salvataggio json
 
-def stima_trapezoidale(velocita, timestamps, ROOT_DIR, pos_iniziale=0):
-
-    pos = [pos_iniziale]
-    for i in range(len(velocita) - 1):
-        dt = timestamps[i+1] - timestamps[i]
-        # Formula trapezoidale
-        spostamento = 0.5 * (velocita[i] + velocita[i+1]) * dt
-        pos.append(pos[-1] + spostamento)
-    return np.array(pos)
-
 
 # ======================================================
 #              INIZIALIZZAZIONE VARIABILI
@@ -50,7 +40,7 @@ def stima_trapezoidale(velocita, timestamps, ROOT_DIR, pos_iniziale=0):
 batch_size = 32                                                                         # Numero di secondi di missione forniti contemporaneamente alla rete
 batch_size_test = 1                                                                     # Per il test si usa una batch size di 1s --> si ottiene la stima della posizione per ogni secondo di navigazione (coincidenza perfetta con batch GPS)
 num_epoch = 60                                                                          # Numero di epoche di iterazione per l'addestramento
-network_config = {'IMU': 9, 'DVL':3, 'GPS': 2}                                # Dizionario di configurazione della rete neurale --> utile per impostare ordine, numero e nome dei rami associati a LSTM e SAM
+network_config = {'IMU': 9, 'DVL': 3, 'GPS': 2}                                # Dizionario di configurazione della rete neurale --> utile per impostare ordine, numero e nome dei rami associati a LSTM e SAM
 hidden_size = 100                                                                       # Numero di neuroni appartenenti al layer nascosto del LSTM
 
 # Si definisce il dizionario di configurazione per stabilire quali dati non devono essere utilizzati e con quale target (NED/body) --> di IMU si usano sempre tutti quindi si sfrutta questo dizionario per selezionare la modalità (deg o sin/cos)
@@ -97,7 +87,7 @@ print('===================================================')
 pre_processing = PreProcessing()
 post_processing = PostProcessing()
 
-#post_processing.mean_parameters_calculation(ROOT_DIR)
+#post_processing.eval_metrics_analysis(ROOT_DIR)
 
 print(f"\nSelezione parametri di pre-processing:")
 
