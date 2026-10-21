@@ -31,16 +31,6 @@ import sys                                  # Libreria che permette di interagir
 import pickle                               # Libreria per la gestione del formato di salvataggio pickle
 import json                                 # libreria per la gestione del formato di salvataggio json
 
-def stima_trapezoidale(velocita, timestamps, ROOT_DIR, pos_iniziale=0):
-
-    pos = [pos_iniziale]
-    for i in range(len(velocita) - 1):
-        dt = timestamps[i+1] - timestamps[i]
-        # Formula trapezoidale
-        spostamento = 0.5 * (velocita[i] + velocita[i+1]) * dt
-        pos.append(pos[-1] + spostamento)
-    return np.array(pos)
-
 
 # ======================================================
 #              INIZIALIZZAZIONE VARIABILI
@@ -97,7 +87,7 @@ print('===================================================')
 pre_processing = PreProcessing()
 post_processing = PostProcessing()
 
-#post_processing.mean_parameters_calculation(ROOT_DIR)
+#post_processing.eval_metrics_analysis(ROOT_DIR)
 
 print(f"\nSelezione parametri di pre-processing:")
 
