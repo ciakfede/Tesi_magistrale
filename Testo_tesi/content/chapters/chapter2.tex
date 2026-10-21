@@ -294,7 +294,21 @@ Non tutti i parametri possono essere definiti sperimentalmente, data la moltitud
 
 \subsubsection{Optimizer}
 
-L'ultimo elemento considerato, fondamentale per determinare la rapidità e la stabilità del processo di addestramento e, spesso, anche la capacità del modello di generalizzare le relazioni tra i dati, è il metodo di discesa del gradiente con le sue possibili implementazioni pratiche note come optimizer (o algoritmi di ottimizzazione). L'apprendimento di una rete neurale, infatti, si basa sull'aggiornamento dei pesi ad ogni epoca di iterazione, in base al gradiente della loss function relativo ai pesi stessi stimato. In letteratura esistono, fondamentalmente, tre metodi di discesa, ognuno dei quali presenta pregi e criticità differenti:
+Si sono, fino ad ora, presentati gli elementi alla base della backward propagation, sebbene resti da valutare come essi si leghino tra loro e come conducano all'aggiornamento dei parametri ad ogni epoca di addestramento. In generale, questo processo si basa sulla ricerca della direzione in grado di minimizzare la funzione di perdita prescelta. Nell'ambito del Machine Learning, ciò può essere implementato tramite l'utilizzo di appositi algoritmi, comunemente detti \emph{optimizer}. All'interno di questa definizione rientrano metodi anche molto differenti tra loro, solitamente suddivisibili in tre macrocategorie:
+
+    \begin{itemize}
+
+        \item \textbf{Metodi del primo ordine}: questi algoritmi si basano sul calcolo del gradiente della loss function rispetto ad ogni peso della rete. In funzione di questo valore, e degli iperparametri impostati, si determinano la direzione e l'entità del passo di aggiornamento dei parametri. Proprio per queste caratteristiche sono anche definiti \emph{metodi del gradiente}. 
+        
+        \item \textbf{Metodi del secondo ordine}: il principio di funzionamento di questa seconda classe di algoritmi è molto simile a quello della precedente, sebbene in questo caso si utilizzi anche la matrice Hessiana del sistema. Ciò consente di aggiornare i pesi con maggiore accuratezza ma, allo stesso tempo, porta ad un notevole aumento del costo computazionale, data la natura matriciale di questo approccio. Per modelli di deep learning, caratterizzati da un gran numero di neuroni e, quindi, di pesi e bias, un'operazione di questo tipo risulta impraticabile e, pertanto, solitamente si predilige l'uso di metodi del gradiente. 
+        
+        \item \textbf{Metodi senza derivate}: nei casi in cui il gradiente non sia determinabile, i metodi precedenti non possono essere impiegati. Si sono, dunque, sviluppati degli approcci differenti che permettono di aggiornare i pesi senza utilizzare questo concetto. Alcuni esempi di metodi simili sono i Nelder-Mead, i particle swarm e gli algoritmi genetici. Nelle reti di deep learning tradizionali, tuttavia, sono poco utilizzati e, pertanto, non si approfondisce ulteriormente questa classe. 
+        
+    \end{itemize}
+
+Ai fini di questo lavoro di tesi, tenendo conto di quanto appena discusso, risulta opportuno esaminare più dettaglitamente i metodi del gradiente. Naturalmente, data la moltitudine di problemi affrontabili con tecniche di machine learning, nel corso degli anni sono state proposte molte varianti del metodo base. Le principali differenze si concentrano su due aspetti: il numero di campioni usati per stimare il gradiente e il metodo di utilizzo del gradiente per l'aggiornamento dei pesi. 
+
+Per quanto riguarda il primo tema, esistono fondamentalmente 3 macrocategorie, presentate nel seguito:
 
     \begin{itemize}
 
@@ -306,7 +320,9 @@ L'ultimo elemento considerato, fondamentale per determinare la rapidità e la st
         
     \end{itemize}
 
-All'interno di una rete neurale, solitamente, si utilizzano delle varianti di uno di questi metodi, in grado di tenere in considerazione più variabili.
+Dal punto di vista delle tecniche di impiego del gradiente, molteplici varianti sono possibili:
+
+
 
 
 
