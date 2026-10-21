@@ -50,7 +50,7 @@ def stima_trapezoidale(velocita, timestamps, ROOT_DIR, pos_iniziale=0):
 batch_size = 32                                                                         # Numero di secondi di missione forniti contemporaneamente alla rete
 batch_size_test = 1                                                                     # Per il test si usa una batch size di 1s --> si ottiene la stima della posizione per ogni secondo di navigazione (coincidenza perfetta con batch GPS)
 num_epoch = 60                                                                          # Numero di epoche di iterazione per l'addestramento
-network_config = {'IMU': 9, 'DVL':3, 'GPS': 2}                                # Dizionario di configurazione della rete neurale --> utile per impostare ordine, numero e nome dei rami associati a LSTM e SAM
+network_config = {'IMU': 9, 'DVL': 3, 'GPS': 2}                                # Dizionario di configurazione della rete neurale --> utile per impostare ordine, numero e nome dei rami associati a LSTM e SAM
 hidden_size = 100                                                                       # Numero di neuroni appartenenti al layer nascosto del LSTM
 
 # Si definisce il dizionario di configurazione per stabilire quali dati non devono essere utilizzati e con quale target (NED/body) --> di IMU si usano sempre tutti quindi si sfrutta questo dizionario per selezionare la modalità (deg o sin/cos)
