@@ -134,7 +134,7 @@ class Dataset(torch.utils.data.Dataset):
                             # Si aggregano le batch associate ai sensori che misurano le azioni ideali di motori e velocità --> se usate appartengono allo stesso ramo --> si aggiunge un check relativo alla configurazione della rete (se REF non è presente si salta e non si inserisce)
                             if sensor_name == 'MOT' or sensor_name == 'V_ref':
 
-                                if network_config['IMU'] == 3:
+                                if network_config['IMU'] == 3 or network_config['IMU'] == 4:
                                     sensor_name = 'REF'
                                     if sensor_name not in network_config:
                                         continue

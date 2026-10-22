@@ -87,7 +87,7 @@ print('===================================================')
 pre_processing = PreProcessing()
 post_processing = PostProcessing()
 
-#post_processing.eval_metrics_analysis(ROOT_DIR)
+post_processing.eval_metrics_analysis(ROOT_DIR)
 
 print(f"\nSelezione parametri di pre-processing:")
 
