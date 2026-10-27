@@ -269,27 +269,36 @@ Naturalmente, per un problema di regressione come quello considerato all'interno
 
 \subsubsection{Iperparametri\cite{Hyperparameters}}
 
-Al fine di garantire la massima efficienza ed efficacia del processo di apprendimento di una rete neurale, selezionare la funzione di perdita opportuna non è sufficiente. Esistono, infatti, diverse variabili che, se impostate correttamente, permettono di minimizzare la funzione stessa, portando ad addestramenti notevolmente più rapidi e a capacità predittive superiori. 
+Al fine di garantire la massima efficienza ed efficacia del processo di apprendimento di una rete neurale, selezionare la funzione di perdita opportuna spesso non è sufficiente. Esistono, infatti, diversi elementi, definiti iperparametri, in grado di influenzare le prestazioni di un modello, in termini di costo computazionale, di qualità predittiva e di capacità di generalizzazione a dati non osservati durante l'addestramento. Tutti questi aspetti, naturalmente, sono fondamentali per ottenere un modello applicabile ad uno scenario operativo reale. Tuttavia, non risulta sempre possibile ottimizzarli contemporaneamente, rendendo necessaria un'analisi di trade-off. Tale analisi si basa, in particolare, sull'ottimizzazione dei principali iperparametri, presentati nel seguito:
 
-In particolare, le prestazioni della rete sono rappresentabili da due valori: il bias e la varianza. Il bias identifica la divergenza tra le previsioni di un modello e la realtà, diventando un indice dell'accuratezza della rete stessa. Appare, dunque, evidente la necessità di mantenere un basso valore del parametro. La varianza, invece, rappresenta la sensibilità di un modello a set di dati non incontrati durante l'addestramento. Per garantire che la rete abbia efficacemente generalizzato i dati occorre, pertanto, garantire un valore piccolo dell'indice.
-
-Tipicamente, per ottenere elevati valori di accuratezza e coerenza, si può agire su diversi elementi di alto livello della rete, definiti iperparametri: 
+% SI potrebbe togliere o va ripensato per correggere eventuali errori
+%In generale, le prestazioni di una rete neurale sono rappresentabili mediante due parametri: il \emph{bias} e la \emph{varianza}. Il bias identifica la divergenza tra le previsioni di un modello e la realtà, diventando un indice dell'accuratezza della rete stessa. Appare, dunque, evidente la necessità di mantenere un basso valore del parametro. La varianza, invece, rappresenta la sensibilità di un modello a set di dati non incontrati durante l'addestramento. Per garantire che la rete abbia efficacemente generalizzato i dati occorre, pertanto, ottenere un valore piccolo dell'indice. Tipicamente, per ottenere elevati valori di accuratezza e coerenza, si può agire su diversi elementi di alto livello della rete, definiti iperparametri:
 
     \begin{itemize}
 
-        \item \textbf{Learning Rate}: parametro che determina le dimensioni di ogni passo fatto dalla rete nella direzione di minimizzazione della loss function. Un valore relativamente elevato di questa variabile permette di aumentare la velocità della fase di addestramento, pur esponendo la rete ad una maggiore instabilità dell'algoritmo di discesa del gradiente utilizzato e al rischio di overshooting del minimo globale o locale ricercato. Tipicamente, pertanto, si predilige l'uso di ratei più piccoli. 
+        \item \textbf{Learning Rate}: il primo parametro introdotto consente di determinare le dimensioni di un singolo passo eseguito dalla rete nella direzione di minimizzazione della loss function. Un valore relativamente elevato di questa variabile permette di aumentare la velocità delle prime fasi di addestramento, pur esponendo la rete ad una maggiore instabilità dell'algoritmo di discesa del gradiente utilizzato e al rischio di overshooting del minimo globale o locale ricercato. Tipicamente, pertanto, si predilige l'uso di ratei relativamente piccoli. 
         
-        \item \textbf{Decay rate}: questa variabile, strettamente connessa al learning rate, permette di gestire ratei variabili. Solitamente, infatti, in una rete complessa addestrata su un grande set di dati, si predilige l'uso di passi di apprendimento relativamente elevati nelle prime iterazioni, andando a ridurne gradualmente il valore. In questo modo, si è in grado di ottenere un compromesso tra stabilità e velocità dell'algoritmo di discesa. Naturalmente, ciò aggiunge complessità al modello, con un parametro aggiuntivo da valutare opportunamente. 
+        \item \textbf{Decay rate}: questo termine, strettamente connesso al learning rate, permette di gestire ratei variabili. Solitamente, infatti, in una rete complessa addestrata su un grande set di dati, si predilige l'uso di passi di apprendimento relativamente elevati nelle prime iterazioni, andando a ridurne gradualmente il valore. Con una tecnica simile si è in grado di ottenere un buon compromesso tra stabilità e velocità dell'algoritmo di discesa, nonostante l'introduzione di un parametro aggiuntivo aumenti inevitabilmente la complessità del processo di ottimizzazione degli iperparametri.
         
-        \item \textbf{Batch size}: un elemento fondamentale negli algoritmi di discesa del gradiente, è il batch, che rappresenta il numero di campioni di dati elaborati dalla rete prima di aggiornare i pesi. Tipicamente valori più elevati, nonostante consentano di velocizzare l'addestramento, portano a prestazioni complessive inferiori. Tuttavia, la selezione opportuna del tasso di apprendimento e del relativo decadimento può mitigare questa problematica. 
+        \item \textbf{Batch size}: un elemento fondamentale negli algoritmi di discesa del gradiente è il batch, la cui dimensione rappresenta il numero di campioni di dati elaborati dalla rete prima di aggiornare i pesi. Tipicamente valori più elevati, sebbene consentano di velocizzare l'addestramento della rete, portano a prestazioni complessive inferiori. Tuttavia, la selezione opportuna del tasso di apprendimento e del relativo decadimento può mitigare questa problematica. 
         
-        \item \textbf{Numero di epoche}: questo parametro rappresenta il numero di volte in cui la rete viene esposta all'intero Dataset durante il processo di addestramento. Un numero di iterazioni più elevato può portare ad un miglioramento delle prestazioni della rete, esponendola, tuttavia, ad un maggiore rischio di overfitting, oltre ad un costo computazionale superiore. 
+        \item \textbf{Numero di epoche}: questo parametro rappresenta il numero di volte in cui la rete viene esposta all'intero Dataset durante il processo di addestramento. Un numero di esposizioni più elevato può portare ad un miglioramento delle prestazioni della rete, esponendola, tuttavia, ad un maggiore rischio di overfitting, oltre ad un costo computazionale superiore. 
         
-        \item \textbf{Numero di nodi e di hidden layers}: questi parametri, già presentati nell'introduzione alle reti neurali, possono portare a variazioni notevoli di performance del modello. Tendezialmente, un maggior numero di questi elementi incrementa la capacità della rete di estrarre e rappresentare relazioni complesse tra i dati, seppur ciò porti ad un significativo aumento del costo computazionale. 
+        \item \textbf{Numero di nodi e di hidden layers}: questi parametri, già presentati nell'introduzione alle reti neurali, possono portare a variazioni notevoli di prestazioni del modello. Tendezialmente, un maggior numero di tali elementi incrementa la capacità della rete di estrarre e rappresentare relazioni complesse tra i dati, al costo, tuttavia, di un significativo aumento del costo computazionale. 
         
     \end{itemize}
 
-Non tutti i parametri possono essere definiti sperimentalmente, data la moltitudine di possibili combinazioni da valutare. A questo scopo, dunque, si sono introdotti degli algoritmi in grado di % Riassunto di algoritmi di ricerca delle migliroi condizioni
+Data la moltitudine di iperparametri e, conseguentemente, di possibili combinazioni esistenti, individuare la configurazione ottimale mediante una ricerca manuale risulta essere impraticabile. Per ovviare a tale problematica, sono stati ideati vari algoritmi di tuning, caratterizzati da differenti gradi di complessità e di automazione. In particolare, essi estraggono una serie di possibili combinazioni dei parametri e, per ognuna di queste, addestrano il modello di rete neurale associato. Confrontando i risultati ottenuti, solitamente espressi in termini di validation loss, è, quindi, possibile selezionare la configurazione ottimale. Nel seguito si presentano tre algoritmi fondamentali in questo ambito:
+
+    \begin{itemize}
+
+        \item \textbf{Ricerca a griglia}: nel primo metodo proposto, la matrice delle potenziali combinazioni viene costruita sulla base di una serie di valori discreti, identificati manualmente per ogni iperparametro. Nonostante l'estrema semplicità ed efficacia di un approccio simile, l'elevato numero di iterazioni necessarie per la valutazione di ogni possibile configurazione lo rende poco efficiente e molto costoso dal punto di vista computazionale. 
+        
+        \item \textbf{Ricerca randomizzata}: per quanto appena discusso, in caso si vogliano esplorare distribuzioni più ampie degli iperparametri, la ricerca a griglia si rivela essere inadatta. Un possibile approccio alternativo, di gran lunga più efficiente, si basa sull'estrazione casuale dei parametri a partire da un range di valori ammissibili. Ripetendo, quindi, tale processo per un numero di iterazioni prestabilito viene generata la matrice di combinazioni ricercata. Le successive operazioni di addestramento e confronto dei modelli risultanti vengono, pertanto, svolte su un numero inferiore di configurazioni rispetto alla controparte a griglia. In questo modo si ottiene una notevole riduzione del costo computazionale associato al processo di ottimizzazione. Tuttavia, dato il minor numero di iterazioni, la migliore configurazione individuata non coincide necessariamente con l'ottimo globale dello spazio di ricerca, che potrebbe non essere stato preso in analisi. 
+        
+        \item \textbf{Ottimizzazione Bayesiana}: l'ultimo algoritmo discusso in questo testo, pone le sue basi proprio sulla ricerca randomizzata, precedentemente introdotta, e si prepone di superare le limitazioni che caratterizzano tale approccio. In particolare, la principale problematica discussa risulta essere causata dalla completa indipendenza che caratterizza le varie iterazioni. Una possibile soluzione individuata si basa sull'integrazione di un approccio di tipo probabilistico al metodo classico, dando così vita all'ottimizzazione bayesiana. Sulla base dei risultati ottenuti dall'addestramento dei modelli associati ad alcune combinazioni di iperparametri, individuate con l'approccio causale, l'algoritmo definisce un cosiddetto \emph{modello surrogato}. Esso, tipicamente rappresentato da un processo gaussiano o da una random forest, consente di stimare le prestazioni di varie combinazioni non ancora prese in esame, seppur con un determinato grado di incertezza. Mediante l'uso della \emph{funzione di acquisizione} si identifica, poi, la nuova configurazione da analizzare. In particolare, ciò avviene attraverso un bilanciamento tra la ricerca delle combinazioni caratterizzate dalle migliori prestazioni e di quelle associate ad un elevato valore di incertezza. In base a queste indicazioni viene, quindi, eseguito il modello vero e proprio e i risultati sono aggiunti ai precedenti, aggiornando così il modello surrogato e fornendo una nuova predizione. Il processo è, poi, ripetuto fino al raggiungimento del numero di iterazioni prefissate. Essendo il modello surrogato molto più leggero computazionalmente del modello effettivo, un approccio simile permette di ottenere un'elevata efficienza. La ricerca della combinazione ottimale sulla base dei risultati già ottenuti, invece, consente di ottenere una configurazione più vicina all'ottimo globale. 
+
+    \end{itemize}
 
 
 \subsubsection{Optimizer}
@@ -298,29 +307,69 @@ Si sono, fino ad ora, presentati gli elementi alla base della backward propagati
 
     \begin{itemize}
 
-        \item \textbf{Metodi del primo ordine}: questi algoritmi si basano sul calcolo del gradiente della loss function rispetto ad ogni peso della rete. In funzione di questo valore, e degli iperparametri impostati, si determinano la direzione e l'entità del passo di aggiornamento dei parametri. Proprio per queste caratteristiche sono anche definiti \emph{metodi del gradiente}. 
+        \item \textbf{Metodi del primo ordine}: questi algoritmi si basano sul calcolo del gradiente della loss function rispetto ad ogni peso della rete, venendo per questo anche definiti \emph{metodi del gradiente}. In funzione di questo valore, e degli iperparametri impostati, si determinano la direzione e l'entità del passo di aggiornamento dei parametri. A livello matematico, tutti gli algoritmi appartenenti a questa categoria risultano essere varianti, più o meno complesse, della formulazione classica, che regola l'aggiornamento dei parametri contenuti nel vettore $\theta_{t}$, solitamente pesi e bias:
         
+            \begin{equation}
+                \theta_{\text{t+1}} = \theta_{t} - \eta \nabla_{\theta} L(\theta_{t})
+                \label{eq:GD}
+            \end{equation}
+
+        Naturalmente, questa relazione rappresenta il processo solamente a livello concettuale. In una rete neurale reale, la derivata della loss function è calcolata rispetto ad ogni parametro individualmente e, per ognuno di questi, è applicata la regola di aggiornamento. Inoltre, dall'analisi della relazione \ref{eq:GD} emerge chiaramente l'importanza del learning rate $\eta$ per il processo di apprendimento.
+
         \item \textbf{Metodi del secondo ordine}: il principio di funzionamento di questa seconda classe di algoritmi è molto simile a quello della precedente, sebbene in questo caso si utilizzi anche la matrice Hessiana del sistema. Ciò consente di aggiornare i pesi con maggiore accuratezza ma, allo stesso tempo, porta ad un notevole aumento del costo computazionale, data la natura matriciale di questo approccio. Per modelli di deep learning, caratterizzati da un gran numero di neuroni e, quindi, di pesi e bias, un'operazione di questo tipo risulta impraticabile e, pertanto, solitamente si predilige l'uso di metodi del gradiente. 
         
         \item \textbf{Metodi senza derivate}: nei casi in cui il gradiente non sia determinabile, i metodi precedenti non possono essere impiegati. Si sono, dunque, sviluppati degli approcci differenti che permettono di aggiornare i pesi senza utilizzare questo concetto. Alcuni esempi di metodi simili sono i Nelder-Mead, i particle swarm e gli algoritmi genetici. Nelle reti di deep learning tradizionali, tuttavia, sono poco utilizzati e, pertanto, non si approfondisce ulteriormente questa classe. 
         
     \end{itemize}
 
-Ai fini di questo lavoro di tesi, tenendo conto di quanto appena discusso, risulta opportuno esaminare più dettaglitamente i metodi del gradiente. Naturalmente, data la moltitudine di problemi affrontabili con tecniche di machine learning, nel corso degli anni sono state proposte molte varianti del metodo base. Le principali differenze si concentrano su due aspetti: il numero di campioni usati per stimare il gradiente e il metodo di utilizzo del gradiente per l'aggiornamento dei pesi. 
-
-Per quanto riguarda il primo tema, esistono fondamentalmente 3 macrocategorie, presentate nel seguito:
+Ai fini di questo lavoro di tesi, tenendo conto di quanto appena discusso, ci si concentra sui metodi del gradiente e, pertanto, risulta opportuno esaminarli più dettaglitamente. Naturalmente, data la moltitudine di problemi affrontabili con tecniche di machine learning, nel corso degli anni sono state proposte molte varianti del metodo classico. Le principali differenze si concentrano sul numero di campioni analizzati per stimare il gradiente e sulla legge che governa l'impiego del gradiente stesso per l'aggiornamento dei pesi. Per quanto riguarda il primo aspetto, si possono distinguere fondamentalmente 3 metodologie di suddivisione del Dataset:
 
     \begin{itemize}
 
-        \item \textbf{Batch gradient descent}: la prima tecnica presentata si basa sul calcolo di un errore unico mediato sull'intero Dataset, aggiornando, dunque, i pesi solo dopo aver valutato tutti i dati. Data la sua natura, il metodo risulta solitamente stabile e molto efficace computazionalmente, nonostante necessiti di immagazzinare una grande quantità di dati ad ogni epoca. Tuttavia, spesso porta all'individuazione di un punto di minimo locale, associato a prestazioni inferiori rispetto a quello globale. 
+        \item \textbf{Batch gradient descent}: la prima tecnica presentata si basa sul calcolo di un errore unico mediato sull'intero Dataset, aggiornando, dunque, i pesi solo dopo aver valutato tutti i dati.  Data la sua natura, il metodo risulta solitamente stabile e molto efficace computazionalmente, nonostante necessiti di immagazzinare una grande quantità di dati ad ogni epoca. Tuttavia, spesso porta all'individuazione di un punto di minimo locale, associato a prestazioni inferiori rispetto al corrispettivo globale. 
         
-        \item \textbf{Stochastic gradient descent}: in questo secondo metodo l'aggiornamento dei parametri avviene ad ogni campione del Dataset preso in considerazione. Questo, ovviamente, porta a una maggiore velocità del processo e minor spazio occupato in memoria, nonostante aumenti l'instabilità e il rischio di rumore nel gradiente. Proprio questa caratteristica, però, può aiutare a superare il punto di minimo locale, giungendo infine a quello globale.
+        \item \textbf{Stochastic gradient descent}: in questo secondo metodo l'aggiornamento dei parametri avviene ad ogni campione del Dataset preso in considerazione. Questo, ovviamente, porta a una maggiore velocità del processo e ad un minor spazio occupato in memoria, nonostante aumenti l'instabilità e il rischio di rumore nel gradiente. Proprio questa caratteristica, però, può aiutare a superare il punto di minimo locale una volta raggiunto, giungendo infine a quello globale.
         
-        \item \textbf{Mini-batch gradient descent}: l'ultima tecnica risulta essere una combinazione dei metodi precedentemente presentati. Il Dataset, infatti, viene scomposto in batch di dimensioni inferiori, valutate separatamente all'interno della stessa epoca di addestramento. In questo modo si individua un compromesso tra l'efficienza computazionale e la stabilità del batch gradient method e la velocità dell'SGD.
+        \item \textbf{Mini-batch gradient descent}: l'ultima tecnica risulta essere una combinazione dei metodi precedentemente presentati. Il Dataset, infatti, viene scomposto in batch di dimensioni inferiori, valutate separatamente all'interno della stessa epoca di addestramento. In questo modo si individua un compromesso tra l'efficienza computazionale e la stabilità, caratteristiche del batch gradient method, e la velocità, associata alla controparte stocastica.
         
     \end{itemize}
 
-Dal punto di vista delle tecniche di impiego del gradiente, molteplici varianti sono possibili:
+Ulte possibili varianti del metodo del gradiente sono, invece, individuabili per quanto concerne le tecniche di aggiornamento dei pesi: 
+
+    \begin{itemize}
+
+        \item \textbf{Adaptive Gradient Algorithm (AdaGrad)}\cite{AdaGrad_medium}: una delle prime variazioni apportate al metodo classico, presentata da Duchi et al.\cite{AdaGrad} nel 2011, coinvolge direttamente il learning rate. Per ottenere un miglior bilanciamento tra stabilità e velocità di addestramento è stato proposto di adattare dinamicamente questo iperparametro durante il processo, rendendone, inoltre, indipendente il valore associato ad ogni peso $w_i$. A livello matematico, questo concetto è implementato grazie all'utilizzo di un termine $G_{\text{t,i}}$, che consente di tenere conto dei gradienti antecedenti associati al peso di interesse, e di un coefficiente $\epsilon$, che elimina la possibile singolarità caratteristica del caso $G_{\text{t,i}} \approx 0$:
+        
+            \begin{equation}
+                \begin{cases}
+                    w_{\text{t+1,i}} = \displaystyle w_{\text{t,i}} - \text{   } \frac{\eta}{\sqrt{G_{\text{t,i}}} + \epsilon} \frac{\partial L}{\partial w_{t,i}} \\[0.45cm]
+                    G_{\text{t,i}} = \displaystyle \sum_{\tau=0}^{t} \left(\frac{\partial L}{\partial w_{\tau,i}}\right)^{2}
+                \end{cases}
+                \label{eq:AdaGrad}
+            \end{equation}
+
+        In presenza di più gradienti passati piccoli o nulli, il denominatore risulta essere altrettanto piccolo e, conseguentemente, il learning rate effettivo cresce, riducendo il numero di passi di aggiornamento non efficaci. Tale comportamento rende questo algoritmo una scelta ottimale quando si trattano dataset sparsi, caratterizzati da una o più feature a prevalenza di elementi nulli. La loro presenza, infatti, porta ad un azzeramento dei pesi dell'input layer e, di conseguenza, del relativo gradiente. Inoltre, utilizzando dei learning rate adattivi, non è necessario effettuare un'ottimizzazione accurata per ogni parametro. Tuttavia, l'accumulo dei gradienti può portare, dopo un numero sufficiente di epoche di addestramento, ad una riduzione eccessiva del learning rate, impedendo alla rete di aggiornare i pesi adeguatamente. L'algoritmo perde, inoltre, di efficacia in presenza di più gradienti elevati seguiti da diversi elementi nulli. Come è facilmente intuibile, in un caso analogo il learning rate effettivo dipenderebbe unicamente dalle componenti di maggiore entità, mantenendo un valore inutilmente basso. Tale limite, naturalmente, rende l'utilizzo di questo optimizer non indicato all'interno di algoritmi di deep learning, in cui l'addestramento può richiedere molte iterazioni.
+
+        \item \textbf{Root Mean Square Propagation (RMSProp)}\cite{RMSProp_medium}: nel tentativo di superare il problema della riduzione progressiva del learning rate introdotto con il precedente algoritmo, Hinton\cite{RMSProp} propone una modifica significativa alla formulazione alla base dell'AdaGrad, vista in \ref{eq:AdaGrad}. In paritcolare, si introduce nella relazione un coeffciente $\beta$, che determina sia l'importanza del gradiente attuale rispetto ai suoi stati passati, sia la memoria dell'algoritmo:
+
+            \begin{equation}
+                \begin{cases}
+                    w_{\text{t+1,i}} = \displaystyle w_{\text{t,i}} - \ \frac{\eta}{\sqrt{v_{\text{t,i}}} + \epsilon} \cdot \frac{\partial L}{\partial w_{t,i}} \\[0.4cm]
+                    v_{\text{t,i}} = \beta \cdot v_{\text{t-1,i}}  + (1 - \beta) \left(\frac{\partial L}{\partial w_{t,i}}\right)^{2} \\[0.35cm]
+                    \beta \in [0.9, 0.95]
+                \end{cases}
+                \label{eq:RMSProp}
+            \end{equation}
+
+        Il risultato è una media mobile del quadrato dei gradienti, caratterizzata da un decadimento esponenziale dell'informazione. Per valori di $\beta$ vicini all'unità, infatti, solamente pochi gradienti influenzano il learning rate effettivo, riducendo significativamente il rischio di una continua decrescita del tasso di apprendimento. Inoltre, utilizzando un approccio simile si ottiene una variazione più graduale del rateo di discesa, incrementando la stabilità del processo. Infine, con una dipendenza dalla sola storia recente della rete, un caso analogo a quello considerato per la precedente funzione, con una successione di gradienti elevati seguiti da diversi elementi nulli, non rappresenterebbe più una fonte di criticità. Dopo poche iterazioni, infatti, i valori superiori scomparirebbero dalla legge di aggiornamento, aumentando efficacemente il rateo.  
+
+        \item \textbf{Adams}
+        
+        \item \textbf{AdamW}
+        
+        \item \textbf{Muon}
+        
+    \end{itemize}
 
 
 
