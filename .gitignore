@@ -22,7 +22,6 @@ Storico_test/
 *.run.xml
 *.synctex.gz
 *.toc
-*.pdf
 *.bbl-SAVE-ERROR
 
 # Ambiente virtuale
@@ -33,3 +32,4 @@ venv/
 NavNet_weights.pkl
 main_NN_claude.py
 Neural_network_claude.py
+thesis.pdf
