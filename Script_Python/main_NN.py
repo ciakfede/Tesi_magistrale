@@ -1,6 +1,7 @@
 """     IMPLEMENTAZIONE RETE NEURALE NAVNET
               FEDERICO CECCHINI
             ANNO ACCADEMICO 2025/26             """
+from Script_Python.Neural_network import MixedLpNavLoss
 
 '''All'interno del main si gestiscono le scelte legate al pre-processing e l'esecuzione della rete neurale --> il tutto 
    è gestito tramite scelta dell'utente --> in ordine si chiede se si vogliono eseguire le seguenti operazioni:
@@ -22,6 +23,7 @@
 
 import os                                   # Libreria per l'utilizzo di Python integrato nel sistema
 import torch                                # Libreria per il Deep Learning
+import torch.nn as nn                       # Libreria utilizzata per le proprietà nelle reti neurali
 from Analisi_dati import PreProcessing      # Importo il modulo per eseguire il pre-processing dei dati da utilizzare per la rete
 from Neural_network import Dataset          # Importo il modulo per definire le batch dei blocchi di sensore per ogni secondo di missione
 from Neural_network import NavNet           # Importo qui la rete neurale
@@ -37,16 +39,24 @@ import json                                 # libreria per la gestione del forma
 # ======================================================
 
 # Variabili legate alla configurazione della rete neurale
-batch_size = 32                                                                         # Numero di secondi di missione forniti contemporaneamente alla rete
-batch_size_test = 1                                                                     # Per il test si usa una batch size di 1s --> si ottiene la stima della posizione per ogni secondo di navigazione (coincidenza perfetta con batch GPS)
-num_epoch = 60                                                                          # Numero di epoche di iterazione per l'addestramento
-network_config = {'IMU': 9, 'DVL': 3, 'GPS': 2}                                # Dizionario di configurazione della rete neurale --> utile per impostare ordine, numero e nome dei rami associati a LSTM e SAM
-hidden_size = 100                                                                       # Numero di neuroni appartenenti al layer nascosto del LSTM
+window_size = 16                                            # Numero di secondi di missione consecutivi accorpati in una singola finestra
+batch_size = 4                                              # Numero di finestre forniti contemporaneamente alla rete --> la dimensione della mini-batch è pari a window_size * batch_size
+batch_size_test = 1                                         # Per il test si usa una batch size di 1s --> si ottiene la stima della posizione per ogni secondo di navigazione (coincidenza perfetta con batch GPS)
+num_epoch = 80                                              # Numero di epoche di iterazione per l'addestramento
+network_config = {'IMU': 9, 'DVL': 3, 'GPS': 2}             # Dizionario di configurazione della rete neurale --> utile per impostare ordine, numero e nome dei rami associati a LSTM e SAM
+hidden_size = 100                                           # Numero di neuroni appartenenti al layer nascosto del LSTM
+FC_layers = 2                                               # Numero di FC Layers della rete
+#loss_function = nn.MSELoss                                  # Loss function prescelta per la rete --> per LogCosh e MixedLpNorm non serve usare il modulo nn --> in tutti i casi non servono le parentesi tonde
+loss_function = MixedLpNavLoss
 
 # Si definisce il dizionario di configurazione per stabilire quali dati non devono essere utilizzati e con quale target (NED/body) --> di IMU si usano sempre tutti quindi si sfrutta questo dizionario per selezionare la modalità (deg o sin/cos)
 data_config = {'target': 'body', 'DVL': ['DVL_Altitude [m]'], 'IMU_format': 'deg', 'MOT': ['Mot_RV [%]', 'Mot_RL [%]'], 'V_ref': ['Ref_Vy [%]', 'Ref_Vz [%]', 'Ref_ωx [%]', 'Ref_ωy [%]']}
 
-sensors_frequencies = {'IMU': 5, 'DVL': 10, 'Depth': 5, 'DepthVel': 5, 'MOT': 5, 'V_ref': 5, 'GPS': 1}             # Frequenze associate ai sensori
+# Si definiscono i pesi associati ai vari termini del metodo Lp norm --> iperparametri da tarare sulla validazione (w_dir = 0 disattiva il termine di direzione)
+loss_weights = {'w_cum': 0.1, 'a_s': 0.05, 'a_t': 0.05, 'p': 1.0, 'q': 1.0, 'w_dir': 0.0}
+
+# Si definiscono le frequenze associate ai sensori
+sensors_frequencies = {'IMU': 5, 'DVL': 10, 'Depth': 5, 'DepthVel': 5, 'MOT': 5, 'V_ref': 5, 'GPS': 1}
 
 # Definizione delle cartelle di riferimento per il progetto
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))                                 # Cartella in cui sono contenuti gli script Python
@@ -403,11 +413,18 @@ print(f"  {pre_processing.empty_missions_list}")
 # ======================================================
 
 # Inizializzazione del modello di rete neurale
-rete_neurale = NavNet(network_config, hidden_size)                  # Si inizializza la rete principale
-rete_neurale.initialize_weights()                                   # Si inizializzano i pesi tramite funzione definita
+rete_neurale = NavNet(network_config, hidden_size, FC_layers)        # Si inizializza la rete principale
+rete_neurale.initialize_weights()                                    # Si inizializzano i pesi tramite funzione definita
 
 # Scheduler --> dimezza il learning rate se la Val_Loss non scende per 5 epoche
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(rete_neurale.optimizer, mode='min', factor=0.5, patience=3)
+
+# Si recuperano le statistiche del GPS salvate nel pre-processing --> trasformandole in tensori per compatibilità con output rete neurale (servono alla loss per riportare in metri e al test)
+GPS_mean = torch.tensor(pre_processing.normalization_parameters_dict['GPS']['media'])
+GPS_std = torch.tensor(pre_processing.normalization_parameters_dict['GPS']['deviazione standard'])
+
+# Si inizializza la loss function selezionata per la rete
+rete_neurale.set_loss_function(loss_function, GPS_mean, GPS_std, **loss_weights)
 
 
 # ======================================================
@@ -455,7 +472,7 @@ while True:
 
             for batch in training_loader:
 
-                # Si suddividono le batch per ramo della rete neurale
+                # Si suddividono le batch per ramo della rete neurale --> con dimensioni [batch, 10, 3] per DVL, [batch, 5, 3/4/9/10] per IMU, [32, 1, 2] --> occorre togliere la dimensione 1 al GPS
                 for key in network_config:
 
                     if key == 'GPS':
@@ -463,9 +480,10 @@ while True:
                     else:
                         data[key] = batch[key]
 
-                #DVL_data = batch[0]                 # Batch di dimensioni [32, 10, 3]
-                #IMU_data = batch[1]                 # Batch di dimensioni [32, 5, 10] --> contiene i 3 valori IMU, i 4 sensori MOT (FV, FL, FW1, FW2) e i 2 di velocità reference (Vxref, omega_yref)
-                #dati_gps = batch[2].squeeze(1)      # Batch di dimensioni [32, 1, 2] --> si vuole avere dimensione [32, 2] per congruenza con output rete neurale --> si elimina una dimensione dalla batch
+                # Si estraggono anche i batch associati allo yaw e allo spostamento calcolato con DVL se si usa la Lp norm come loss function
+                if isinstance(loss_function, MixedLpNavLoss):
+                    data['YAW'] = batch['YAW']                          # Yaw di ogni secondo della finestra [B, K] --> per la rotazione body -> NED nella loss
+                    data['DVL_DISP'] = batch['DVL_DISP']                # Spostamento DVL di ogni secondo della finestra [B, K, 2] --> per il termine di smallness
 
                 # Si richiama la funzione di aggiornamento pesi
                 training_batch_loss = rete_neurale.backpropagation(data)
@@ -485,6 +503,7 @@ while True:
 
             rete_neurale.eval()
             with torch.no_grad():
+
                 epoch_batches_number = 0
                 for batch in validation_loader:
 
@@ -495,10 +514,19 @@ while True:
                         else:
                             data[key] = batch[key]
 
+                    # Si estraggono anche i batch associati allo yaw e allo spostamento calcolato con DVL se si usa la Lp norm come loss function
+                    if isinstance(loss_function, MixedLpNavLoss):
+                        data['YAW'] = batch['YAW']                  # Yaw di ogni secondo della finestra [B, K] --> per la rotazione body -> NED nella loss
+                        data['DVL_DISP'] = batch['DVL_DISP']        # Spostamento DVL di ogni secondo della finestra [B, K, 2] --> per il termine di smallness
+
+                    # Esecuzione della rete neurale
                     NN_displacement_estimation = rete_neurale.forward(data)
 
-                    # Calcolo della loss function
-                    validation_batch_loss = rete_neurale.loss_criterion(NN_displacement_estimation, data['GPS'])
+                    # Calcolo della loss function e aggiornamento dei termini cumulativi per il calcolo della loss media
+                    if isinstance(loss_function, MixedLpNavLoss):
+                        validation_batch_loss = rete_neurale.loss_criterion(NN_displacement_estimation, data['GPS'], data['YAW'], data['DVL_DISP'])
+                    else:
+                        validation_batch_loss = rete_neurale.loss_criterion(NN_displacement_estimation, data['GPS'])
                     validation_epoch_loss += validation_batch_loss
                     epoch_batches_number += 1
 
@@ -524,7 +552,6 @@ while True:
         break
 
     elif do_training == 'N':
-
         print(f"  Prosecuzione nell'esecuzione delle rete neurale con i pesi salvati in un precedente addestramento all'interno di {weights_save_path}.")
         break
 
@@ -559,10 +586,6 @@ test_dataset = Dataset(tensor_dict, sensors_frequencies, test_missions_dict, net
 # -----------------------------------------------------
 #              INIZIALIZZAZIONE VARIABILI
 # -----------------------------------------------------
-
-# Si recuperano le statistiche del GPS salvate nel pre-processing --> trasformandole in tensori per compatibilità con output rete neurale
-GPS_mean = torch.tensor(pre_processing.normalization_parameters_dict['GPS']['media'])
-GPS_std = torch.tensor(pre_processing.normalization_parameters_dict['GPS']['deviazione standard'])
 
 # Si itera sulle missioni presenti nella lista definita appositamente
 NN_displacements_dict = {}              # Dizionario che contiene gli elementi di posizione stimati dalla rete per la singola missione [m] --> nella forma {('0', '4'): {'Traiettoria1': [], 'Traiettoria2': [], 'Traiettoria3': [], 'Traiettoria4': []}, ('0', '8'): {}.....}

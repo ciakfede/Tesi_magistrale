@@ -41,10 +41,16 @@ torch.manual_seed(0)            # Si imposta il valore dei seed di partenza per 
 # Si definisce una nuova classe che prende in input i tensori suddivisi per blocco e missione (generati da PreProcessing) e li trasforma in singole batch di dati (1 secondo) da fornire alla rete
 class Dataset(torch.utils.data.Dataset):
 
-    # Si inizializza la struttura comune degli elementi appartenenti alla classe --> in input riceve 3 liste di tensori
-    def __init__(self, tensor_dict, sensor_frequencies, test_missions, network_config, mode):
+    # Si inizializza la struttura comune degli elementi appartenenti alla classe --> in input riceve 3 liste di tensori e i parametri di normalizzazione (utilizzati solamente per Lp norm)
+    def __init__(self, tensor_dict, sensor_frequencies, test_missions, network_config, mode, yaw_dict=None, norm_parameters=None, window_size=1, window_stride=1):
 
         self.mode = mode
+        self.sensor_frequencies = sensor_frequencies
+
+        self.yaw_dict = yaw_dict                    # Dizionario degli yaw [rad] per missione --> serve alla loss per ruotare gli spostamenti da body a NED (solo training e validazione)
+        self.norm_parameters = norm_parameters      # Dizionario dei parametri di normalizzazione --> serve per riportare in metri le velocità DVL
+        self.window_size = window_size              # Numero di secondi consecutivi aggregati in una finestra (K) --> solo training e validazione
+        self.window_stride = window_stride          # Passo [s] tra l'inizio di due finestre successive della stessa missione
 
         self.validation_missions_dict = {('0', '2'), ('1', '8H'), ('2', '11G'), ('3', '16C'), ('4', '12H'), ('5', '5A')}
 
@@ -98,6 +104,8 @@ class Dataset(torch.utils.data.Dataset):
                 elif (trajectory, combination) not in self.validation_missions_dict and self.mode == 'validazione':
                     continue
 
+                # Si itera per ogni secondo della missione
+                mission_seconds_list = []
                 for second in range(mission_time):
 
                     # Si inizializza un dizionario vuoto che conterrà n tensori --> un tensore per ogni blocco sensori contenente le relative misurazioni di 1 secondo
@@ -158,19 +166,74 @@ class Dataset(torch.utils.data.Dataset):
                             batch_is_valid = False
                             continue
 
+                    # Per training e validazione si aggiungono lo yaw del secondo e lo spostamento DVL (in metri, assi body) --> servono ai termini phi_d2 e phi_s della loss
+                    if batch_is_valid and self.mode != 'test' and self.yaw_dict is not None:
+
+                        # Si estraggono le colonne associate ai parametri di normalizzazione e ai valori DVL normalizzati delle componenti lungo x e y
+                        dvl_mean = torch.tensor(self.norm_parameters['DVL']['media'][:2])
+                        dvl_std = torch.tensor(self.norm_parameters['DVL']['deviazione standard'][:2])
+                        dvl_velocities = single_second_batches_list['DVL'][:, :2] * dvl_std + dvl_mean
+
+                        # Si aggiungono al batch del singolo secondo la componente di spostamento calcolato tramite integrazione delle velocità e l'angolo di yaw corrispondente alla misura GPS target (si usa un offset di 1 s)
+                        single_second_batches_list['DVL_DISP'] = dvl_velocities.sum(dim=0) / sensors_frequencies['DVL']
+                        single_second_batches_list['YAW'] = torch.tensor(self.yaw_dict[trajectory][combination][second + 1], dtype=torch.float32)
+
                     # Si aggiunge alla lista completa delle batch la sottolista contenente i dati dei sensori per il secondo di iterazione se le dimensioni singole sono corrette
                     if batch_is_valid and (trajectory, combination) not in self.validation_missions_dict and self.mode == 'train':
-                        self.training_batches_list.append(single_second_batches_list)
+                        mission_seconds_list.append((second, single_second_batches_list))
                     elif batch_is_valid and (trajectory, combination) in self.validation_missions_dict and self.mode == 'validazione':
-                        self.validation_batches_list.append(single_second_batches_list)
+                        mission_seconds_list.append((second, single_second_batches_list))
                     elif batch_is_valid and (trajectory, combination) in test_missions and self.mode == 'test':
                         self.test_batches_dict[(trajectory, combination)].append(single_second_batches_list)
                     else:
                         continue
 
+                # Per training e validazione i secondi validi della missione vengono raggruppati in finestre di secondi consecutivi
+                if self.mode != 'test':
+                    self.windows_building(mission_seconds_list)
+
                 print(f'  Batch unitarie per la missione {trajectory} - {combination} definite correttamente.')
 
         return self
+
+    # Funzione che raggruppa i secondi di una missione in finestre di window_size secondi consecutivi (passo window_stride) --> ogni finestra ha forma [K, ...] per ogni blocco di sensori, YAW [K] e DVL_DISP [K, 2]
+    def windows_building_overlap(self, mission_seconds_list):
+
+        # Si itera per tutti i secondi che rappresentano l'istante di inizio di una nuova finestra
+        for start in range(0, len(mission_seconds_list) - self.window_size + 1, self.window_stride):
+
+            window = mission_seconds_list[start:start + self.window_size]
+
+            # Se un secondo è stato scartato nel mezzo della finestra questa non è consecutiva e viene saltata --> altrimenti cumsum e smoothness della loss non avrebbero significato
+            if window[-1][0] - window[0][0] != self.window_size - 1:
+                continue
+
+            stacked_window = {key: torch.stack([single_second[key] for _, single_second in window]) for key in window[0][1]}
+
+            if self.mode == 'train':
+                self.training_batches_list.append(stacked_window)
+            elif self.mode == 'validazione':
+                self.validation_batches_list.append(stacked_window)
+
+    # Funzione che raggruppa i secondi di una missione in finestre di window_size secondi consecutivi --> ogni finestra ha forma [K, ...] per ogni blocco di sensori, YAW [K] e DVL_DISP [K, 2]
+    def windows_building(self, mission_seconds_list):
+
+        # Si itera per tutti i secondi che rappresentano l'istante di inizio di una nuova finestra
+        for start in range(0, len(mission_seconds_list) - self.window_size + 1, self.window_stride):
+
+            window = mission_seconds_list[start:start + self.window_size]
+
+            # Se un secondo è stato scartato nel mezzo della finestra questa non è consecutiva e viene saltata --> altrimenti cumsum e smoothness della loss non avrebbero significato
+            if window[-1][0] - window[0][0] != self.window_size - 1:
+                continue
+
+            stacked_window = {key: torch.stack([single_second[key] for _, single_second in window]) for key in window[0][1]}
+
+            if self.mode == 'train':
+                self.training_batches_list.append(stacked_window)
+                print(self.training_batches_list)
+            elif self.mode == 'validazione':
+                self.validation_batches_list.append(stacked_window)
 
     # Funzione che porta a definire il numero di campioni da 1 secondo accumulati --> necessaria per usare len(dataset) e per il dataloader
     def __len__(self):
@@ -199,6 +262,7 @@ class Dataset(torch.utils.data.Dataset):
 
 # Classe che permette di implementare la loss function Log-Cosh
 class LogCoshLoss(nn.Module):
+
     def __init__(self):
         super(LogCoshLoss, self).__init__()
 
@@ -206,32 +270,64 @@ class LogCoshLoss(nn.Module):
         diff = y_pred - y_true
         return torch.mean(diff + nn.functional.softplus(-2.0 * diff) - torch.log(torch.tensor(2.0)))
 
+
+# Classe che implementa la loss function ispirata a Wei & Sun (2022) --> misfit dati + termini di regolarizzazione Lp (smallness rispetto al DVL e smoothness temporale) su finestre di K secondi consecutivi
 class MixedLpNavLoss(nn.Module):
 
-    def __init__(self, w_cum=0.1, a_s=0.05, a_t=0.05, p=1.0, q=1.0, w_dir=0.0, eps=1e-3):
-        super().__init__()
-        self.w_cum, self.a_s, self.a_t, self.p, self.q, self.w_dir, self.eps = w_cum, a_s, a_t, p, q, w_dir, eps
+    # Si inizializzano media e std del GPS (per riportare in metri output e target) e i pesi dei termini --> i pesi sono iperparametri da tarare sulla validazione
+    def __init__(self, mu, sigma, w_cum=0.1, a_s=0.05, a_t=0.05, p=1.0, q=1.0, w_dir=0.0, eps=1e-3):
 
-    # Utilizzo della norma p elevata al grado p --> come specificato nel lavoro di Fournier-Oldenburg
+        super().__init__()
+
+        self.register_buffer('mu', mu, persistent=False)            # persistent=False --> non compaiono nello state_dict, quindi i pesi già salvati restano compatibili
+        self.register_buffer('sigma', sigma, persistent=False)
+        self.w_cum, self.a_s, self.a_t, self.p, self.q, self.w_dir, self.eps = w_cum, a_s, a_t, p, q, w_dir, eps
+        self.terms = {}                                             # Valori degli ultimi termini calcolati --> utili per tarare i pesi
+
+    # Utilizzo della norma p elevata al grado p --> come specificato nel lavoro di Fournier-Oldenburg (versione smussata con eps per avere gradiente definito in 0)
     def lp(self, x, p):
         return ((x**2 + self.eps**2) ** (p / 2)).mean()
 
-    # Funzione di esecuzione del calcolo della loss effettivo --> richiede in input media e std del GPS, la batch GPS normalizzata, l'output della rete e lo yaw
-    def forward(self, y_hat, y, yaw, v_dvl, mu, sigma):
+    # Funzione interna che ruota uno spostamento dagli assi body (X, Y) agli assi NED (E, N) --> stessa convenzione di body_to_NED in PreProcessing, ma lavora su tensori [window size, window stride,2] e su yaw [window size, window stride]
+    def body_to_NED(self, displacement, yaw):
 
-        # y_hat, y: [B,K,2] normalizzati (body: X, Y); yaw: [B,K] rad; v_dvl: [B,K,2] spostamento DVL in m (body)
-        m_hat, m = y_hat * sigma + mu, y * sigma + mu
-        c, s = torch.cos(yaw), torch.sin(yaw)
+        # Si estraggono i valori di spostamento body --> usata forma che permette di tenere conto di qualsiasi forma precedente all'indice colonna
+        X_body = displacement[..., 0]
+        Y_body = displacement[..., 1]
 
-        def to_ned(d):                        # stessa convenzione di body_to_NED: output [E, N]
-            return torch.stack([d[..., 0]*s + d[..., 1]*c, d[..., 0]*c - d[..., 1]*s], -1)
+        # Si effettua la conversione
+        Delta_N = X_body * torch.cos(yaw) - Y_body * torch.sin(yaw)
+        Delta_E = X_body * torch.sin(yaw) + Y_body * torch.cos(yaw)
 
-        phi_d   = F.mse_loss(y_hat, y)                                          # misfit per passo (attuale)
-        phi_cum = F.mse_loss(to_ned(m_hat).cumsum(1), to_ned(m).cumsum(1))      # misfit sulla posizione (G = somma cumulata)
-        phi_s   = self.lp(m_hat - v_dvl, self.p)                                # smallness rispetto al DVL
-        phi_t   = self.lp(y_hat[:, 1:] - y_hat[:, :-1], self.q)                 # smoothness temporale
-        cross   = (m_hat[..., 0]*v_dvl[..., 1] - m_hat[..., 1]*v_dvl[..., 0]).pow(2).mean()
-        return phi_d + self.w_cum*phi_cum + self.a_s*phi_s + self.a_t*phi_t + self.w_dir*cross
+        return torch.stack([Delta_E, Delta_N], dim=-1)
+
+    # Funzione di esecuzione del calcolo della loss effettivo --> y_hat, y: [B,K,2] normalizzati (body: X, Y); yaw: [B,K] rad; v_dvl: [B,K,2] spostamento DVL in metri (body)
+    def forward(self, y_hat, y, yaw, v_dvl):
+
+        # Conversione di output target e prodotto dalla rete in metri (de-normalizzazione)
+        m_hat, m = y_hat * self.sigma + self.mu, y * self.sigma + self.mu
+
+        # Si estraggono dal batch i valori di yaw e si convertono in coseno e seno
+        #c, s = torch.cos(yaw), torch.sin(yaw)
+
+        # Funzione interna che permette di trasformare le coordinate body ottenute in assi NED --> usa la stessa convenzione della funzione definita in pre-processing [E, N]
+        #def to_ned(d):
+            #return torch.stack([d[..., 0]*s + d[..., 1]*c, d[..., 0]*c - d[..., 1]*s], -1)
+
+        sigma2 = (self.sigma**2).mean()       # Fattore che rende adimensionali i termini espressi in metri --> è la varianza
+
+        phi_d1 = F.mse_loss(y_hat, y)                                                              # Misfit per passo (attuale)
+        #phi_d2 = F.mse_loss(self.body_to_NED(m_hat, yaw).cumsum(1), self.body_to_NED(m, yaw).cumsum(1)) / sigma2
+        #phi_cum = F.mse_loss(to_ned(m_hat).cumsum(1), to_ned(m).cumsum(1)) / sigma2                 # Misfit sulla posizione NED (operatore G = somma cumulata sui K secondi)
+        phi_s   = self.lp((m_hat - v_dvl) / self.sigma, self.p)                                     # Smallness rispetto allo spostamento DVL
+        phi_t   = self.lp(y_hat[:, 1:] - y_hat[:, :-1], self.q)                                     # Smoothness temporale
+        cross   = (m_hat[..., 0]*v_dvl[..., 1] - m_hat[..., 1]*v_dvl[..., 0]).pow(2).mean() / sigma2**2     # Allineamento di direzione con il DVL (prodotto vettoriale)
+
+        #self.terms = {'phi_d': phi_d1.detach(), 'phi_cum': phi_d2.detach(), 'phi_s': phi_s.detach(), 'phi_t': phi_t.detach(), 'cross': cross.detach()}
+        self.terms = {'phi_d': phi_d1.detach(), 'phi_s': phi_s.detach(),'phi_t': phi_t.detach(), 'cross': cross.detach()}
+
+        return phi_d1 + self.a_s*phi_s + self.a_t*phi_t + self.w_dir*cross
+
 
 # Si definisce la classe utilizzata per il Simplified Attention Mechanism --> trattata come classe per non appesantire troppo il codice della NavNet --> prodotto in output un vettore dim(hidden_layer)*1
 class SimplifiedAttentionMechanism(nn.Module):
@@ -261,11 +357,12 @@ class SimplifiedAttentionMechanism(nn.Module):
 
         return c
 
+
 # Si definisce ora la classe all'interno della quale sono gestite tutte le operazioni della rete neurale
 class NavNet(nn.Module):
 
     # Si inizializza la rete neurale --> permette di salvare i layer prodotti all'interno della funzione in modo permanente nella variabile del main x = NavNet()
-    def __init__(self, network_config, hidden_size):
+    def __init__(self, network_config, hidden_size, FC_layers):
 
         # Si inizializzano i meccanismi interni legati a pytorch
         super(NavNet, self).__init__()
@@ -284,15 +381,42 @@ class NavNet(nn.Module):
             self.SAMS[branch_name] = SimplifiedAttentionMechanism(hidden_size=hidden_size)
 
         # Si applicano i Fully connected layers --> ricevono in input il vettore c concatenato --> devo arrivare a 2 output, che rappresentano gli spostamenti nei due assi (possibile automatizzare aggiungendo più strati)
-        input_size_FC = hidden_size * (len(network_config)-1)
-        self.FC = nn.Sequential(
-            nn.Linear(input_size_FC, input_size_FC // 2),
-            nn.ReLU(),
-            #nn.Linear(input_size_FC // 2, input_size_FC // 4),
-            #nn.ReLU(),
-            #nn.Linear(input_size_FC // 4, input_size_FC // 6),
-            #nn.ReLU(),
-            nn.Linear(input_size_FC // 2, 2))
+        #input_size_FC = hidden_size * (len(network_config)-1)
+        #if FC_layers == 2:
+        #    self.FC = nn.Sequential(
+        #        nn.Linear(input_size_FC, input_size_FC // 2),
+        #        nn.ReLU(),
+        #        nn.Linear(input_size_FC // 2, 2))
+        #elif FC_layers == 3:
+        #    self.FC = nn.Sequential(
+        #        nn.Linear(input_size_FC, input_size_FC // 2),
+        #        nn.ReLU(),
+        #        nn.Linear(input_size_FC // 2, input_size_FC // 4),
+        #        nn.ReLU(),
+        #        nn.Linear(input_size_FC // 4, 2))
+        #elif FC_layers == 4:
+        #    self.FC = nn.Sequential(
+        #        nn.Linear(input_size_FC, input_size_FC // 2),
+        #        nn.ReLU(),
+        #        nn.Linear(input_size_FC // 2, input_size_FC // 4),
+        #        nn.ReLU(),
+        #        nn.Linear(input_size_FC // 4, input_size_FC // 6),
+        #        nn.ReLU(),
+        #        nn.Linear(input_size_FC // 2, 2))
+
+        # Si definisce una lista di dimensioni del layer --> composta da elementi input_size, input_size//2, input_size//4,...,2 (in base a quanti layer sono previsti)
+        input_size_FC = hidden_size * (len(network_config) - 1)
+        layers_size = [input_size_FC] + [input_size_FC // (2*i) for i in range(1, FC_layers)] + [2]
+
+        # Si definisce una lista di layer composti dal modulo lineare seguito da una funzione ReLu --> si rimuove l'ultimo elemento che sarebbe la ReLu di troppo una volta raggiunta la dimensionalità finale della rete
+        layers = []
+        for in_size, out_size in zip(layers_size[:-1], layers_size[1:]):
+            layers.append(nn.Linear(in_size, out_size))
+            layers.append(nn.ReLU())
+        layers.pop()
+
+        # Si associa la struttura definita alla variabile FC
+        self.FC = nn.Sequential(*layers)
 
         # Definizione struttura funzione di costo --> si sceglie una Euclidean Loss per restare coerenti con il paper
         self.loss_criterion = nn.MSELoss()
@@ -303,6 +427,14 @@ class NavNet(nn.Module):
     # Si crea una funzione utile per modificare, in caso di necessità, l'ottimizzatore utilizzato --> utilizzato kwargs per poter usare metodi con numero di argomenti di input differenti
     def set_optimizer(self, new_optimizer, **kwargs):
         self.optimizer = new_optimizer(self.parameters(), **kwargs)
+
+    # Si crea una funzione per sostituire la loss MSE con la loss mista --> richiede media e std del GPS (per riportare in metri) e i pesi dei termini tramite kwargs
+    def set_loss_function(self, loss_function, GPS_mean, GPS_std, **kwargs):
+
+        if loss_function == MixedLpNavLoss:
+            self.loss_criterion = MixedLpNavLoss(GPS_mean, GPS_std, **kwargs)
+        else:
+            self.loss_criterion = loss_function()
 
     # Si crea ora la funzione che gestisce la forward propagation della rete neurale
     def forward(self, data):
@@ -340,8 +472,15 @@ class NavNet(nn.Module):
 
         # Fase di backward optimization --> si ottimizzano i pesi introdotti
         pos_target = data['GPS']
-        loss = self.loss_criterion(pos_predetta, pos_target)    # Calcolo della perdita associata alla predizione rispetto al target
+
+        # Calcolo della perdita associata alla predizione rispetto al target
+        if isinstance(self.loss_criterion, MixedLpNavLoss):
+            loss = self.loss_criterion(pos_predetta, pos_target, data['YAW'], data['DVL_DISP'])
+        else:
+            loss = self.loss_criterion(pos_predetta, pos_target)
+
         loss.backward()                                         # Calcolo del gradiente della funzione di costo
+
         self.optimizer.step()                                   # Update dei parametri di ottimizzazione
 
         return loss.item()

@@ -89,10 +89,10 @@ All'interno di questa relazione, implementata efficacemente in una rete neurale 
 
         \subfloat[Neurone biologico\cite{jpg_neurone_bio}]{%
                 \includegraphics[width=0.50\linewidth]{images/NN/Neurone_bio_2.png}%
-            }\hfill
-            \subfloat[Neurone artificiale]{%
+                }\hfill
+        \subfloat[Neurone artificiale]{%
                 \includegraphics[width=0.49\linewidth]{images/NN/Neurone_artificiale_1.png}%
-            }\\[8pt]
+                }\\[8pt]
 
         \caption{Confronto tra tipologie di neuroni}
         \label{fig:confronto_neuroni}
@@ -316,9 +316,25 @@ Nei precedenti paragrafi sono stati introdotti i principali elementi posti alla 
                 \label{fig:gradient_descent}
             \end{figure}
 
-        Dall'analisi della \emph{Figura} \ref{fig:gradient_descent}, si evidenzia il percorso di aggiornamento dei parametri, caratterizzato da passi ad ampiezza decrescente procedendo verso il minimo. Avendo ipotizzato un learning rate costante, questa variazione è dovuta unicamente al valore del gradiente, che si riduce avvicinandosi alla zona a pendenza nulla. In un modello multidimensionale reale, tuttavia, difficilmente si osserva un paesaggio perfettametne convesso. Come presentato nel testo prodotto da Goodfellow et al., questo introduce punti critici che possono trarre in inganno un algoritmo di ottimizzazione, quali punti di minimo o massimo locale e punti di sella. Tutti questi punti, analogamente al minimo globale, sono, infatti, caratterizzati da una zona a gradiente nullo e un normale algoritmo di ottimizzazione non è in grado di distinguere la tipologia di punto incontrato. Per ottenere delle prestazioni ottimali, tuttavia, è necessario riuscire a superarli, giungendo così al minimo globale o, comunque, ad un minimo locale molto vicino. 
+        Dall'analisi della \emph{Figura} \ref{fig:gradient_descent}, si evidenzia il percorso di aggiornamento dei parametri, caratterizzato da passi ad ampiezza decrescente procedendo verso il minimo. Avendo ipotizzato un learning rate costante, questa variazione è dovuta unicamente al valore del gradiente, che si riduce avvicinandosi alla zona a pendenza nulla. In un modello multidimensionale reale, tuttavia, difficilmente si osserva un paesaggio perfettametne convesso. Come presentato nel testo prodotto da Goodfellow et al., questo introduce punti stazionari che possono trarre in inganno un algoritmo di ottimizzazione, quali punti di minimo o massimo locale e punti di sella. Tutti questi punti, analogamente al minimo globale, sono, infatti, caratterizzati da una zona a gradiente nullo e un normale algoritmo di ottimizzazione non è in grado di distinguere la tipologia di punto incontrato. Per ottenere delle prestazioni ottimali, tuttavia, è necessario riuscire a superarli, giungendo così al minimo globale o, comunque, ad un minimo locale molto vicino. 
         
-        % Inserire immagini dei punti critici 
+            \begin{figure}[!htb]
+                \centering
+
+                \subfloat[Minimo locale]{%
+                        \includegraphics[width=0.33\linewidth]{images/NN/minimo_locale.pdf}%
+                        }\hfill
+                \subfloat[Massimo locale]{%
+                        \includegraphics[width=0.33\linewidth]{images/NN/massimo_locale.pdf}%
+                        }\hfill
+                \subfloat[Punto di sella]{%
+                        \includegraphics[width=0.33\linewidth]{images/NN/punto_di_sella.pdf}%
+                        }\\
+
+                \caption{Punti stazionari della loss function}
+                \label{fig:punti_critici}
+                
+            \end{figure}
 
         Esistono, poi, due problematiche riguardanti il gradiente stesso: il \emph{vanishin gradient}, che si verifica quando i valori del gradiente diventano progressivamente molto piccoli, portando ad una rete che non impara più, e l'\emph{exploding gradient}, associato a valori di gradiente che diventano sempre più grandi, fino ad assumere il valore NaN. Per ridurre l'impatto di quest'ultimo problema, è possibile usare delle opportune tecniche che diminuiscono la dimensionalità del problema.  
 
@@ -339,27 +355,23 @@ Nei precedenti paragrafi sono stati introdotti i principali elementi posti alla 
         
     \end{itemize}
  
-
-Considerando le caratteristiche dei metodi fin qui presentati, nel seguito si sceglie di considerare unicamente i metodi di discesa del gradiente, giudicati più attinenti con gli scopi della tesi. Al fine di soddisfare le esigenze e le criticità uniche associate ad ogni possibile classe di problemi affrontabili con tecniche di machine learning, nel corso degli anni sono stati proposti molteplici varianti del metodo classico presentato in \ref{eq:GD}. Una prima ramificazione di questa classe di algoritmi riguarda il numero di campioni di dati analizzati prima di effettuare un singolo passo di aggiornamento. In particolare, come presentato nel lavoro di Ruder\cite{Ruder_GD}, esistono tre macroclassi di metodi sotto questo aspetto:  
+Considerando le caratteristiche dei metodi fin qui presentati, nel seguito si sceglie di considerare unicamente i metodi di discesa del gradiente, giudicati più attinenti agli scopi della tesi. Al fine di soddisfare le esigenze e le criticità uniche associate ad ogni possibile classe di problemi affrontabili con tecniche di machine learning, nel corso degli anni sono stati proposti molteplici varianti del metodo classico presentato in \ref{eq:GD}. Una prima ramificazione di questa classe di algoritmi riguarda il numero di campioni di dati analizzati prima di effettuare un singolo passo di aggiornamento. In particolare, come presentato nel lavoro di Ruder\cite{Ruder_GD}, esistono tre macroclassi di metodi sotto questo aspetto:  
 
     \begin{itemize}
 
-        \item \textbf{Batch gradient descent}: la prima tecnica presentata si basa sul calcolo di un errore unico mediato sull'intero Dataset, aggiornando, dunque, i pesi solo dopo aver valutato tutti i dati.  Data la sua natura, il metodo risulta solitamente stabile e molto efficace computazionalmente, nonostante necessiti di immagazzinare una grande quantità di dati ad ogni epoca. Tuttavia, spesso porta all'individuazione di un punto di minimo locale, associato a prestazioni inferiori rispetto al corrispettivo globale. 
+        \item \textbf{Batch gradient descent}: la prima tecnica introdotta si basa sul calcolo di un errore unico mediato sull'intero Dataset, aggiornando, dunque, i pesi solo dopo aver valutato la totalità dei dati. Data la sua natura, il metodo risulta solitamente stabile, con gradienti stimati con un alto livello di accuratezza, sebbene necessiti di immagazzinare una grande quantità di dati ad ogni epoca. Inoltre, nonostante la convergenza sia quasi sempre garantita, per problemi non convessi, spesso il punto individuato rappresenta un minimo locale o un altro punto stazionario, associati a prestazioni inferiori rispetto al minimo globale ricercato.
         
-        \item \textbf{Stochastic gradient descent}: in questo secondo metodo l'aggiornamento dei parametri avviene ad ogni campione del Dataset preso in considerazione. Questo, ovviamente, porta a una maggiore velocità del processo e ad un minor spazio occupato in memoria, nonostante aumenti l'instabilità e il rischio di rumore nel gradiente. Proprio questa caratteristica, però, può aiutare a superare il punto di minimo locale una volta raggiunto, giungendo infine a quello globale.
+        \item \textbf{Stochastic gradient descent}: in questa seconda classe di metodi, l'aggiornamento dei parametri avviene ad ogni singolo campione del Dataset preso in considerazione. Sebbene l'operazione di aggiornamento avvenga qui con maggiore frequenza e con minor impatto sulla memoria di sistema, non necessariamente un approccio simile si traduce in un incremento della velocità complessiva del processo di apprendimento. Il calcolo del gradiente su un singolo campione, infatti, comporta un aumento della varianza, e, quindi del rumore, associato a tale operazione. In generale, questo porta ad una maggiore instabilità del processo, consentendo un più semplice superamento di un eventuale punto stazionario non globale incontrato al costo, tuttavia, di un maggiore rischio di overshooting e di una mancata convergenza ad un punto di minimo. E' stato però dimostrato che una graduale riduzione del learning rate può ridurre o addirittura annullare questo rischio, riducendo le oscillazioni e garantendo una convergenza analoga ad un metodo basato sul batch. Naturalmente, ciò comporta aggiornamenti sempre più contenuti con l'avvicinarsi al raggiungimento dell'obiettivo, aumentando significativamente il tempo totale necessario. 
         
-        \item \textbf{Mini-batch gradient descent}: l'ultima tecnica risulta essere una combinazione dei metodi precedentemente presentati. Il Dataset, infatti, viene scomposto in batch di dimensioni inferiori, valutate separatamente all'interno della stessa epoca di addestramento. In questo modo si individua un compromesso tra l'efficienza computazionale e la stabilità, caratteristiche del batch gradient method, e la velocità, associata alla controparte stocastica.
+        \item \textbf{Mini-batch gradient descent}: l'ultima famiglia di metodi risulta essere un compromesso tra quelle precedentemente presentate. Il dataset, infatti, viene scomposto in sottoinsiemi di dimensioni ridotte, definiti mini-batch, considerati separatamente per la stima del gradiente e l'aggiornamento dei parametri all'interno della stessa epoca di addestramento. Ciò consente di combinare alcune delle caratteristiche distintive delle tecniche introdotte, quali la maggior accuratezza della stima del gradiente e la stabilità della convergenza, tipiche di un Batch Gradient Descent, e il minor costo computazionale e la capacità di superamento di punti stazionari lontani dal minimo globale, caratteristiche di un approccio stocastico. In approcci simili, naturalmente, l'opportuna selezione della dimensione del batch assume un ruolo chiave, consentendo all'algoritmo di discesa di avvicinarsi maggiormente alla prima categoria di metodi per valori elevati e alla seconda per valori inferiori. Occorre, tuttavia, tenere presente una possibile limitazione associata a dimensioni eccessivamente ridotte. In casi simili le capacità di elaborazione parallela dell'hardware impiegate non vengono sfruttate appieno, portando ad una riduzione dei vantaggi in termini di velocità di addestramento altrimenti presenti. Proprio per ottimizzare le caratteristiche di CPU e GPU moderne, tendenzialmente si tende ad utilizzare batch di dimensioni corrispondenti a potenze di due, solitamente appartenenti all'intervallo $16\div256$.
         
     \end{itemize}
 
-
-Per quanto discusso, le possibili varianti presentate possono incidere sulla velocità del processo di aggiornamento e sul rumore associato al calcolo del gradiente. Tuttavia, i metodi di discesa del gradiente presentano diverse criticità, che possono rendere inefficiente o addirittura impossibile il processo di addestramento del modello. Per affrontare adeguatamente queste sfide, agire sulla suddivisione dei dati non è sufficiente. Occore, pertanto, andare a toccare il cuore del processo, ovvero la legge di aggiornamento dei parametri. In questo senso, molti algoritmi di ottimizzazione sono stati proposti: 
+Le possibili varianti presentate possono, per quanto discusso, incidere su diversi aspetti dell'addestramento di una rete neurale, quali il costo computazionale, la velocità complessiva, la quantità di rumore del gradiente e la stabilità della convergenza. Tuttavia, i metodi di discesa del gradiente presentano criticità non considerate fino ad ora, che possono rendere inefficiente o addirittura impossibile il processo di addestramento del modello. Tra queste spicca in particolare la selezione opportuna del learning rate, già citata nell'ambito dei metodi stocastici. Riuscire ad ottenere una velocità di convergenza elevata, associata a learning rate maggiori, pur mantenendo una buona stabilità della convergenza stessa, associata a valori piccoli dell'iperparametro, non è un compito semplice in una rete neurale. Inoltre, una possibile problematica è legata ai datasate sparsi, caratterizzati da una o più features (una colonna del dataset) a prevalenza di elementi nulli. Questo, naturalmente, porta ad un azzeramento del gradiente rispetto ai pesi dei nodi del primo layer coinvolti nella loro analisi, e rende di conseguenza inefficace l'aggiornamento dei parametri associati. Per affrontare adeguatamente queste sfide, agire sulla suddivisione dei dati non risulta sufficiente. Occore, pertanto, andare a modificare il cuore del processo, ovvero la legge di aggiornamento dei parametri. In questo senso, molti algoritmi di ottimizzazione sono stati proposti: 
 
     \begin{itemize}
 
-        \item \textbf{Momentum}:  
-        
-        un approccio antecedente quelli presentati fino ad ora e molto differente da quest'ultimi, è stato proposto da Polyak et al. nel 1964. Nel suo lavoro, Polyak identifica un'analogia tra la discesa del gradiente e la dinamica di un masso posto sul fianco di un pendio. L'aggiornamento dei parametri, pertanto, tiene conto sia del gradiente attuale, interpretabile come l'accelerazione istantanea, che del precedente valore dei parametri, assimilabile all'inerzia: 
+        \item \textbf{Momentum}: una delle prime criticità caratteristiche degli algoritmi di discesa del gradiente affrontate, coinvolge l'instabilità della discesa in presenza di un avvallamento, come può essere un minimo locale o globale. Utilizzando la formulazione classica introdotta in \ref{eq:GD}, in presenza di una simile condizione si assiste ad un comportamento oscillatorio tra le pareti del pendio, causando una significativa decrescita della velocità di progressione verso il minimo. Nel trattare questo problema, Polyak\cite{Momentum} nel 1964 identifica un'analogia tra la discesa del gradiente e la dinamica di un masso posto sul fianco di un pendio. Se lasciato libero di muoversi,  tale masso tende a guadagnare velocità fino a raggiungere il fondo della valle. Allo stesso modo si vorrebbe ottenere un passo di aggiornamento non più oscillatorio ma in grado di muoversi lungo la sola direzione di massima efficacia. Per ottenere un simile comportamento, Polyak propone di introdurre al fianco del gradiente attuale, che rappresenta una sorta di accelerazione istantanea, un termine di momentum pesato da un coefficiente $\beta$ (solitamente 0.9), assimilabile all'inerzia che si oppone al cambiamento di direzione e dipendente dalla velocità attuale $v_{t} = \theta_{t} - \theta_{\text{t-1}}$:
         
             \begin{equation}
                 \theta_{\text{t+1}} = \theta_{t} - \eta \cdot \nabla L(\theta) + \beta (\theta_{t} - \theta_{\text{t-1}}) \iff \begin{cases}
@@ -369,15 +381,17 @@ Per quanto discusso, le possibili varianti presentate possono incidere sulla vel
                 \label{eq:Polyak}
             \end{equation}
 
-        Nel corso degli anni questa relazione ha poi subito varie modifiche al fine di adattarla alle evoluzioni degli algoritmi di machine learning. La formulazione comunemente usata dalle librerie standard, come pytorch, prevede un cambio di segno per quanto riguarda il termine del gradiente all'interno del buffer degli stati passati. Questa scelta è puramente convenzionale, dal momento che sull'aggiornamento dei parametri non cambia l'impatto di questo termine. Inoltre, il learning rate non è più associato al solo gradiente attuale ma anche agli stati passati, diventando più simile nella forma ai precedenti approcci presentati:
+        Nel corso degli anni questa relazione ha subito varie modifiche, al fine di adattarla alle evoluzioni degli algoritmi di machine learning. La formulazione comunemente usata dalle librerie standard, come pytorch, prevede un cambio di paradigma. Il termine di momentum, infatti, non è più interpretato come uno spostamento tra stati consecutivi ma diventa un accumulatore di gradiente ponderato, che permette di tenere conto dei valori passati per aumentarne la stabilità direzionale. Nel concreto, inoltre, si attua un cambio di segno del termine associato al gradiente attuale e si sceglie di utilizzare il learning rate come fattore moltiplicativo dell'interno termine di buffer $v_{\text{t+1}}$:
 
             \begin{equation}
                 \begin{cases}
-                    v_{\text{t+1}} = \beta v_{t} + \nabla L(\theta) \\[0.35cm]
-                    \theta_{\text{t+1}} = \theta_{t} - \eta \cdot v_{\text{t+1}}
+                    v_{\text{t}} = \beta v_{\text{t-1}} + \nabla L(\theta) \\[0.35cm]
+                    \theta_{\text{t+1}} = \theta_{\text{t}} - \eta \cdot v_{\text{t}}
                 \end{cases}
                 \label{eq:momentum_pytorch}
             \end{equation}
+
+        \item \textbf{Nestorov Momentum}: sebbene l'approccio classico proposto da Polyak consenta di ottenere un minor numero di oscillazioni del passo di aggiornamento, resta un grande margine di miglioramento. Idealmente, infatti, si vorrebbe fornire al termine di momentum una conoscenza maggiore di dove si trova e cosa potrebbe incontrare successivamente. Riproponendo l'analogia con il masso sul pendio, si nota un possibile rischio di superamento del minimo per effetto dell'inerzia, che spinge la sfera in salita lungo la parete del pendio. Rendendo il masso intelligente sarebbe possibile rallentarlo prima di raggiungere il minimo evitando così questo comportamento.  
 
         \item \textbf{Adaptive Gradient Algorithm (AdaGrad)}\cite{AdaGrad_medium}: una delle prime variazioni apportate al metodo classico, presentata da Duchi et al.\cite{AdaGrad} nel 2011, coinvolge direttamente il learning rate. Per ottenere un miglior bilanciamento tra stabilità e velocità di addestramento è stato proposto di adattare dinamicamente questo iperparametro durante il processo, rendendone, inoltre, indipendente il valore associato ad ogni peso $w_i$. A livello matematico, questo concetto è implementato grazie all'utilizzo di un termine $G_{\text{t,i}}$, che consente di tenere conto dei gradienti antecedenti associati al peso di interesse, e di un coefficiente $\epsilon$, che elimina la possibile singolarità caratteristica del caso $G_{\text{t,i}} \approx 0$:
         
