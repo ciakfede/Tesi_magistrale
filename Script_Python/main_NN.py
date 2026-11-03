@@ -1,7 +1,6 @@
 """     IMPLEMENTAZIONE RETE NEURALE NAVNET
               FEDERICO CECCHINI
             ANNO ACCADEMICO 2025/26             """
-from Script_Python.Neural_network import MixedLpNavLoss
 
 '''All'interno del main si gestiscono le scelte legate al pre-processing e l'esecuzione della rete neurale --> il tutto 
    è gestito tramite scelta dell'utente --> in ordine si chiede se si vogliono eseguire le seguenti operazioni:
@@ -26,6 +25,8 @@ import torch                                # Libreria per il Deep Learning
 import torch.nn as nn                       # Libreria utilizzata per le proprietà nelle reti neurali
 from Analisi_dati import PreProcessing      # Importo il modulo per eseguire il pre-processing dei dati da utilizzare per la rete
 from Neural_network import Dataset          # Importo il modulo per definire le batch dei blocchi di sensore per ogni secondo di missione
+from Neural_network import MixedLpNavLoss
+from Neural_network import LogCoshLoss
 from Neural_network import NavNet           # Importo qui la rete neurale
 from Analisi_dati import PostProcessing     # Importo il modulo per eseguire il post-processing dei dati prodotti dalla rete
 import numpy as np                          # Libreria per i calcoli matematici
@@ -417,7 +418,7 @@ rete_neurale = NavNet(network_config, hidden_size, FC_layers)        # Si inizia
 rete_neurale.initialize_weights()                                    # Si inizializzano i pesi tramite funzione definita
 
 # Scheduler --> dimezza il learning rate se la Val_Loss non scende per 5 epoche
-scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(rete_neurale.optimizer, mode='min', factor=0.5, patience=3)
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(rete_neurale.optimizer, mode='min', factor=0.7, patience=3)
 
 # Si recuperano le statistiche del GPS salvate nel pre-processing --> trasformandole in tensori per compatibilità con output rete neurale (servono alla loss per riportare in metri e al test)
 GPS_mean = torch.tensor(pre_processing.normalization_parameters_dict['GPS']['media'])
@@ -442,8 +443,8 @@ while True:
     if do_training == 'S':
 
         # Si richiama la classe Dataset per definire la lunghezza della batch unitaria per ogni blocco di sensori --> successivamente tramite libreria pytorch si generano batch di forma [32, frequenza, numero di colonne]
-        training_dataset = Dataset(tensor_dict, sensors_frequencies, test_missions_dict, network_config, mode='train')
-        validation_dataset = Dataset(tensor_dict, sensors_frequencies, test_missions_dict, network_config, mode='validazione')
+        training_dataset = Dataset(tensor_dict, sensors_frequencies, test_missions_dict, network_config, mode='train', yaw_dict=pre_processing.yaw_dict, norm_parameters=pre_processing.normalization_parameters_dict, window_size=window_size)
+        validation_dataset = Dataset(tensor_dict, sensors_frequencies, test_missions_dict, network_config, mode='validazione', yaw_dict=pre_processing.yaw_dict, norm_parameters=pre_processing.normalization_parameters_dict, window_size=window_size)
 
         # Si trasformano i subset definiti nei dataloader necessari alla rete neurale --> si aggregano più blocchi in base alla batch_size definita
         training_loader = torch.utils.data.DataLoader(training_dataset, batch_size=batch_size, shuffle=True)                 # Definizione del dataloader associato al training
@@ -476,12 +477,12 @@ while True:
                 for key in network_config:
 
                     if key == 'GPS':
-                        data[key] = batch[key].squeeze(1)
+                        data[key] = batch[key].squeeze(-2)
                     else:
                         data[key] = batch[key]
 
                 # Si estraggono anche i batch associati allo yaw e allo spostamento calcolato con DVL se si usa la Lp norm come loss function
-                if isinstance(loss_function, MixedLpNavLoss):
+                if loss_function is MixedLpNavLoss:
                     data['YAW'] = batch['YAW']                          # Yaw di ogni secondo della finestra [B, K] --> per la rotazione body -> NED nella loss
                     data['DVL_DISP'] = batch['DVL_DISP']                # Spostamento DVL di ogni secondo della finestra [B, K, 2] --> per il termine di smallness
 
@@ -510,12 +511,12 @@ while True:
                     for key in network_config:
 
                         if key == 'GPS':
-                            data[key] = batch[key].squeeze(1)
+                            data[key] = batch[key].squeeze(-2)
                         else:
                             data[key] = batch[key]
 
                     # Si estraggono anche i batch associati allo yaw e allo spostamento calcolato con DVL se si usa la Lp norm come loss function
-                    if isinstance(loss_function, MixedLpNavLoss):
+                    if loss_function is MixedLpNavLoss:
                         data['YAW'] = batch['YAW']                  # Yaw di ogni secondo della finestra [B, K] --> per la rotazione body -> NED nella loss
                         data['DVL_DISP'] = batch['DVL_DISP']        # Spostamento DVL di ogni secondo della finestra [B, K, 2] --> per il termine di smallness
 
@@ -523,7 +524,7 @@ while True:
                     NN_displacement_estimation = rete_neurale.forward(data)
 
                     # Calcolo della loss function e aggiornamento dei termini cumulativi per il calcolo della loss media
-                    if isinstance(loss_function, MixedLpNavLoss):
+                    if loss_function is MixedLpNavLoss:
                         validation_batch_loss = rete_neurale.loss_criterion(NN_displacement_estimation, data['GPS'], data['YAW'], data['DVL_DISP'])
                     else:
                         validation_batch_loss = rete_neurale.loss_criterion(NN_displacement_estimation, data['GPS'])
@@ -635,7 +636,7 @@ for (trajectory, combination) in test_missions_dict:
             for key in network_config:
 
                 if key == 'GPS':
-                    data[key] = batch[key].squeeze(1)
+                    data[key] = batch[key].squeeze(-2)
                 else:
                     data[key] = batch[key]
 

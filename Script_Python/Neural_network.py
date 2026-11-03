@@ -219,7 +219,7 @@ class Dataset(torch.utils.data.Dataset):
     def windows_building(self, mission_seconds_list):
 
         # Si itera per tutti i secondi che rappresentano l'istante di inizio di una nuova finestra
-        for start in range(0, len(mission_seconds_list) - self.window_size + 1, self.window_stride):
+        for start in range(0, len(mission_seconds_list) - self.window_size + 1, self.window_size):
 
             window = mission_seconds_list[start:start + self.window_size]
 
@@ -231,7 +231,6 @@ class Dataset(torch.utils.data.Dataset):
 
             if self.mode == 'train':
                 self.training_batches_list.append(stacked_window)
-                print(self.training_batches_list)
             elif self.mode == 'validazione':
                 self.validation_batches_list.append(stacked_window)
 
@@ -307,26 +306,18 @@ class MixedLpNavLoss(nn.Module):
         # Conversione di output target e prodotto dalla rete in metri (de-normalizzazione)
         m_hat, m = y_hat * self.sigma + self.mu, y * self.sigma + self.mu
 
-        # Si estraggono dal batch i valori di yaw e si convertono in coseno e seno
-        #c, s = torch.cos(yaw), torch.sin(yaw)
-
-        # Funzione interna che permette di trasformare le coordinate body ottenute in assi NED --> usa la stessa convenzione della funzione definita in pre-processing [E, N]
-        #def to_ned(d):
-            #return torch.stack([d[..., 0]*s + d[..., 1]*c, d[..., 0]*c - d[..., 1]*s], -1)
-
         sigma2 = (self.sigma**2).mean()       # Fattore che rende adimensionali i termini espressi in metri --> è la varianza
 
         phi_d1 = F.mse_loss(y_hat, y)                                                              # Misfit per passo (attuale)
-        #phi_d2 = F.mse_loss(self.body_to_NED(m_hat, yaw).cumsum(1), self.body_to_NED(m, yaw).cumsum(1)) / sigma2
-        #phi_cum = F.mse_loss(to_ned(m_hat).cumsum(1), to_ned(m).cumsum(1)) / sigma2                 # Misfit sulla posizione NED (operatore G = somma cumulata sui K secondi)
+        phi_d2 = F.mse_loss(self.body_to_NED(m_hat, yaw).cumsum(1), self.body_to_NED(m, yaw).cumsum(1)) / sigma2
         phi_s   = self.lp((m_hat - v_dvl) / self.sigma, self.p)                                     # Smallness rispetto allo spostamento DVL
         phi_t   = self.lp(y_hat[:, 1:] - y_hat[:, :-1], self.q)                                     # Smoothness temporale
         cross   = (m_hat[..., 0]*v_dvl[..., 1] - m_hat[..., 1]*v_dvl[..., 0]).pow(2).mean() / sigma2**2     # Allineamento di direzione con il DVL (prodotto vettoriale)
 
-        #self.terms = {'phi_d': phi_d1.detach(), 'phi_cum': phi_d2.detach(), 'phi_s': phi_s.detach(), 'phi_t': phi_t.detach(), 'cross': cross.detach()}
-        self.terms = {'phi_d': phi_d1.detach(), 'phi_s': phi_s.detach(),'phi_t': phi_t.detach(), 'cross': cross.detach()}
+        self.terms = {'phi_d': phi_d1.detach(), 'phi_cum': phi_d2.detach(), 'phi_s': phi_s.detach(), 'phi_t': phi_t.detach(), 'cross': cross.detach()}
+        #self.terms = {'phi_d': phi_d1.detach(), 'phi_s': phi_s.detach(),'phi_t': phi_t.detach(), 'cross': cross.detach()}
 
-        return phi_d1 + self.a_s*phi_s + self.a_t*phi_t + self.w_dir*cross
+        return phi_d1 + self.w_cum*phi_d2 + self.a_s*phi_s + self.a_t*phi_t + self.w_dir*cross
 
 
 # Si definisce la classe utilizzata per il Simplified Attention Mechanism --> trattata come classe per non appesantire troppo il codice della NavNet --> prodotto in output un vettore dim(hidden_layer)*1
@@ -380,30 +371,6 @@ class NavNet(nn.Module):
             self.LSTMS[branch_name] = nn.LSTM(input_size=branch_size, hidden_size=hidden_size, batch_first=True)
             self.SAMS[branch_name] = SimplifiedAttentionMechanism(hidden_size=hidden_size)
 
-        # Si applicano i Fully connected layers --> ricevono in input il vettore c concatenato --> devo arrivare a 2 output, che rappresentano gli spostamenti nei due assi (possibile automatizzare aggiungendo più strati)
-        #input_size_FC = hidden_size * (len(network_config)-1)
-        #if FC_layers == 2:
-        #    self.FC = nn.Sequential(
-        #        nn.Linear(input_size_FC, input_size_FC // 2),
-        #        nn.ReLU(),
-        #        nn.Linear(input_size_FC // 2, 2))
-        #elif FC_layers == 3:
-        #    self.FC = nn.Sequential(
-        #        nn.Linear(input_size_FC, input_size_FC // 2),
-        #        nn.ReLU(),
-        #        nn.Linear(input_size_FC // 2, input_size_FC // 4),
-        #        nn.ReLU(),
-        #        nn.Linear(input_size_FC // 4, 2))
-        #elif FC_layers == 4:
-        #    self.FC = nn.Sequential(
-        #        nn.Linear(input_size_FC, input_size_FC // 2),
-        #        nn.ReLU(),
-        #        nn.Linear(input_size_FC // 2, input_size_FC // 4),
-        #        nn.ReLU(),
-        #        nn.Linear(input_size_FC // 4, input_size_FC // 6),
-        #        nn.ReLU(),
-        #        nn.Linear(input_size_FC // 2, 2))
-
         # Si definisce una lista di dimensioni del layer --> composta da elementi input_size, input_size//2, input_size//4,...,2 (in base a quanti layer sono previsti)
         input_size_FC = hidden_size * (len(network_config) - 1)
         layers_size = [input_size_FC] + [input_size_FC // (2*i) for i in range(1, FC_layers)] + [2]
@@ -443,8 +410,12 @@ class NavNet(nn.Module):
         context_vector_list = []
         for key, batch in data.items():
 
-            if key == 'GPS':
+            if key == 'GPS' or key == 'YAW' or key == 'DVL_DISP':
                 continue
+
+            # Si memorizzano le dimensioni di raggruppamento e si uniscono in un'unica dimensione --> ogni secondo diventa una sequenza indipendente [N, freq, feat] per l'LSTM (qualsiasi sia il numero di dimensioni precedenti)
+            lead_shape = batch.shape[:-2]
+            batch = batch.reshape(-1, *batch.shape[-2:])
 
             # 1. Passaggio negli LSTM
             LSTM_output, _ = self.LSTMS[key](batch)
@@ -461,7 +432,8 @@ class NavNet(nn.Module):
         # 4. Passaggio dai fully connected layers
         predicted_displacement = self.FC(c)
 
-        return predicted_displacement
+        return predicted_displacement.reshape(*lead_shape, -1)
+        #return predicted_displacement
 
     # Si crea una funzione per l'aggiornamento dei pesi tramite backpropagation per ogni epoca di addestramento
     def backpropagation(self, data):
