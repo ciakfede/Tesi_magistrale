@@ -1780,7 +1780,7 @@ class PostProcessing:
         return self
 
     # Funzione interna per la creazione dei box plot, utili per confrontare la distribuzione dei valori di errore (e non solo il valore medio) tra le varie versioni della rete
-    def box_plot(self, ROOT_DIR, metric_groups=("RMSE",)):
+    def box_plot_old(self, ROOT_DIR, metric_groups=("RMSE",)):
 
         highlight_best = False
 
@@ -1897,6 +1897,158 @@ class PostProcessing:
                                           Line2D([0], [0], marker='s', color='w', markerfacecolor='tab:green',
                                                  markersize=9, label='Mediana minore')],
                                  loc='center', frameon=False)
+
+                # Si salva il grafico e si chiude la figura per liberare memoria
+                fig.savefig(os.path.join(PLOT_FOLDER_PATH, fig_name), dpi=150)
+                plt.close(fig)
+
+        return self
+
+    def box_plot(self, ROOT_DIR, metric_groups=("RMSE",)):
+
+        highlight_best = False
+
+        # Si scelgono le metriche da rappresentare --> stessa struttura usata per i grafici a barre (per aggiungere i Delta basta passare metric_groups=("RMSE", "Delta"))
+        metrics_dict = {"RMSE": {"RMSE_E": "RMSE East", "RMSE_N": "RMSE North", "RMSE_tot": "RMSE complessivo"},
+                        "Delta": {"Delta_E": "Delta East finale", "Delta_N": "Delta North finale",
+                                  "Delta_tot": "Delta tot finale"}}
+
+        # Colori degli outlier --> pallini pieni sul tono del blu (riempimento coerente con le scatole, bordo piu' scuro per renderli leggibili)
+        outlier_face_color = 'tab:blue'
+        outlier_edge_color = 'navy'
+
+        # Si genera un nuovo dizionario avente come chiave le missioni --> a ognuna si associa, per ogni metrica, una lista di tuple (chiave iterazione, lista dei valori grezzi)
+        values_dict = {}
+        for iteration_key, version_dict in self.raw_values_dict.items():
+
+            for mission_key, mission_dict in version_dict.items():
+
+                if mission_key not in values_dict:
+                    values_dict[mission_key] = {}
+
+                for metric_key, raw_values in mission_dict.items():
+
+                    if metric_key not in values_dict[mission_key]:
+                        values_dict[mission_key][metric_key] = []
+                    values_dict[mission_key][metric_key].append((iteration_key, raw_values))
+
+        for plot_key in metric_groups:
+
+            metrics = metrics_dict[plot_key]
+
+            # Si crea una sottocartella per ogni metrica --> separata da quella dei grafici a barre per non sovrascrivere i file
+            PLOT_FOLDER_PATH = os.path.join(ROOT_DIR, 'Risultati_NN', 'Evaluation_metrics_analysis', 'Box_plot',
+                                            plot_key)
+            os.makedirs(PLOT_FOLDER_PATH, exist_ok=True)
+
+            # Per ogni chiave di missione si definisce un grafico differente
+            for mission_key, mission_dict in values_dict.items():
+
+                # Si inizializza l'ambiente grafico con la stessa impaginazione dei grafici a barre
+                fig = plt.figure(figsize=(20, 12), layout='constrained')
+                gs = fig.add_gridspec(2, 4)
+                axis = [fig.add_subplot(gs[0, 0:2]), fig.add_subplot(gs[0, 2:4]), fig.add_subplot(gs[1, 1:3])]
+
+                # Si definisce il titolo del grafico complessivo
+                if mission_key == 'test_missions':
+                    fig_name, fig_title = f"{plot_key}_boxplot_test_missions.pdf", f"Distribuzione {plot_key.upper()} sulle missioni di test"
+                elif mission_key == 'training_missions':
+                    fig_name, fig_title = f"{plot_key}_boxplot_training_missions.pdf", f"Distribuzione {plot_key.upper()} sulle missioni di training"
+                elif mission_key == 'total_missions':
+                    fig_name, fig_title = f"{plot_key}_boxplot_total_missions.pdf", f"Distribuzione {plot_key.upper()} su tutte le missioni"
+                elif isinstance(mission_key, tuple):
+                    fig_name, fig_title = f"{plot_key}_boxplot_{mission_key[0]}_{mission_key[1]}.pdf", f"Distribuzione {plot_key.upper()} sulla missione {mission_key[0]} - {mission_key[1]}"
+                else:
+                    fig_name, fig_title = f"{plot_key}_boxplot_{mission_key}.pdf", f"Distribuzione {plot_key.upper()} sulla missione {mission_key}"
+
+                fig.suptitle(fig_title, **self.title_font)
+
+                fliers_shown = False  # Diventa True se almeno un subplot mostra gli outlier --> serve a decidere se inserirli in legenda
+
+                for ax, (metric, axis_title) in zip(axis, metrics.items()):
+
+                    # Si estraggono le versioni con almeno un valore valido --> si scartano eventuali NaN/inf (es. versioni con training divergente)
+                    versions, samples = [], []
+                    for version, raw_values in mission_dict.get(metric, []):
+                        valid_values = np.asarray(raw_values, dtype=float)
+                        valid_values = valid_values[np.isfinite(valid_values)]
+                        if valid_values.size > 0:
+                            versions.append(version)
+                            samples.append(valid_values)
+
+                    if not samples:
+                        print(
+                            f"  [WARNING] Nessun valore valido per la missione {mission_key} e la metrica {metric}: grafico non generato.")
+                        ax.set_axis_off()
+                        continue
+
+                    # Per le singole missioni ci sono solo 4 valori per versione --> si mostrano i punti reali al posto degli outlier
+                    few_samples = max(len(s) for s in samples) <= 10
+                    fliers_shown = fliers_shown or not few_samples
+
+                    # Si inizializza il box plot --> ogni scatola e' una versione, con baffi a 1.5 IQR, mediana (linea nera) e media (rombo bianco)
+                    # Gli outlier sono pallini pieni (riempimento blu, bordo blu scuro)
+                    box_plot = ax.boxplot(samples, positions=range(len(samples)), widths=0.6, patch_artist=True,
+                                          showmeans=True, showfliers=not few_samples,
+                                          medianprops=dict(color='black', linewidth=1.5),
+                                          meanprops=dict(marker='D', markerfacecolor='white', markeredgecolor='black',
+                                                         markersize=4),
+                                          flierprops=dict(marker='o', markersize=4, markerfacecolor=outlier_face_color,
+                                                          markeredgecolor=outlier_edge_color, markeredgewidth=0.5,
+                                                          linestyle='none', alpha=0.8))
+
+                    # Ogni scatola ha il colore blu --> si evidenzia in verde la versione con la mediana minore
+                    for box in box_plot['boxes']:
+                        box.set_facecolor('tab:blue')
+                        box.set_edgecolor('black')
+
+                    if highlight_best:
+                        box_plot['boxes'][int(np.argmin([np.median(s) for s in samples]))].set_facecolor('tab:green')
+
+                    # Se i campioni sono pochi si sovrappongono i singoli valori con una piccola dispersione orizzontale (seed fisso per riproducibilita')
+                    if few_samples:
+                        rng = np.random.default_rng(0)
+                        for i, s in enumerate(samples):
+                            ax.scatter(i + rng.uniform(-0.12, 0.12, size=len(s)), s, s=14, color='black', alpha=0.7,
+                                       zorder=3)
+
+                    # Si calcolano mediana e media di ogni versione (sugli stessi campioni usati dal box plot) e le si scrivono sotto l'etichetta della versione
+                    # --> si evita di scriverle dentro il grafico, dove le scatole sono molto compresse e si sovrapporrebbero a baffi e outlier
+                    medians = [np.median(s) for s in samples]
+                    means = [np.mean(s) for s in samples]
+                    tick_labels = [f"v{version}\nmed: {md:.2f}\nμ: {mu:.2f}" for version, md, mu in
+                                   zip(versions, medians, means)]
+
+                    # Dimensione del font ridotta e adattata al numero di versioni (8 pt per 10 versioni) --> con fontdict le chiavi vanno unite, altrimenti la size originale (11) sovrascrive
+                    tick_font = {**self.axis_font, 'size': float(np.clip(80 / len(versions), 5, 9))}
+
+                    # Si definiscono i parametri associati agli assi di ogni subplot
+                    ax.set_xticks(range(len(versions)))
+                    ax.set_xticklabels(tick_labels, rotation=0, fontdict=tick_font, linespacing=1.3)
+                    ax.set_ylabel(f"{metric} [m]", fontdict=self.axis_font)
+                    ax.set_title(f"Distribution {axis_title}", fontdict=self.axis_font)
+
+                    log_grid = False
+                    if log_grid:
+                        ax.set_yscale('log')
+                        ax.grid(axis='y', which='both', alpha=0.3)
+                    else:
+                        ax.grid(axis="y", alpha=0.3)
+
+                # Si usa lo spazio libero in basso a destra della griglia per la legenda --> la voce "Mediana minore" compare solo se l'evidenziazione e' attiva
+                legend_handles = [Line2D([0], [0], color='black', linewidth=1.5, label='Mediana (med)'),
+                                  Line2D([0], [0], marker='D', color='w', markerfacecolor='white',
+                                         markeredgecolor='black', markersize=6, label='Media (μ)')]
+                if fliers_shown:
+                    legend_handles.append(Line2D([0], [0], marker='o', color='w', markerfacecolor=outlier_face_color,
+                                                 markeredgecolor=outlier_edge_color, markersize=6, label='Outlier'))
+                if highlight_best:
+                    legend_handles.append(Line2D([0], [0], marker='s', color='w', markerfacecolor='tab:green',
+                                                 markersize=9, label='Mediana minore'))
+
+                legend_ax = fig.add_subplot(gs[1, 3])
+                legend_ax.set_axis_off()
+                legend_ax.legend(handles=legend_handles, loc='center', frameon=False)
 
                 # Si salva il grafico e si chiude la figura per liberare memoria
                 fig.savefig(os.path.join(PLOT_FOLDER_PATH, fig_name), dpi=150)

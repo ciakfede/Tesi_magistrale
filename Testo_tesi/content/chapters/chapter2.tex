@@ -430,28 +430,53 @@ Le possibili varianti presentate impattano su diversi aspetti dell'addestramento
 
             \begin{equation}
                 \begin{cases}
-                    v_{\text{t+1,i}} = \displaystyle \beta \, v_{\text{t-1,i}}  + (1 - \beta) \left(\frac{\partial L(\theta_{\tau})}{\partial \theta_{i}}\right)^{2} \\[0.40cm]
-                    \theta_{\text{t+1,i}} = \displaystyle \theta_{\text{t,i}} - \ \frac{\eta}{\sqrt{v_{\text{t,i}} + \epsilon}} \cdot \frac{\partial L(\theta_{\tau})}{\partial \theta_{i}} = (1 - \beta) \sum_{\tau=1}^{\text{t}} \beta^{t-\tau} \, \left(\frac{\partial L(\theta_{\tau})}{\partial \theta_{i}}\right)^{2}
+                    v_{\text{t+1,i}} = \displaystyle \beta \, v_{\text{t,i}}  + (1 - \beta) \left(\frac{\partial L(\theta_{\tau})}{\partial \theta_{i}}\right)^{2} = (1 - \beta) \sum_{\tau=1}^{\text{t}} \beta^{t-\tau} \, \left(\frac{\partial L(\theta_{\tau})}{\partial \theta_{i}}\right)^{2} \\[0.40cm]
+                    \theta_{\text{t+1,i}} = \displaystyle \theta_{\text{t,i}} - \ \frac{\eta}{\sqrt{v_{\text{t+1,i}} + \epsilon}} \cdot \frac{\partial L(\theta_{\tau})}{\partial \theta_{i}}
                 \end{cases}
                 \label{eq:RMSProp}
             \end{equation}
 
-        Il risultato è sostanzialmente una media mobile del quadrato dei gradienti, caratterizzata da un decadimento esponenziale dell'informazione. Per valori di $\beta$ vicini all'unità, solamente i gradienti più recenti influenzano il learning rate effettivo, riducendo significativamente il rischio di una continua decrescita del tasso di apprendimento. Utilizzando un approccio simile, inoltre, si ottiene una variazione più graduale del rateo di discesa, incrementando la stabilità del processo. Infine, con una dipendenza dalla sola storia recente della rete, un caso analogo a quello considerato per la precedente funzione, con una successione di gradienti elevati seguiti da diversi elementi nulli, non rappresenterebbe più una fonte di criticità. Dopo poche iterazioni, infatti, i valori superiori scomparirebbero dalla legge di aggiornamento, aumentando efficacemente il rateo.
+        Il risultato è sostanzialmente una media mobile del quadrato dei gradienti, caratterizzata da un decadimento esponenziale dell'informazione. Per valori di $\beta$ vicini all'unità, solamente i gradienti più recenti influenzano il learning rate effettivo, riducendo significativamente il rischio di una continua decrescita del tasso di apprendimento. Un approccio simile, inoltre, determina una variazione più graduale del learning rate, incrementando la stabilità del processo. Infine, con una dipendenza dalla sola storia recente della rete, un caso analogo a quello considerato per la precedente funzione, con una successione di gradienti elevati seguiti da diversi elementi nulli, non rappresenterebbe più una fonte di criticità. Dopo poche iterazioni, infatti, i valori superiori scomparirebbero dalla legge di aggiornamento, aumentando efficacemente il rateo.
 
-        \item \textbf{Adams}
+        \item \textbf{Adaptive Moment Estimation (Adam)}\cite{Adam_medium}: i metodi discussi fino ad ora sono stati pensati per risolvere criticità specifiche associate alla discesa del gradiente. Tuttavia, in una rete neurale tali problematiche e limitazioni possono presentarsi contemporaneamente, rendendo necessario un approccio più complesso. Nel 2015 Kingma et al.\cite{Adam}, propongono un algoritmo di ottimizzazione capace di combinare le caratteristiche distintive dei metodi presentati, con particolare riferimento ad AdaGrad, RMSprop e Momentum. Ciò permette di ottenere un algoritmo caratterizzato da un learning rate adattivo per ogni parametro, gestito tramite il \emph{secondo momento} ($v_{\text{t+1}}$) e basato su una media mobile non centrata del quadrato dei gradienti, e allo stesso tempo da un meccanismo inerziale di riduzione delle oscillazioni, gestito tramite il \emph{primo momento} ($m_{\text{t+1}}$) e dipendente da una media mobile dei gradienti. Entrambi i termini sono caratterizzati da un decadimento esponenziale, al fine di ottimizzare la memoria impiegata, e vengono pesati tramite i coefficienti $\beta_{1}$ e $\beta_{2}$, solitamente pari a 0.9 e 0.999 rispettivamente. Inoltre, analogamente a quanto visto per le relazioni \ref{eq:AdaGrad} e \ref{eq:RMSProp}, si introduce una costante $\epsilon$ a denominatore della legge di aggiornamento, solitamente pari a $10^{-8}$. Come evidenziato da Kingma et al., poi, i vettori dei momenti $m_{\text{t+1}}$ e $v_{\text{t+1}}$ risultano inizializzati a zero, e, pertanto, le prime iterazioni dell'algoritmo risentono di una forte distorsione verso tale valore. Per compensare questo effetto, si rende necessario correggere opportunamente questi termini mediante un fattore di normalizzazione basato sui rispettivi coefficienti di decadimento:
         
-        \item \textbf{AdamW}
+            \begin{equation}
+                \begin{cases}
+                    m_{\text{t+1}} = \displaystyle \beta_{1} m_{\text{t}} + (1 - \beta_{1}) \nabla L(\theta_{\text{t}}) \rightarrow \hat{m}_{\text{t+1}} = \frac{m_{\text{t+1}}}{1 - \beta_{1}^{\text{t+1}}}  \\[0.35cm]
+
+                    v_{\text{t+1}} = \displaystyle \beta_{2} v_{\text{t}} + (1 - \beta_{2}) \nabla L(\theta_{\text{t}})^{2} \rightarrow \hat{v}_{\text{t+1}} = \frac{v_{\text{t+1}}}{1 - \beta_{2}^{\text{t+1}}} \\[0.35cm]
+
+                    \theta_{\text{t+1}} = \displaystyle \theta_{\text{t}} - \frac{\eta}{\sqrt{\hat{v}_{\text{t+1}}} + \epsilon} \cdot \hat{m}_{\text{t+1}}
+                \end{cases}
+                \label{eq:Adam}
+            \end{equation} 
+
+        Naturalmente, questo approccio non è esente da criticità. L'efficacia dell'algoritmo, infatti, dipende fortemente dalla selezione degli iperparametri introdotti, quali il learning rate, i coefficienti di decadimento e la costante $\epsilon$. Inoltre, la convergenza dell'algoritmo non è garantita a livello teorico, e le prestazioni non risultano identiche per ogni architettura neurale. Ad ogni modo, l'elevata velocità di convergenza e la maggiore stabilità rispetto ad altri metodi di ottimizzazione, hanno reso Adam uno degli algoritmi più diffusi per l'addestramento di reti neurali.
+             
+        \item \textbf{AdamW}\cite{AdamW_medium}: in alcuni problemi di ottimizzazione si rende necessario l'utilizzo di un termine di \emph{weight decay} nella formulazione della loss function, al fine di ridurre l'eccessiva crescita dei parametri del modello e, di conseguenza, il rischio di overfitting:
         
-        \item \textbf{Muon}
+            \begin{equation}
+                L_{wd}(\theta) = \displaystyle L(\theta) + \frac{\lambda}{2} \sum_{i=1}^{n} \theta_{i}^{2} \implies \nabla_{\theta} L(\theta) |_{\text{wd}} = \nabla_{\theta} L(\theta) + \lambda \theta
+                \label{eq:weight_decay}
+            \end{equation}
+
+        In caso si combini questa soluzione con l'ottimizzatore Adam, il termine di penalizzazione introdotto impatta differentemente, attraverso il gradiente, sui termini di momento. Per risolvere questa problematica, Loshchilov e Hutter\cite{AdamW} propongono una modifica alla legge di aggiornamento dei parametri, che consente di separare il contributo del weight decay da quello del gradiente della loss function:
+
+            \begin{equation}
+                \begin{cases}
+                    m_{\text{t+1}} = \displaystyle \beta_{1} m_{\text{t}} + (1 - \beta_{1}) \nabla L(\theta_{\text{t}}) \rightarrow \hat{m}_{\text{t+1}} = \frac{m_{\text{t+1}}}{1 - \beta_{1}^{\text{t+1}}}  \\[0.35cm]
+
+                    v_{\text{t+1}} = \displaystyle \beta_{2} v_{\text{t}} + (1 - \beta_{2}) \nabla L(\theta_{\text{t}})^{2} \rightarrow \hat{v}_{\text{t+1}} = \frac{v_{\text{t+1}}}{1 - \beta_{2}^{\text{t+1}}} \\[0.35cm]
+
+                    \theta_{\text{t+1}} = \displaystyle \theta_{\text{t}} - \eta \, \left(\frac{1}{\sqrt{\hat{v}_{\text{t+1}}} + \epsilon} \cdot \hat{m}_{\text{t+1}} + \lambda \theta_{\text{t}}\right)
+                \end{cases}
+                \label{eq:AdamW}
+            \end{equation}
+
+        Per reti neurali complesse ad alta dimensionalità, è stato dimostrato che spesso l'adozione di un approccio simile consente di ottenere prestazioni migliori rispetto all'utilizzo del classico Adam, con una migliore capacità di generalizzazione e una superiore stabilità, ed è, pertanto, preferibile. 
         
     \end{itemize}
 
 
-
-
-
-
-
-
-
 \subsection{Algoritmi tipici}
+
