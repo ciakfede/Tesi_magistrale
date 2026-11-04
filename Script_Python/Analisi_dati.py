@@ -1908,6 +1908,9 @@ class PostProcessing:
 
         highlight_best = False
 
+        # Dimensione (in pt) del font dei valori di mediana e media scritti sopra ogni grafico --> aumentarla per le presentazioni
+        stats_fontsize = 14
+
         # Si scelgono le metriche da rappresentare --> stessa struttura usata per i grafici a barre (per aggiungere i Delta basta passare metric_groups=("RMSE", "Delta"))
         metrics_dict = {"RMSE": {"RMSE_E": "RMSE East", "RMSE_N": "RMSE North", "RMSE_tot": "RMSE complessivo"},
                         "Delta": {"Delta_E": "Delta East finale", "Delta_N": "Delta North finale",
@@ -2012,21 +2015,36 @@ class PostProcessing:
                             ax.scatter(i + rng.uniform(-0.12, 0.12, size=len(s)), s, s=14, color='black', alpha=0.7,
                                        zorder=3)
 
-                    # Si calcolano mediana e media di ogni versione (sugli stessi campioni usati dal box plot) e le si scrivono sotto l'etichetta della versione
-                    # --> si evita di scriverle dentro il grafico, dove le scatole sono molto compresse e si sovrapporrebbero a baffi e outlier
+                    # Si calcolano mediana e media di ogni versione (sugli stessi campioni usati dal box plot) e le si scrivono in due righe sopra il grafico,
+                    # allineate in orizzontale alla scatola corrispondente --> fuori dall'area dei dati, quindi senza sovrapposizioni con baffi e outlier
                     medians = [np.median(s) for s in samples]
                     means = [np.mean(s) for s in samples]
-                    tick_labels = [f"v{version}\nmed: {md:.2f}\nμ: {mu:.2f}" for version, md, mu in
-                                   zip(versions, medians, means)]
+                    stats_font = {**self.axis_font, 'size': stats_fontsize}
 
-                    # Dimensione del font ridotta e adattata al numero di versioni (8 pt per 10 versioni) --> con fontdict le chiavi vanno unite, altrimenti la size originale (11) sovrascrive
-                    tick_font = {**self.axis_font, 'size': float(np.clip(80 / len(versions), 5, 9))}
+                    # Trasformazione mista: x in coordinate dati (posizione della scatola), y in coordinate relative all'asse (1 = bordo superiore del grafico)
+                    # Le due righe sono distanziate dal bordo in punti (non in frazione dell'asse) --> restano ben separate anche cambiando stats_fontsize
+                    x_data_y_axes = ax.get_xaxis_transform()
+                    row_offset = {'Media': 1.0 * stats_fontsize, 'Mediana': 2.4 * stats_fontsize}
 
-                    # Si definiscono i parametri associati agli assi di ogni subplot
+                    for i, (md, mu) in enumerate(zip(medians, means)):
+                        ax.annotate(f"{md:.2f}", xy=(i, 1.0), xycoords=x_data_y_axes, xytext=(0, row_offset['Mediana']),
+                                    textcoords='offset points', ha='center', va='center', annotation_clip=False,
+                                    **{**stats_font, 'weight': 'bold'})
+                        ax.annotate(f"{mu:.2f}", xy=(i, 1.0), xycoords=x_data_y_axes, xytext=(0, row_offset['Media']),
+                                    textcoords='offset points', ha='center', va='center', annotation_clip=False,
+                                    **stats_font)
+
+                    # Intestazioni delle due righe, a sinistra del bordo del grafico
+                    for label, offset in row_offset.items():
+                        ax.annotate(label, xy=(0, 1.0), xycoords='axes fraction', xytext=(-8, offset),
+                                    textcoords='offset points', ha='right', va='center', annotation_clip=False,
+                                    **{**stats_font, 'weight': 'bold' if label == 'Mediana' else 'normal'})
+
+                    # Si definiscono i parametri associati agli assi di ogni subplot --> etichette delle versioni ruotate a 45 gradi come nella versione originale
                     ax.set_xticks(range(len(versions)))
-                    ax.set_xticklabels(tick_labels, rotation=0, fontdict=tick_font, linespacing=1.3)
+                    ax.set_xticklabels([f"v{version}" for version in versions], rotation=45, fontdict=self.axis_font)
                     ax.set_ylabel(f"{metric} [m]", fontdict=self.axis_font)
-                    ax.set_title(f"Distribution {axis_title}", fontdict=self.axis_font)
+                    ax.set_title(f"Distribution {axis_title}", fontdict=self.axis_font, pad=3.4 * stats_fontsize)
 
                     log_grid = False
                     if log_grid:
@@ -2036,9 +2054,9 @@ class PostProcessing:
                         ax.grid(axis="y", alpha=0.3)
 
                 # Si usa lo spazio libero in basso a destra della griglia per la legenda --> la voce "Mediana minore" compare solo se l'evidenziazione e' attiva
-                legend_handles = [Line2D([0], [0], color='black', linewidth=1.5, label='Mediana (med)'),
+                legend_handles = [Line2D([0], [0], color='black', linewidth=1.5, label='Mediana'),
                                   Line2D([0], [0], marker='D', color='w', markerfacecolor='white',
-                                         markeredgecolor='black', markersize=6, label='Media (μ)')]
+                                         markeredgecolor='black', markersize=6, label='Media')]
                 if fliers_shown:
                     legend_handles.append(Line2D([0], [0], marker='o', color='w', markerfacecolor=outlier_face_color,
                                                  markeredgecolor=outlier_edge_color, markersize=6, label='Outlier'))
