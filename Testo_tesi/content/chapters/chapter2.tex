@@ -480,3 +480,111 @@ Le possibili varianti presentate impattano su diversi aspetti dell'addestramento
 
 \subsection{Algoritmi tipici}
 
+Fino ad ora sono stati presentati gli elementi fondamentali per comprendere il funzionamento di una rete neurale e le principali problematiche associate al suo addestramento. Inoltre, si è introdotto uno schema di funzionamento della più semplice rete neurale, definita \emph{Feedforward Neural Network}. 
+
+Una rete di questo tipo, tuttavia, non si rivela adatta alla risoluzione di ogni possibile problema riscontrabile in questo ambito. Per ovviare ai limiti che possono insorgere a seconda del caso specifico, sono state sviluppate diverse architetture alternative. Naturalmente, le strutture possibili sono decine se non centinaia e l'analisi dettagliata di ognuna di esse va oltre gli scopi di questo lavoro di tesi. Per tale motivo, nel seguito verranno discusse le caratterisiche proprie degli algoritmi più diffusi e, allo stesso tempo, attinenti con la risoluzione di problemi di regressione, come quello qui trattato. 
+
+\subsubsection{Recurrent Neural Network}
+
+Come anticipato, in molte applicazioni, una semplice rete neurale feedforward non risulta adatta per catturare le complesse relazioni presenti tra i dati. Ciò è particolarmente vero per problemi che richiedono l'individuazione di un pattern all'interno di una sequenza temporale di informazioni, come una serie di misurazioni effettuate da un sensore o una sequenza di parole in un testo. In questi casi, infatti, l'output della rete non dipende solamente dall'input corrente $X_{t} \in \R^{n \times d}$, dove n è il numero di istanti temporali considerati contemporaneamente e d è il numero di elementi associato ad ogni istante, ma anche da quelli precedenti. Per affrontare problemi di questo tipo, come indicato anche nel paper di Schmidt\cite{RNN}, è necessario introdurre nella rete neurale un meccanismo in grado di memorizzare le informazioni elaborate in precedenza, sotto forma di vettore $H_{\text{t-1}} \in \R^{n \times h}$, dove h è la dimensionalità dell'hidden layer, e di utilizzarle per influenzare l'analisi dei dati successivi. Un simile approccio viene implementato concretamente all'interno delle cosiddette \emph{reti neurali ricorsive o RNN}, una cui rappresentazione concettuale è riportata in \emph{Figura} \ref{fig:RNN}. 
+
+    \begin{figure}[!htb]
+        \centering
+        \includegraphics[width=0.7\linewidth]{./images/NN/RNN_base.pdf}
+        \caption{Rappresentazione concettuale di una RNN}
+        \label{fig:RNN}
+    \end{figure}
+
+Lo schema qui proposto, raffigurante una rete composta da un solo hidden layer per semplicità, consente di visualizzare il percorso seguito dalle informazioni all'interno di un RNN. In particolare, la prima elaborazione avviene nell'input layer, analogamente a quanto già discusso per le reti feedforward. Successivamente, il vettore risultante viene trasmesso, mediante opportuni pesi definiti nella matrice $W_{xh}\in \R^{d \times h}$, all'hidden layer. Qui le informazioni vengono combinate con quelle relative allo stato precedente del layer stesso, opportunamente pesate tramite la matrice $W_{hh} \in \R^{h \times h}$. Infine, il vettore prodotto, moltiplicato per i pesi definiti nella matrice $W_{hy}$, viene trasmesso all'output layer, per ottenere l'output finale del modello. Matematicamente questo processo può essere descritto dalle seguenti relazioni, in cui $h_{t}$ rappresenta lo stato del layer nascosto al tempo $t$, $\hat{y}_{t}$ l'output della rete nello stesso istante e $\phi_{h}$ e $\phi_{y}$ sono le funzioni di attivazione associate ai due layer coinvolti:
+
+\vspace{-14pt}
+
+    \begin{equation}
+        \begin{cases}
+            h_{t} = \phi_{h}(X_{t} \cdot W_{xh} + h_{t-1} \cdot W_{hh} + b_{h}) \\[0.35cm]
+            \hat{y}_{t} = \phi_{y}(h_{t} \cdot W_{hy} + b_{y})
+        \end{cases}
+        \label{eq:RNN}
+    \end{equation} 
+
+\vspace{-14pt}
+
+Per ottenere le prestazioni ottimali da un'architettura di questo tipo, naturalmente, una corretta gestione del processo di apprendimento è fondamentale. In particolare, tale processo richiede un approccio differente rispetto a quello caratteristico delle classiche reti feedforward, come la \emph{backpropagation through time o BPTT}. In questo caso, infatti, il gradiente della loss function rispetto ad ogni peso della rete deve essere calcolato separatamente per ogni istante temporale. Ovviamente, il gradiente calcolato in un istante temporale dipende dallo stato precedente dell'hidden layer, che a sua volta dipende da quello ancora prima e così via. In particolare, come mostrato nel lavoro di Schmidt, applicando la regola della catena è possibile definire le derivate parziali rispetto alle varie matrici dei pesi della rete:
+
+\vspace{-14pt}
+
+    \begin{equation}
+        \begin{cases}
+            \displaystyle \frac{\partial L}{\partial W_{xh}} = \sum_{t=1}^{T} \frac{\partial l_{t}}{\partial \hat{y}_{t}} \cdot \frac{\partial \hat{y}_{t}}{\partial \phi_{y}} \cdot \frac{\partial \phi_{y}}{\partial h_{t}} \cdot \frac{\partial h_{t}}{\partial \phi_{h}} \cdot \frac{\partial \phi_{h}}{\partial W_{xh}}\text{,     con  } \frac{\partial h_{t}}{\partial \phi_{h}} \frac{\partial \phi_{h}}{\partial W_{xh}} = \sum_{k=1}^{t} (W_{hh}^{T})^{t-k} \cdot X_{k} \\[0.40cm]
+
+            \displaystyle \frac{\partial L}{\partial W_{hh}} = \sum_{t=1}^{T} \frac{\partial l_{t}}{\partial \hat{y}_{t}} \cdot \frac{\partial \hat{y}_{t}}{\partial \phi_{y}} \cdot \frac{\partial \phi_{y}}{\partial h_{t}} \cdot \frac{\partial h_{t}}{\partial \phi_{h}} \cdot \frac{\partial \phi_{h}}{\partial W_{hh}}\text{,     con  } \frac{\partial h_{t}}{\partial \phi_{h}} \frac{\partial \phi_{h}}{\partial W_{hh}} = \sum_{k=1}^{t} (W_{hh}^{T})^{t-k} \cdot h_{k} \\[0.40cm]
+
+            \displaystyle \frac{\partial L}{\partial W_{hy}} = \sum_{t=1}^{T} \frac{\partial l_{t}}{\partial \hat{y}_{t}} \cdot \frac{\partial \hat{y}_{t}}{\partial \phi_{y}} \cdot \frac{\partial \phi_{y}}{\partial W_{hy}}
+        \end{cases}
+        \label{eq:BPTT}
+    \end{equation}
+
+Come evidenziato dalle relazioni \ref{eq:BPTT}, i gradienti calcolati dipendono, oltre al resto, da una sommatoria di contributi in cui compare una potenza della matrice dei pesi $W_{hh}$, con esponente pari al numero di istanti temporali considerati. Ciò si traduce, in presenza di sequenze temporali particolarmente lunghe, in una tendenza delle derivate parziali rispetto ai pesi $W_{hh}$ e $W_{hy}$ ad assumere valori molto grandi (exploding gradient) o molto piccoli (vanishing gradient), a seconda della natura della funzione di attivazione impiegata e agli autovalori della matrice dei pesi in questione. Una possibile soluzione a questo problema, seppur parziale, consiste nel troncare la sommatoria di istanti temporali considerati, rendendo sostanzialmente la rete dipendente da una finestra temporale mobile limitata.
+
+\subsubsection{Long Short-Term Memory Units}
+
+Al fine di superare, in particolare, le criticità legate al vanishing gradient, nel 1997 Hochreiter e Schmidhuber\cite{LSTM} propongono una architettura innovativa, seppur ancora basata sui principi di una RNN, definita \emph{LSTM}. La peculiarità di questa architettura consiste nella presenza di particolari strutture, chiamate \emph{celle di memoria}, in grado di immagazzinare una gran quantità di dati al di fuori del normale flusso di informazioni della rete. In questo modo, infatti, è possibile mantenere le informazioni rilevanti in una memoria a lungo termine, pensata appositamente per favorire la fase di backpropagation, e allo stesso tempo usare gli stati più recenti come memoria a breve termnine per influenzare l'analisi dei nuovi dati. Nel concreto, una cella di memoria si compone di tre \emph{gate} principali, come mostrato schematicamente in \emph{Figura} \ref{fig:LSTM}. Ognuno di questi gate, riceve in ingresso un vettore composto dai dati associati all'istante di iterazione $X_{\text{t}} \in \R^{n \times d}$ e dallo stato passato del layer LSTM $H_{\text{t-1}} \in \R^{n \times h}$, dove n, d e h coincidono con le dimensioni già descritte nel precedente paragrafo. 
+
+In una rete neurale reale, naturalmente, ogni modulo LSTM presente risulta composto da $h$ celle di memoria identiche poste in parallelo. Pertanto, tutte le operazioni svolte per raggiungere gli output desiderati hanno carattere vettoriale. Al fine di comprendere il meccanismo di funzionamento alla base di un'architettura di questo tipo, tuttavia, si è scelto di descrivere il percorso di elaborazione dei dati dal punto di vista di una singola cella di memoria, che elabora l'intero vettore di input ma produce, per ogni gate, dei singoli valori scalari:
+
+    \begin{itemize}
+
+        \item \textbf{Forget gate}: il primo gate incontrato dal vettore di input, aggiunto in lavori successivi al paper di ochreiter e Schmidhuber precedentemente citato, ha il compito di determinare quali informazioni della memoria a lungo termine devono essere "eliminate" poiché non più utili. Per fare ciò si ricorre ad una funzione di attivazione sigmoidale che, in combinazione con la funzione lineare, trasforma il vettore di ingresso in un valore compreso tra 0 e 1. Questo scalare viene, poi, moltiplicato per lo stato passato della cella di memoria $C_{\text{t-1}}$, determinando in questo modo la percentuale di informazione utilizzata per le fasi seguenti. 
+        
+        \item \textbf{Input gate}: successivamente, occorre determinare quante e quali informazioni aggiungere alla memoria a lungo termine. Per fare ciò, in particolare, si ricorre ad un meccanismo basato sulla combinazione di due valori numerici, ottenuti da una duplice elaborazione del vettore di ingresso. Il primo di questi scalari, indicato con $I_{t}$, è stimato dall'input gate vero e proprio, mediante una funzione di attivazione sigmoidale. Pertanto, il valore è necessariamente compreso tra 0 e 1 e definisce la frazione del vettore dello stato candidato della cella ritenuta utile e, dunque, da immagazzinare in memoria. Il secondo scalare, invece, rappresentante proprio lo \textbf{stato candidato della cella} $\tilde{C}_{t}$, è stimato mediante una funzione tangente iperbolica e, pertanto, apppartiene all'intervallo $(-1, 1)$. Per determinare lo stato di memoria della cella $C_{t}$, occorre  tenere conto, oltre al risultato prodotto da questo gate, della frazione dello stato passato mantenuta dopo il passaggio attraverso il forget gate.  
+
+        \item \textbf{Output gate}: infine, combinando lo stato di memoria della cella, ottenuto a seguito dell'elaborazione del vettore di input nei precedenti gate e nuovamente processato attraverso una funzione tangente iperbolica, con il vettore stesso, trasformato mediante una funzione sigmoidale, si ottiene lo stato attuale del layer, $H_{t}$. 
+        
+    \end{itemize}
+
+    \begin{figure}[!htb]
+        \centering
+        \includegraphics[width=0.7\linewidth]{./images/NN/LSTM_base.pdf}
+        \caption{Rappresentazione concettuale di una LSTM}
+        \label{fig:LSTM}
+    \end{figure}
+
+Per quanto detto, volendo ora descrivere le equazioni caratteristiche di ogni gate, occorre tornare ad una notazione vettoriale. In particolare, ogni vettore prodotto in output è caratterizzato dalle medesime dimensioni, dipendenti dal numero di istanti temporali considerati nella stessa iterazione e dalla dimensionalità del layer, ottenendo, quindi, $F_{\text{t}}$, $I_{\text{t}}$, $\tilde{C}_{\text{t}}$, $O_{\text{t}}$, $C_{\text{t}}$ e $H_{\text{t}}$ $\in \R^{n \times h}$. Per completezza, inoltre, si osserva che le matrici dei pesi riportate assumono dimensioni determinate dal vettore di input a cui sono associate, mentre i bias sono legati al vettore di output stesso. Più nel dettaglio, $W_{\text{xf}}$, $W_{\text{xi}}$, $W_{\text{xc}}$ e $W_{\text{xo}}$ $\in \R^{d \times h}$ e $W_{\text{hf}}$, $W_{\text{hi}}$, $W_{\text{hc}}$ e $W_{\text{ho}}$ $\in \R^{h \times h}$. Considerando quanto detto, dunque, si possono definire le seguenti equazioni:
+
+\vspace{-14pt}
+
+    \begin{equation}
+        \begin{cases}
+            F_{\text{t}} = \sigma \left(X_{\text{t}} \cdot W_{\text{xf}} + H_{\text{t-1}} \cdot W_{\text{hf}} + b_{\text{f}}\right) \\[0.35cm]
+            I_{\text{t}} = \sigma \left(X_{\text{t}} \cdot W_{\text{xi}} + H_{\text{t-1}} \cdot W_{\text{hi}} + b_{\text{i}}\right) \\[0.35cm]
+            \tilde{C}_{\text{t}} = tanh \left(X_{\text{t}} \cdot W_{\text{xc}} + H_{\text{t-1}} \cdot W_{\text{hc}} + b_{\text{c}}\right) \\[0.35cm]
+            O_{\text{t}} = \sigma \left(X_{\text{t}} \cdot W_{\text{xo}} + H_{\text{t-1}} \cdot W_{\text{ho}} + b_{\text{o}}\right)
+        \end{cases} \Longrightarrow \begin{cases} C_{\text{t}} = F_{\text{t}} \odot C_{\text{t-1}} + I_{\text{t}} \odot \tilde{C}_{\text{t}} \\[0.35cm]
+            H_{\text{t}} = O_{\text{t}} \odot tanh(C_{\text{t}}) \end{cases}
+        \label{eq:LSTM}
+    \end{equation}
+
+
+\subsubsection{Radial Basis Function Neural Network}
+
+In problemi caratterizzati da dati fortemente non-lineari e in cui risulta particolarmente rilevante la distribuzione spaziale dei dati stessi, una semplice rete feedforward può non rivelarsi la scelta ottimale. Una variante di quest'ultima, è stata proposta nel 1988 da Broomhead e Lowe\cite{RBFNN} e si basa, nella sua versione più semplice, sull'introduzione di una \emph{radial basis function} nell'hidden layer presente, come mostrato schematicamente in \emph{Figura} \ref{fig:RBFNN}. 
+
+    \begin{figure}[!htb]
+        \centering
+        \includegraphics[width=0.7\linewidth]{./images/NN/RBFNN_base.pdf}
+        \caption{Rappresentazione concettuale di un RBFNN}
+        \label{fig:RBFNN}
+    \end{figure}
+
+Prima di descrivere dettagliatamente il processo che permette di giungere alla stima prodotta da una simile rete neurale, occorre comprenderne appieno il funzionamento e, pertanto, è necessario descrivere le caratteristiche e la formulazione matematica associate a questa particolare classe di funzioni. Facendo riferimento alle informazioni riportate nel lavoro di Orr\cite{RBFNN_Orr}, si può affermare che il tratto distintivo comune sia la dipendenza dalla distanza tra un centro di riferimento e il punto considerato. A seconda della specifica formulazione prescelta, poi, il profilo della risposta può assumere una forma differente. Tipicamente, nell'ambito delle reti neurali si predilige l'utilizzo di una variante Gaussiana della funzione base, caratterizzata da una decrescita monotona graduale della funzione al crescere della distanza dal centro identificato. A livello matematico ciò si traduce nella seguente relazione, dipendente dal valore del centro $c_{i}$ del singolo neurone e dall'ampiezza della curva $\sigma_{i}$, che determina l'estensione della zona di influenza del neurone:
+
+    \begin{equation}
+        \phi_{i}(x) = \displaystyle e^{\displaystyle -\frac{||x - c_{i}||^{2}}{2 \,\sigma_{i}^{2}}}
+        \label{eq:RBF}
+    \end{equation}
+
+Considerando quanto appena discusso e lo schema concettuale della rete neurale mostrato in \emph{Figura} \ref{fig:RBFNN}, si notano immediatamente alcune differenze rispetto ad una tradizionale rete feedforward. Sebbene la struttura resti la medesima, non sono più presenti pesi e bias associati al passaggio di informazioni tra l'input layer e l'hidden layer. I neuroni dell'hidden layer, infatti, non usano più il tradizionale meccanismo basato sulla funzione lineare, necessitando unicamente della distanza tra i valori di input e il centro specifico del neurone. Applicando la funzione radiale a questo valore si ottiene, quindi, un indice di attinenza tra il dato di input e la zona dello spazio associata ad uno specifico neurone. Infine, la stima finale della rete si ottiene tramite una classica funzione lineare pesata dei valori prodotti dall'hidden layer. 
+
+Utilizzare un simile approccio può, dunque, migliorare notevolmente le prestazioni degli algoritmi in problemi caratterizzati da uno spazio dei dati partizionato in più cluster. La radial basis function, infatti, consente di creare risposte differenti a seconda della specifica regione presa in considerazione, semplicemente selezionando opportunamente il centro dei vari neuroni presenti nell'hidden layer. Un ulteriore vantaggio significativo rispetto alle tradizionali reti neurali si riscontra nel processo di addestramento, molto più rapido dato il minor numero di parametri coinvolti e la possibilità di utilizzare tecniche alternative al classico meccanismo della backpropagation, separando, inoltre, l'identificazione dei valori ottimali dei centri dall'apprendimento dei pesi associati all'output layer. La natura locale del metodo, tuttavia, può diventare una criticità in problemi che richiedono un'elevata generalizzazione a dati distribuiti in tutto lo spazio degli input e occorre, pertanto, considerare attentamente se una rete di questo tipo può essere applicata ad uno specifico quesito. 
+
+
