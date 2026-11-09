@@ -3,3 +3,40 @@
 
 % Discutere di possibili miglioramenti futuri --> test su drone reale --> inserimento di altri algoritmi presentati come quelli per correggere DVL o calibrazione iniziale sensori
 
+
+Per quanto riguarda le traiettorie del paper, in particolare, sono forniti i seguenti errori medi sulla posizione: 
+
+\small
+\renewcommand{\arraystretch}{1.10}       % Riduce l'altezza delle righe 
+\setlength{\LTpre}{8pt}                  % Riduce lo spazio prima della longtable
+\setlength{\LTpost}{6pt}                 % Riduce lo spazio dopo della longtable
+\setlength{\belowcaptionskip}{5pt}       % Riduce lo spazio sotto la didascalia
+\begin{longtable}{ccc}
+
+            \caption{Valori dell'errore in termini di RMSE medio e posizione finale} 
+            \label{tab:errori_paper} \\
+            
+            \toprule
+            \textbf{ID traiettoria} & \textbf{RMSE [m]} & $\mathbf{\Delta_{pos} [m]}$\\
+            \midrule
+            \endfirsthead
+            
+            \toprule
+            \textbf{ID traiettoria} & \textbf{RMSE [m]} & $\mathbf{\Delta_{pos} [m]}$ \\
+            \midrule
+            \endhead
+
+            \midrule
+            \multicolumn{3}{r}{{Continua nella pagina successiva}} \\
+            \endfoot
+
+            \bottomrule
+            \endlastfoot
+
+            1 & 1.7984 & 2.7435 \\
+            2 & 1.9538 & 0.9324 \\
+            3 & 2.1145 & 3.2894 \\
+            4 & 2.5404 & 3.5220 \\
+    
+\end{longtable}
+

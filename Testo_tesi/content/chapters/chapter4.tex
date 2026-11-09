@@ -42,21 +42,28 @@ Il simulatore offre, poi, la possibilità di modificare anche alcuni parametri c
 
 \section{Definizione missioni}
 
-Sfruttando i parametri fino ad ora introdotti, sono state, quindi, generate 256 possibili combinazioni uniche di condizioni operative e ambientali, presentate nelle \emph{Tabelle} xx e xx. Sulla base della suddivisione osservabile nelle tabelle, per ogni traiettoria presa in esame si sono eseguite 16 simulazioni, una per ogni possibile condizione ambientale. Proprio in quest'ottica, si è reso necessario il raggruppamento delle configurazioni operative in quattro scenari, poi specchiati per arrivare agli otto complessivi presentati. Per massimizzare l'efficienza di utilizzo del simulatore, infatti, si è scelto di eseguire consecutivamente le quattro possibili condizioni operative associate ad uno specifico scenario ambientale. Nel concreto, questo si traduce in un minor numero di riavvii del simulatore e, conseguentemente, in un significativo risparmio di tempo. Tuttavia, la metodologia adottata introduce complessità alla successiva fase di analisi. Volendo valutare ogni ripetizione della traiettoria come una singola missione indipendente, occorre, infatti, individuare gli istanti temporali associati all'inizio e alla fine di ognuna.  
+Sfruttando i parametri fino ad ora introdotti, sono state, quindi, generate 256 possibili combinazioni uniche di condizioni operative e ambientali, presentate nelle \emph{Tabelle} xx e xx. Sulla base della suddivisione osservabile in quest'ultime, per ogni traiettoria presa in esame si sono eseguite 16 simulazioni, una per ogni possibile condizione ambientale. Proprio in quest'ottica, si è reso necessario il raggruppamento delle configurazioni operative in quattro scenari, poi specchiati per arrivare agli otto complessivi presentati. Per massimizzare l'efficienza di utilizzo del simulatore, infatti, si è scelto di eseguire consecutivamente le quattro possibili configurazioni operative associate ad uno specifico scenario ambientale. Nel concreto, questo si traduce in un minor numero di riavvii del simulatore e, conseguentemente, in un significativo risparmio di tempo. Tuttavia, la metodologia adottata introduce complessità nella successiva fase di analisi. Volendo valutare ogni ripetizione della traiettoria come una singola missione indipendente, occorre, infatti, individuare gli istanti temporali associati all'inizio e alla fine di ognuna.  
 
-Una volta definiti i parametri di simulazione, è necessario identificare le traiettorie alla base delle missioni stesse. In particolare, tenendo conto sia delle tipiche necessità operative di un drone subacqueo autonomo che delle scelte fatte all'interno del paper di riferimento per l'architettura selezionata\cite{AligNet}, sono state individuate 6 traiettorie. In questo modo risulta possibile sia valutare il comportamento del modello in un possibile scenario reale futuro, sia eseguire un confronto diretto con l'approccio originale, verifcando così la bontà dell'implementazione presentata in questo lavoro di tesi. Queste 6 traiettorie, descritte nel seguito, sono, nel dettaglio, utilizzate per la fase di addestramento e di validazione della rete neurale:
+Una volta definiti i parametri di simulazione, è necessario identificare le traiettorie alla base delle missioni stesse. In particolare, tenendo conto sia delle tipiche necessità operative di un drone subacqueo autonomo che delle scelte fatte all'interno del paper di riferimento per l'architettura neurale\cite{NavNet}, sono state individuate 6 traiettorie. In questo modo risulta possibile sia valutare il comportamento del modello in un possibile scenario reale, sia eseguire un confronto diretto con l'approccio originale, verifcando così la bontà dell'implementazione presentata in questo lavoro di tesi. Queste 6 traiettorie, descritte nel seguito, sono, nel dettaglio, utilizzate unicamente per la fase di addestramento e di validazione della rete neurale:
 
     \begin{itemize}
 
-        \item[\emph{N.B.}]: tutte le traiettorie sono rappresentate con un \emph{Waiting Point}, in modo tale da rendere la simulazione di ogni ripetizione quanto più indipendente ed adattabili ad una reale campagna di test. I tratti $WP \rightarrow SP$ e il corrispettivo $EP \rightarrow WP$, infatti, sono percorsi dal drone in emersione. Questo consente l'utilizzo dei sensori GNSS per la correggere l'eventuale errore di deriva sulla posizione accumulata durante la traiettoria precedente. Solo una volta raggiunto il punto di inizio missione effettivo l'AUV inizia l'immersione, raggiungendo la profondità imposta e iniziando la navigazione subacquea. 
+        \item[\emph{N.B.}]: in tutte le traiettorie è aggiunto un \emph{Waiting Point}, necessario al fine di rendere la simulazione di ogni ripetizione più indipendente ed adattabile ad una reale campagna di test. I tratti tra il punto di attesa e il punto di inizio della traiettoria, così come il corrispettivo tra il punto di fine missione e il punto di attesa, infatti, sono percorsi dal drone in emersione. Questo consente l'utilizzo del sensore GNSS per la correzione dell'eventuale errore di deriva sulla posizione accumulato durante la traiettoria precedente. Solo una volta raggiunto il punto di inizio missione effettivo l'AUV inizia l'immersione, raggiungendo la profondità imposta e iniziando la navigazione subacquea. 
         
-        \item[\emph{N.B.}]: per ogni traiettoria si riportano in tabella le coordinate in assi NED locali, aventi origine coincidente con il primo punto della missione, e le istruzioni utilizzate sul simulatore per definire la specifica traiettoria. Nel dettaglio, per un'operazione analoga sono richiesti il valore di heading, in gradi, e di distanza, in metri, dal punto di riferimento prescelto. Dal momento che, specialmente per alcune traiettorie, il punto di riferimento non è sempre coincidente con il punto di inizio missione, nel pedice si riporta sempre il punto di riferimento e il punto generato, con una notazione del tipo $P_{\text{reference point} \rightarrow \text{new point}}$.
+        \item[\emph{N.B.}]: per ogni traiettoria si è scelto di riportare in tabella le coordinate in assi NED locali, aventi origine coincidente con il primo punto della missione, e le istruzioni utilizzate sul simulatore per definire la specifica traiettoria. Nel dettaglio, per un'operazione analoga sono richiesti il valore di heading, misurato in gradi rispetto al Nord magnetico, e di distanza, misurata in metri rispetto al punto di riferimento prescelto. Dal momento che quest'ultimo non risulta sempre coincidente con il punto di inizio missione, nel pedice si riporta sempre il punto di riferimento e il punto generato, con una notazione del tipo $P_{\text{reference point} \, \rightarrow \, \text{new point}}$.
 
-        \item \textit{Traiettoria 0}: la prima traiettoria presentata corrisponde ad un semplice percorso rettilineo ripetuto in entrambe le direzioni. Pur essendo molto basilare, una simile traiettoria spesso si rivela fondamentale per le missioni di osservazione del fondale, specialmente se l'obiettivo è una struttura artificiale come i cavi per trasporto di energia o dati. Inoltre va sottolineato che, specialmente in presenza di forti correnti perpendicolari alla traiettoria, il drone tende a seguire un percorso caratterizzato da molte oscillazioni intorno alla linea ideale. Questo può rappresentare un punto di criticità per una rete neurale che non ha alcuna informazione sulla corrente presente e, pertanto, può essere fondamentale valutare le prestazioni in simili condizioni. 
+        \item \textbf{Traiettoria 0}: la prima traiettoria presentata corrisponde ad un semplice percorso rettilineo ripetuto in entrambe le direzioni. Pur essendo molto basilare, una simile traiettoria spesso si rivela fondamentale per le missioni di osservazione del fondale, specialmente se l'obiettivo è una struttura artificiale come i cavi per il trasporto di energia o di dati. Inoltre va sottolineato che, specialmente in presenza di forti correnti perpendicolari alla traiettoria, il drone tende a seguire un percorso caratterizzato da molte oscillazioni intorno alla linea ideale. Questo può rappresentare un punto di criticità per una rete neurale che non possiede alcuna informazione sulla corrente presente e, pertanto, può essere fondamentale valutarne la capacità di sopperire a questa mancanza. 
+        
+            \begin{figure}[!htb]
+                \centering
+                \includegraphics[width=0.7\linewidth]{./images/Traiettorie_ideali/Traiettoria_ideale_0.pdf}
+                \caption{Rappresentazione grafica della traiettoria 0}
+                \label{fig:traiettoria0}
+            \end{figure}
         
         Per completezza di trattazione, si evidenzia come le missioni associate a questa traiettoria non seguano la stessa nomenclatura delle altre. I dati relativi alla traiettoria, infatti, provengono da una differente campagna di simulazione svolta internamente all'azienda. Tuttavia, a livello strutturale nulla cambia, con 16 missioni ognuna delle quali caratterizzata da 4 ripetizioni della traiettoria in differenti condizioni operative.
         
-        \item \textit{Traiettoria 1}: questa traiettoria, riprodotta sulla base della descrizione contenuta nel paper di riferimento, rappresenta sostanzialmente un'estensione della precedente. Infatti, dopo una prima traslazione diagonale, che operativamente potrebbe rappresentare una fase di spostamento verso un punto di interesse, il drone segue un duplice percorso rettilineo, inframezzato da una deviazione di $90^\circ$. 
+        \item \textbf{Traiettoria 1}: questa traiettoria, riprodotta sulla base della descrizione contenuta nel paper di riferimento, rappresenta sostanzialmente un'estensione della precedente. Infatti, dopo una prima traslazione diagonale, che operativamente potrebbe rappresentare una fase di spostamento verso un punto di interesse, il drone segue un duplice percorso rettilineo, inframezzato da una deviazione di $90^\circ$. 
         
             \begin{figure}[!htb]
                 \centering
@@ -64,6 +71,54 @@ Una volta definiti i parametri di simulazione, è necessario identificare le tra
                 \caption{Rappresentazione grafica della traiettoria 1}
                 \label{fig:traiettoria1}
             \end{figure}
+
+            \small
+            \renewcommand{\arraystretch}{1.10}       % Riduce l'altezza delle righe 
+            \setlength{\LTpre}{8pt}                  % Riduce lo spazio prima della longtable
+            \setlength{\LTpost}{6pt}                 % Riduce lo spazio dopo della longtable
+            \setlength{\belowcaptionskip}{5pt}       % Riduce lo spazio sotto la didascalia
+
+            \begin{longtable}{ccc p{8mm} ccc}
+                \caption{Coordinate e parametri di navigazione per traiettoria 1} 
+                \label{tab:traiettoria_1} \\
+                
+                % --- TESTATA DELLA PRIMA PAGINA ---
+                \cmidrule{1-3} \cmidrule{5-7}
+                \textbf{ID} & \textbf{East [m]} & \textbf{North [m]} & & 
+                \textbf{ID} & \textbf{Heading [\textdegree]} & \textbf{Lunghezza [m]} \\
+                \cmidrule{1-3} \cmidrule{5-7}
+                \endfirsthead 
+
+                % --- TESTATA DELLE PAGINE SUCCESSIVE ---
+                \cmidrule{1-3} \cmidrule{5-7}
+                \textbf{ID} & \textbf{East [m]} & \textbf{North [m]} & & 
+                \textbf{ID} & \textbf{Heading [\textdegree]} & \textbf{Lunghezza [m]} \\
+                \cmidrule{1-3} \cmidrule{5-7}
+                \endhead
+
+                % --- PIÈ DI PAGINA (Continua...) ---
+                \cmidrule{1-3} \cmidrule{5-7}
+                \multicolumn{7}{r}{{Continua nella pagina successiva}} \\
+                \endfoot
+
+                % --- PIÈ DI PAGINA FINALE ---
+                \cmidrule{1-3} \cmidrule{5-7}
+                \endlastfoot
+
+                % --- DATI ---
+                $WP$ & 0 & -20 & & $P_{1 \rightarrow WP}$ & 180 & 20 \\
+                $P_{1}$ & 0  & 0  & & $P_{1 \rightarrow 1}$ & 0.00 & 0.00 \\
+                %$P_{2}$ & 
+                $P_{2}$ & 35 & 20 & & $\Delta_{2-1}$ & 29.75 & 40.31 \\
+                $P_{3}$ & 35 & 50 & & $\Delta_{3-2}$ & 0.00 & 20.00 \\
+                $P_{4}$ & 40 & 55 & & $\Delta_{4-3}$ & 45.00 & 7.07 \\
+                $P_{5}$ & 70 & 55 & & $\Delta_{5-4}$ & 90.00 & 30.00 \\
+
+            \end{longtable}
+
+
+
+
 
             \small
             \renewcommand{\arraystretch}{1.10}       % Riduce l'altezza delle righe 
@@ -161,304 +216,209 @@ Una volta definiti i parametri di simulazione, è necessario identificare le tra
                 \label{fig:traiettoria3}
             \end{figure}
 
-        \item \textbf{Traiettoria 4}:
+            \small
+            \renewcommand{\arraystretch}{1.10}       % Riduce l'altezza delle righe 
+            \setlength{\LTpre}{8pt}                  % Riduce lo spazio prima della longtable
+            \setlength{\LTpost}{6pt}                 % Riduce lo spazio dopo della longtable
+            \setlength{\belowcaptionskip}{5pt}       % Riduce lo spazio sotto la didascalia
+            \begin{longtable}{ccc p{8mm} ccc}
+                \caption{Coordinate di navigazione per traiettoria 3} 
+                \label{tab:traiettoria_3} \\
+                
+                % --- TESTATA DELLA PRIMA PAGINA ---
+                \cmidrule{1-3} \cmidrule{5-7}
+                \textbf{ID} & \textbf{East [m]} & \textbf{North [m]} & & 
+                \textbf{ID} & \textbf{Heading [\textdegree]} & \textbf{Lunghezza [m]} \\
+                \cmidrule{1-3} \cmidrule{5-7}
+                \endfirsthead 
+
+                % --- TESTATA DELLE PAGINE SUCCESSIVE ---
+                \cmidrule{1-3} \cmidrule{5-7}
+                \textbf{ID} & \textbf{East [m]} & \textbf{North [m]} & & 
+                \textbf{ID} & \textbf{Heading [\textdegree]} & \textbf{Lunghezza [m]} \\
+                \cmidrule{1-3} \cmidrule{5-7}
+                \endhead
+
+                % --- PIÈ DI PAGINA (Continua...) ---
+                \cmidrule{1-3} \cmidrule{5-7}
+                \multicolumn{7}{r}{{Continua nella pagina successiva}} \\
+                \endfoot
+
+                % --- PIÈ DI PAGINA FINALE ---
+                \cmidrule{1-3} \cmidrule{5-7}
+                \endlastfoot
+
+                $P_{0}$ & 0 & 0 & & $\Delta_{0-0}$ & 0.00  & 0.00 \\
+                $P_{ref}\footnote{Punto fittizio al centro del cerchio.}$ & -80 & 0 & & $\Delta_{ref-0}$ & 80.00 & 270.00 \\
+                $P_{1}$ & -23.4 & -56.6 & & $\Delta_{1-ref}$ & 135 & 80.00 \\
+                $P_{2}$ & -80 & -80 & & $\Delta_{2-ref}$ & 180 & 80.00 \\
+                $P_{3}$ & -136.6 & -56.6 & & $\Delta_{3-ref}$ & 225 & 80.00 \\
+                $P_{4}$ & -160 & 0 & & $\Delta_{4-ref}$ & 270 & 80.00 \\
+                $P_{5}$ & -136.6 & 56.6 & & $\Delta_{5-ref}$ & 315 & 80.00 \\
+                $P_{6}$ & -80 & 80 & & $\Delta_{6-ref}$ & 0 & 80.00 \\
+                $P_{7}$ & -23.4 & 56.6 & & $\Delta_{7-ref}$ & 45 & 80.00 \\
+                $P_{8}$ & 0 & 0 & & $\Delta_{8-ref}$ & 90 & 80.00 \\
+                $P_{wait}$ & 20 & 0 & & $\Delta_{wait-ref}$ & 90.00 & 100.00 \\
+
+            \end{longtable}
+
+        \item \textit{Traiettoria 4}: l'ultima traiettoria derivata dal papaer di riferimento rappresenta sostanzialmente una variante della traiettoria 2, con un percorso di forma quadrata con lato pari a circa 120 metri.
+        
+            \begin{figure}[!htb]
+                \centering
+                \includegraphics[width=0.7\linewidth]{./images/Traiettorie_ideali/Traiettoria_ideale_4.pdf}
+                \caption{Rappresentazione grafica della traiettoria 4}
+                \label{fig:traiettoria4}
+            \end{figure}
+
+             \small
+            \renewcommand{\arraystretch}{1.10}       % Riduce l'altezza delle righe 
+            \setlength{\LTpre}{8pt}                  % Riduce lo spazio prima della longtable
+            \setlength{\LTpost}{6pt}                 % Riduce lo spazio dopo della longtable
+            \setlength{\belowcaptionskip}{5pt}       % Riduce lo spazio sotto la didascalia
+            \begin{longtable}{ccc p{8mm} ccc}
+                \caption{Coordinate di navigazione per traiettoria 4} 
+                \label{tab:traiettoria_4} \\
+                
+                % --- TESTATA DELLA PRIMA PAGINA ---
+                \cmidrule{1-3} \cmidrule{5-7}
+                \textbf{ID} & \textbf{East [m]} & \textbf{North [m]} & & 
+                \textbf{ID} & \textbf{Heading [\textdegree]} & \textbf{Lunghezza [m]} \\
+                \cmidrule{1-3} \cmidrule{5-7}
+                \endfirsthead 
+
+                % --- TESTATA DELLE PAGINE SUCCESSIVE ---
+                \cmidrule{1-3} \cmidrule{5-7}
+                \textbf{ID} & \textbf{East [m]} & \textbf{North [m]} & & 
+                \textbf{ID} & \textbf{Heading [\textdegree]} & \textbf{Lunghezza [m]} \\
+                \cmidrule{1-3} \cmidrule{5-7}
+                \endhead
+
+                % --- PIÈ DI PAGINA (Continua...) ---
+                \cmidrule{1-3} \cmidrule{5-7}
+                \multicolumn{7}{r}{{Continua nella pagina successiva}} \\
+                \endfoot
+
+                % --- PIÈ DI PAGINA FINALE ---
+                \cmidrule{1-3} \cmidrule{5-7}
+                \endlastfoot
+
+                1 & 0 & 0 & / \\
+                2 & -60 & 30 & 206.565 \\
+                3 & -113.7 & -77.3 & 206.586 \\
+                4 & -6.3 & -131 & 116.565 \\
+                5 & 47.3 & -23.7 & 26.544 \\
+                6 & 0 & 0 & 26.544 \\
+
+            \end{longtable}
+
+        \item \textit{Traiettoria 5}: la sesta traiettoria introdotta per questo lavoro di tesi, composta da un percorso triangolare, è stata pensata come rappresentazione di una missione di ricognizione di un tratto di fondale, in direzione obliqua, con ritorno al punto di partenza. Una traiettoria di questo tipo risulta particolarmente utile per valutare la capacità della rete neurale di effettuare una missione tipica e tornare nel punto di partenza con un buon livello di precisione.
+        
+            \begin{figure}[!htb]
+                \centering
+                \includegraphics[width=0.7\linewidth]{./images/Traiettorie_ideali/Traiettoria_ideale_5.pdf}
+                \caption{Rappresentazione grafica della traiettoria 5}
+                \label{fig:traiettoria5}
+            \end{figure}
+
+            \small
+            \renewcommand{\arraystretch}{1.10}       % Riduce l'altezza delle righe 
+            \setlength{\LTpre}{8pt}                  % Riduce lo spazio prima della longtable
+            \setlength{\LTpost}{6pt}                 % Riduce lo spazio dopo della longtable
+            \setlength{\belowcaptionskip}{5pt}       % Riduce lo spazio sotto la didascalia
+            \begin{longtable}{ccc p{8mm} ccc}
+                \caption{Coordinate di navigazione per traiettoria 5} 
+                \label{tab:traiettoria_5} \\
+                
+                % --- TESTATA DELLA PRIMA PAGINA ---
+                \cmidrule{1-3} \cmidrule{5-7}
+                \textbf{ID} & \textbf{East [m]} & \textbf{North [m]} & & 
+                \textbf{ID} & \textbf{Heading [\textdegree]} & \textbf{Lunghezza [m]} \\
+                \cmidrule{1-3} \cmidrule{5-7}
+                \endfirsthead 
+
+                % --- TESTATA DELLE PAGINE SUCCESSIVE ---
+                \cmidrule{1-3} \cmidrule{5-7}
+                \textbf{ID} & \textbf{East [m]} & \textbf{North [m]} & & 
+                \textbf{ID} & \textbf{Heading [\textdegree]} & \textbf{Lunghezza [m]} \\
+                \cmidrule{1-3} \cmidrule{5-7}
+                \endhead
+
+                % --- PIÈ DI PAGINA (Continua...) ---
+                \cmidrule{1-3} \cmidrule{5-7}
+                \multicolumn{7}{r}{{Continua nella pagina successiva}} \\
+                \endfoot
+
+                % --- PIÈ DI PAGINA FINALE ---
+                \cmidrule{1-3} \cmidrule{5-7}
+                \endlastfoot
+
+                $P_{0}$ & 0 & 0 & & $\Delta_{0-0}$ & 0.00 & 0.00 \\
+                $P_{1}$ & 0 & 50 & & $\Delta_{1-0}$ & 0.00 & 50.00 \\
+                $P_{2}$ & 25 & 25 & & $\Delta_{2-1}$ & 135 & 35.35 \\
+                $P_{3}$ & 50 & 0 & & $\Delta_{3-2}$ & 135 & 35.35 \\
+                $P_{4}$ & 0 & 0 & & $\Delta_{4-3}$ & 270 & 50.00 \\
+                $P_{wait}$ & -30 & 0 & & $\Delta_{wait-0}$ & 270.00 & 30.00 \\
+
+        \end{longtable}
         
     \end{itemize}
 
-
-
-
-
-Per una prima valutazione delle correlazioni statistiche e delle prestazioni della rete neurale, come si è visto, è stato utilizzato un dataset prodotto internamente all'azienda e basato su un'unica traiettoria rettilinea, ripetuta in diverse condizioni ambientali e di navigazione. Data la natura stessa del dataset, tuttavia, non risulta possibile dimostrare le effettive prestazioni della rete in traiettorie più articolate, simili a quelle che il drone si troverà ad affrontare in missioni reali. 
-
-Pertanto, si è reso necessario ampliare tale dataset, introducendo nuove traiettorie, pur ripetendo lo stesso pattern di selezione delle possibili configurazioni ambientali e di navigazione. Esso, infatti, risulta già essere un ottimo compromesso tra la necessità di addestrare la rete neurale a gestire il maggior numero di situazioni differenti e il ridurre la potenza di calcolo necessaria all'intero processo. 
-
-Per ogni traiettoria, dunque, si hanno 16 scenari differenti, dipendenti dalle possibili combinazioni dei fattori ambientali controllabili tramite simulatore e già elencati nel capitolo XX. All'interno di ogni scenario, poi, si eseguono 4 differenti missioni, dipendenti qui dalle possibili combinazioni dei parametri di navigazione. 
-
-Per quanto riguarda la selezione delle traiettorie da considerare in questa fase, si tiene conto di quanto fatto all'interno del paper di riferimento, includendo le 4 traiettorie presentate in fase di validazione della rete\footnote{Dal momento che all'interno del paper sono rappresentate le traiettorie reali del drone sottomarino, si sceglie qui di regolarizzarle sulla base della descrizione teorica presente nel paper stesso, al fine di annullare gli errori di navigazione dovuti al sistema di controllo dell'AUV}. Questo permette, infatti, di confrontare le prestazioni della rete modificata direttamente con la versione originale, fornendo un chiaro indice della bontà di quanto fatto in questa tesi. In aggiunta a queste, si definiscono 2 traiettorie rappresentanti possibili missioni tipiche per un drone sottomarino:
-
+Per valutare adeguatamente la capacità di generalizzazione della rete, verificare le prestazioni solamente su traiettorie già incontrate durante l'addestramento, seppur con condizioni ambientali e operative differenti, non risulta sufficiente. Pertanto, sono state generate 4 ulteriori traiettorie, eseguite una sola volta per ogni combinazione ambientale/operativa secondo quanto presentato nelle \emph{Tabelle} xx e xx:
 
 \begin{itemize}
 
-    \item[\textbf{NOTA:}] per la definizione dei waypoint all'interno del simulatore, è richiesta la distanza relativa tra due punti e l'angolo di heading, misurato rispetto al Nord magnetico, associato. Pertanto, all'interno delle tabelle si includono tali valori, oltre alle coordinate sul piano East-North di ogni punto.
-
-    \item \textbf{Traiettoria 1}: questa è la prima traiettoria tratta dal paper NavNet e, a livello operativo, potrebbe simulare una missione di ricognizione del fondale, con il drone che raggiunge un punto di interesse e da lì prosegue con una traiettoria rettilinea fino ad un'ulteriore cambiamento di direzione di 90\textdegree. Per la simulazione si utilizzano i seguenti valori di riferimento:
-
-        \small
-        \renewcommand{\arraystretch}{1.10}       % Riduce l'altezza delle righe 
-        \setlength{\LTpre}{8pt}                  % Riduce lo spazio prima della longtable
-        \setlength{\LTpost}{6pt}                 % Riduce lo spazio dopo della longtable
-        \setlength{\belowcaptionskip}{5pt}       % Riduce lo spazio sotto la didascalia
-
-        \begin{longtable}{ccc p{8mm} ccc}
-            \caption{Coordinate e parametri di navigazione per traiettoria 1} 
-            \label{tab:traiettoria_1} \\
-            
-            % --- TESTATA DELLA PRIMA PAGINA ---
-            \cmidrule{1-3} \cmidrule{5-7}
-            \textbf{ID} & \textbf{East [m]} & \textbf{North [m]} & & 
-            \textbf{ID} & \textbf{Heading [\textdegree]} & \textbf{Lunghezza [m]} \\
-            \cmidrule{1-3} \cmidrule{5-7}
-            \endfirsthead 
-
-            % --- TESTATA DELLE PAGINE SUCCESSIVE ---
-            \cmidrule{1-3} \cmidrule{5-7}
-            \textbf{ID} & \textbf{East [m]} & \textbf{North [m]} & & 
-            \textbf{ID} & \textbf{Heading [\textdegree]} & \textbf{Lunghezza [m]} \\
-            \cmidrule{1-3} \cmidrule{5-7}
-            \endhead
-
-            % --- PIÈ DI PAGINA (Continua...) ---
-            \cmidrule{1-3} \cmidrule{5-7}
-            \multicolumn{7}{r}{{Continua nella pagina successiva}} \\
-            \endfoot
-
-            % --- PIÈ DI PAGINA FINALE ---
-            \cmidrule{1-3} \cmidrule{5-7}
-            \endlastfoot
-
-            % --- DATI ---
-            $P_{1}$ & 0  & 0  & & $\Delta_{1-0}$ & 0.00 & 0.00 \\
-            $P_{2}$ & 35 & 20 & & $\Delta_{2-1}$ & 29.75 & 40.31 \\
-            $P_{3}$ & 35 & 50 & & $\Delta_{3-2}$ & 0.00 & 20.00 \\
-            $P_{4}$ & 40 & 55 & & $\Delta_{4-3}$ & 45.00 & 7.07 \\
-            $P_{5}$ & 70 & 55 & & $\Delta_{5-4}$ & 90.00 & 30.00 \\
-
-        \end{longtable}
-
-
-    \item \textbf{Traiettoria 2}: in questo caso la traiettoria risulta essere un pentagono composto da lati di circa 40 m. A livello operativo sarebbe una traiettoria insolita ma è senz'altro molto utile per valutare la capacità della rete neurale di predire accuratamente la posizione in corrispondenza dei molteplici cambi di direzione repentina. 
-
-        \small
-        \renewcommand{\arraystretch}{1.10}       % Riduce l'altezza delle righe 
-        \setlength{\LTpre}{8pt}                  % Riduce lo spazio prima della longtable
-        \setlength{\LTpost}{6pt}                 % Riduce lo spazio dopo della longtable
-        \setlength{\belowcaptionskip}{5pt}       % Riduce lo spazio sotto la didascalia
-        
-        \begin{longtable}{ccc p{8mm} ccc}
-            \caption{Coordinate di navigazione per traiettoria 2} 
-            \label{tab:traiettoria_2} \\
-
-            % --- TESTATA DELLA PRIMA PAGINA ---
-            \cmidrule{1-3} \cmidrule{5-7}
-            \textbf{ID} & \textbf{East [m]} & \textbf{North [m]} & & 
-            \textbf{ID} & \textbf{Heading [\textdegree]} & \textbf{Lunghezza [m]} \\
-            \cmidrule{1-3} \cmidrule{5-7}
-            \endfirsthead 
-
-            % --- TESTATA DELLE PAGINE SUCCESSIVE ---
-            \cmidrule{1-3} \cmidrule{5-7}
-            \textbf{ID} & \textbf{East [m]} & \textbf{North [m]} & & 
-            \textbf{ID} & \textbf{Heading [\textdegree]} & \textbf{Lunghezza [m]} \\
-            \cmidrule{1-3} \cmidrule{5-7}
-            \endhead
-
-            % --- PIÈ DI PAGINA (Continua...) ---
-            \cmidrule{1-3} \cmidrule{5-7}
-            \multicolumn{7}{r}{{Continua nella pagina successiva}} \\
-            \endfoot
-
-            % --- PIÈ DI PAGINA FINALE ---
-            \cmidrule{1-3} \cmidrule{5-7}
-            \endlastfoot
-
-            $P_{0}$ & 0 & 0 & & $\Delta_{0-0}$ & 0.00 & 0.00 \\
-            $P_{1}$ & 0 & 40 & & $\Delta_{1-0}$ & 0.00 & 40.00 \\
-            $P_{2}$ & 38 & 52.4 & & $\Delta_{2-1}$ & 71.93 & 39.97\\
-            $P_{3}$ & 61.5 & 20 & & $\Delta_{3-2}$ & 144.05 & 40.02 \\
-            $P_{4}$ & 38 & 12.4 & & $\Delta_{4-3}$ & 215.95 & 40.02 \\
-            $P_{5}$ & 0 & 0 & & $\Delta_{5-4}$ & 288.07 & 39.97 \\
-
-        \end{longtable}
-
-    \item \textbf{Traiettoria 3}: in questo caso si ha una traiettoria circolare avente raggio 80 m, rappresentazione di un possibile cicruito di attesa per l'AUV. Inoltre, permette di valutare il comportamento della rete in presenza di traiettorie lunghe e curvilinee, molto complesse dal punto di vista del drift. 
+    \item \textbf{Traiettoria T1}: la prima traiettoria di test presentata richiama concettualmente la traiettoria 5, seppur con un maggiore grado di complessità. Tendenzialmente, dunque, dovrebbe presentare valori di accuratezza quantomento in linea con le restanti traiettorie.
     
-        \small
-        \renewcommand{\arraystretch}{1.10}       % Riduce l'altezza delle righe 
-        \setlength{\LTpre}{8pt}                  % Riduce lo spazio prima della longtable
-        \setlength{\LTpost}{6pt}                 % Riduce lo spazio dopo della longtable
-        \setlength{\belowcaptionskip}{5pt}       % Riduce lo spazio sotto la didascalia
-        \begin{longtable}{ccc p{8mm} ccc}
-            \caption{Coordinate di navigazione per traiettoria 3} 
-            \label{tab:traiettoria_3} \\
-            
-            % --- TESTATA DELLA PRIMA PAGINA ---
-            \cmidrule{1-3} \cmidrule{5-7}
-            \textbf{ID} & \textbf{East [m]} & \textbf{North [m]} & & 
-            \textbf{ID} & \textbf{Heading [\textdegree]} & \textbf{Lunghezza [m]} \\
-            \cmidrule{1-3} \cmidrule{5-7}
-            \endfirsthead 
-
-            % --- TESTATA DELLE PAGINE SUCCESSIVE ---
-            \cmidrule{1-3} \cmidrule{5-7}
-            \textbf{ID} & \textbf{East [m]} & \textbf{North [m]} & & 
-            \textbf{ID} & \textbf{Heading [\textdegree]} & \textbf{Lunghezza [m]} \\
-            \cmidrule{1-3} \cmidrule{5-7}
-            \endhead
-
-            % --- PIÈ DI PAGINA (Continua...) ---
-            \cmidrule{1-3} \cmidrule{5-7}
-            \multicolumn{7}{r}{{Continua nella pagina successiva}} \\
-            \endfoot
-
-            % --- PIÈ DI PAGINA FINALE ---
-            \cmidrule{1-3} \cmidrule{5-7}
-            \endlastfoot
-
-            $P_{0}$ & 0 & 0 & & $\Delta_{0-0}$ & 0.00  & 0.00 \\
-            $P_{ref}\footnote{Punto fittizio al centro del cerchio.}$ & -80 & 0 & & $\Delta_{ref-0}$ & 80.00 & 270.00 \\
-            $P_{1}$ & -23.4 & -56.6 & & $\Delta_{1-ref}$ & 135 & 80.00 \\
-            $P_{2}$ & -80 & -80 & & $\Delta_{2-ref}$ & 180 & 80.00 \\
-            $P_{3}$ & -136.6 & -56.6 & & $\Delta_{3-ref}$ & 225 & 80.00 \\
-            $P_{4}$ & -160 & 0 & & $\Delta_{4-ref}$ & 270 & 80.00 \\
-            $P_{5}$ & -136.6 & 56.6 & & $\Delta_{5-ref}$ & 315 & 80.00 \\
-            $P_{6}$ & -80 & 80 & & $\Delta_{6-ref}$ & 0 & 80.00 \\
-            $P_{7}$ & -23.4 & 56.6 & & $\Delta_{7-ref}$ & 45 & 80.00 \\
-            $P_{8}$ & 0 & 0 & & $\Delta_{8-ref}$ & 90 & 80.00 \\
-            $P_{wait}$ & 20 & 0 & & $\Delta_{wait-ref}$ & 90.00 & 100.00 \\
-
-        \end{longtable}
-
-    \item \textbf{Traiettoria 4}: a livello concettuale, quest'ultima traiettoria tratta dal paper di riferimento, è molto simile alla traiettoria 2. L'unica differenza sostanziale, infatti, si ha nella forma, che qui rappresenta un quadrato di lato circa 120 metri. 
+        \begin{figure}[!htb]
+            \centering
+            \includegraphics[width=0.7\linewidth]{./images/Traiettorie_ideali/Traiettoria_ideale_T1.pdf}
+            \caption{Rappresentazione grafica della traiettoria T1}
+            \label{fig:traiettoriaT1}
+        \end{figure}
     
-        \small
-        \renewcommand{\arraystretch}{1.10}       % Riduce l'altezza delle righe 
-        \setlength{\LTpre}{8pt}                  % Riduce lo spazio prima della longtable
-        \setlength{\LTpost}{6pt}                 % Riduce lo spazio dopo della longtable
-        \setlength{\belowcaptionskip}{5pt}       % Riduce lo spazio sotto la didascalia
-        \begin{longtable}{ccc p{8mm} ccc}
-            \caption{Coordinate di navigazione per traiettoria 4} 
-            \label{tab:traiettoria_4} \\
-            
-            % --- TESTATA DELLA PRIMA PAGINA ---
-            \cmidrule{1-3} \cmidrule{5-7}
-            \textbf{ID} & \textbf{East [m]} & \textbf{North [m]} & & 
-            \textbf{ID} & \textbf{Heading [\textdegree]} & \textbf{Lunghezza [m]} \\
-            \cmidrule{1-3} \cmidrule{5-7}
-            \endfirsthead 
+    \item \textbf{Traiettoria T2}: la seconda traiettoria trattata rappresenta una delle più complesse introdotte, essendo composta da più cerchi concentrici a raggio crescente. Questa traiettoria in particolare, risponde ad una specifica necessità operativa. Spesso, infatti, un drone subacqueo al termine della propria missione deve tornare al punto di partenza, in cui potrebbe trovarsi il punto di estrazione o il resto dello sciame, se presente. Spesso, però, l'errore di deriva impedisce di arrivare nel punto previsto e, pertanto, è possibile attivare un circuito di ricerca a raggio crescente.
 
-            % --- TESTATA DELLE PAGINE SUCCESSIVE ---
-            \cmidrule{1-3} \cmidrule{5-7}
-            \textbf{ID} & \textbf{East [m]} & \textbf{North [m]} & & 
-            \textbf{ID} & \textbf{Heading [\textdegree]} & \textbf{Lunghezza [m]} \\
-            \cmidrule{1-3} \cmidrule{5-7}
-            \endhead
-
-            % --- PIÈ DI PAGINA (Continua...) ---
-            \cmidrule{1-3} \cmidrule{5-7}
-            \multicolumn{7}{r}{{Continua nella pagina successiva}} \\
-            \endfoot
-
-            % --- PIÈ DI PAGINA FINALE ---
-            \cmidrule{1-3} \cmidrule{5-7}
-            \endlastfoot
-
-            1 & 0 & 0 & / \\
-            2 & -60 & 30 & 206.565 \\
-            3 & -113.7 & -77.3 & 206.586 \\
-            4 & -6.3 & -131 & 116.565 \\
-            5 & 47.3 & -23.7 & 26.544 \\
-            6 & 0 & 0 & 26.544 \\
-
-        \end{longtable}
+        \begin{figure}[!htb]
+            \centering
+            \includegraphics[width=0.7\linewidth]{./images/Traiettorie_ideali/Traiettoria_ideale_T2.pdf}
+            \caption{Rappresentazione grafica della traiettoria T2}
+            \label{fig:traiettoriaT2}
+        \end{figure}
     
-    \item \textbf{Traiettoria 5}: questa traiettoria, formata da un triangolo, è stata pensata come rappresentazione di una missione di ricognizione di un tratto (obliquo) di fondale con ritorno al punto di partenza (che potrebbe essere lo sciame di dronni in una missione tipica). In particolare, risulta così composta:
+    \item \textbf{Traiettoria T3}: la terza traiettoria di test estende al massimo il concetto alla base di una missione di osservazione del fondale. Essa, infatti, risulta composta da più percorsi rettilinei paralleli, tutti della medesima lunghezza. Ognuno, poi, è collegato tramite una deviazione molto più ampia rispetto a quelle implementate nelle traiettorie di test, pari a $180^\circ$. E', quindi, utile per verificare che nei cambi di direzione non accumuli eccessivo errore sulla posizione, che potrebbe inficiare significativamente sulla riuscita di una missione con un profilo analogo. 
     
-        \small
-        \renewcommand{\arraystretch}{1.10}       % Riduce l'altezza delle righe 
-        \setlength{\LTpre}{8pt}                  % Riduce lo spazio prima della longtable
-        \setlength{\LTpost}{6pt}                 % Riduce lo spazio dopo della longtable
-        \setlength{\belowcaptionskip}{5pt}       % Riduce lo spazio sotto la didascalia
-        \begin{longtable}{ccc p{8mm} ccc}
-            \caption{Coordinate di navigazione per traiettoria 5} 
-            \label{tab:traiettoria_5} \\
-            
-            % --- TESTATA DELLA PRIMA PAGINA ---
-            \cmidrule{1-3} \cmidrule{5-7}
-            \textbf{ID} & \textbf{East [m]} & \textbf{North [m]} & & 
-            \textbf{ID} & \textbf{Heading [\textdegree]} & \textbf{Lunghezza [m]} \\
-            \cmidrule{1-3} \cmidrule{5-7}
-            \endfirsthead 
-
-            % --- TESTATA DELLE PAGINE SUCCESSIVE ---
-            \cmidrule{1-3} \cmidrule{5-7}
-            \textbf{ID} & \textbf{East [m]} & \textbf{North [m]} & & 
-            \textbf{ID} & \textbf{Heading [\textdegree]} & \textbf{Lunghezza [m]} \\
-            \cmidrule{1-3} \cmidrule{5-7}
-            \endhead
-
-            % --- PIÈ DI PAGINA (Continua...) ---
-            \cmidrule{1-3} \cmidrule{5-7}
-            \multicolumn{7}{r}{{Continua nella pagina successiva}} \\
-            \endfoot
-
-            % --- PIÈ DI PAGINA FINALE ---
-            \cmidrule{1-3} \cmidrule{5-7}
-            \endlastfoot
-
-            $P_{0}$ & 0 & 0 & & $\Delta_{0-0}$ & 0.00 & 0.00 \\
-            $P_{1}$ & 0 & 50 & & $\Delta_{1-0}$ & 0.00 & 50.00 \\
-            $P_{2}$ & 25 & 25 & & $\Delta_{2-1}$ & 135 & 35.35 \\
-            $P_{3}$ & 50 & 0 & & $\Delta_{3-2}$ & 135 & 35.35 \\
-            $P_{4}$ & 0 & 0 & & $\Delta_{4-3}$ & 270 & 50.00 \\
-            $P_{wait}$ & -30 & 0 & & $\Delta_{wait-0}$ & 270.00 & 30.00 \\
-
-        \end{longtable}
+        \begin{figure}[!htb]
+            \centering
+            \includegraphics[width=0.7\linewidth]{./images/Traiettorie_ideali/Traiettoria_ideale_T3.pdf}
+            \caption{Rappresentazione grafica della traiettoria T3}
+            \label{fig:traiettoriaT3}
+        \end{figure}
     
-    \item \textbf{Traiettoria 6}: 
-
+    \item \textbf{Traiettoria T4}: l'ultima traiettoria rappresenta semplicemente un percorso sinusoidale. Sebbene in apparenza sembri semplice, è stata scelta per verificare le prestazioni del modello su un tipo di manovra mai vista durante l'addestramento. Inoltre, tipicamente una traiettoria simile crea problemi alle reti neurali, che faticano a mantenere un profilo vicino a quello ideale.
+    
+        \begin{figure}[!htb]
+            \centering
+            \includegraphics[width=0.7\linewidth]{./images/Traiettorie_ideali/Traiettoria_ideale_T4.pdf}
+            \caption{Rappresentazione grafica della traiettoria T4}
+            \label{fig:traiettoriaT4}
+        \end{figure}
+    
 \end{itemize}
 
-
-% Non so bene dove mettere questa parte ma ci deve essere
-Per quanto riguarda le traiettorie del paper, in particolare, sono forniti i seguenti errori medi sulla posizione: 
-
-\small
-\renewcommand{\arraystretch}{1.10}       % Riduce l'altezza delle righe 
-\setlength{\LTpre}{8pt}                  % Riduce lo spazio prima della longtable
-\setlength{\LTpost}{6pt}                 % Riduce lo spazio dopo della longtable
-\setlength{\belowcaptionskip}{5pt}       % Riduce lo spazio sotto la didascalia
-\begin{longtable}{ccc}
-
-            \caption{Valori dell'errore in termini di RMSE medio e posizione finale} 
-            \label{tab:errori_paper} \\
-            
-            \toprule
-            \textbf{ID traiettoria} & \textbf{RMSE [m]} & $\mathbf{\Delta_{pos} [m]}$\\
-            \midrule
-            \endfirsthead
-            
-            \toprule
-            \textbf{ID traiettoria} & \textbf{RMSE [m]} & $\mathbf{\Delta_{pos} [m]}$ \\
-            \midrule
-            \endhead
-
-            \midrule
-            \multicolumn{3}{r}{{Continua nella pagina successiva}} \\
-            \endfoot
-
-            \bottomrule
-            \endlastfoot
-
-            1 & 1.7984 & 2.7435 \\
-            2 & 1.9538 & 0.9324 \\
-            3 & 2.1145 & 3.2894 \\
-            4 & 2.5404 & 3.5220 \\
-    
-\end{longtable}
+Una volta presentate tutte le traiettorie e le possibili configurazioni ambientali e operative, occorre evidenziare come esse siano state combinate per ottenere il dataset completo. In \emph{Tabella} xx, quindi, sono mostrati gli accoppiamenti utilizzati per ogni traiettoria. Come si evince osservando la tabella, si è scelto di traslare di una posizione le configurazioni operative rispetto allo scenario ambientale per ogni traiettoria differente. Questo, infatti, introduce ulteriore variabilità all'interno dei dati, riducendo il rischio di overfitting della rete.
 
 
 \section{Pre - processing telemetria}
 
-Al termine della campagna di raccolta dati effettuata sul simulatore del drone X300, si sono ottenuti diversi file, in formato .csv, contenenti le telemetrie di ogni missione. I dati così acquisiti risultano essere asincroni, come è lecito aspettarsi data la metodologia utilizzata, e non associati ad una tabulazione uniforme. Ogni sensore presente, caratterizzato da una frequenza specifica, infatti, fornisce un differente numero di valori per ogni istante di misurazione. Possono, inoltre, essere presenti celle o intere sezioni dei file csv formattate diversamente o corrotte. Tutte queste caratteristiche rendono i dati grezzi difficilmente leggibili e utilizzabili all'interno di un algoritmo di guida. Risulta, dunque, inevitabile passare da una fase di pre-processing delle telemetrie, prima di poter utilizzare effettivamente i dati contenuti al loro interno.
-
-Un processo di questo tipo, specialmente se si vuole rendere estremamente scalabile e versatile, richiede molteplici operazioni, che risultano essere racchiuse all'interno delle seguenti fasi:
+Al termine della campagna di raccolta dati effettuata sul simulatore del drone X300, si sono ottenuti diversi file, in formato csv, contenenti le telemetrie di ogni missione. I dati così acquisiti risultano essere asincroni, come è lecito aspettarsi data la metodologia utilizzata, e non associati ad una tabulazione uniforme. Ogni sensore presente, caratterizzato da una frequenza specifica, infatti, fornisce un differente numero di valori per ogni istante di misurazione. Possono, inoltre, essere presenti celle o intere sezioni dei file csv formattate diversamente o corrotte. Tutte queste caratteristiche rendono i dati grezzi difficilmente leggibili e utilizzabili all'interno di un algoritmo di posizionamento. Risulta, dunque, inevitabile passare da una fase di pre-processing delle telemetrie. Un processo di questo tipo, specialmente se si vuole rendere estremamente scalabile e versatile, richiede molteplici operazioni, che risultano essere racchiuse all'interno delle seguenti fasi:
 
 \begin{itemize}
-    \item \textbf{Unificazione file}: il primo passaggio riguarda l'unificazione, tramite concatenazione e sorting sui timestamp, dei file .csv legati a DVL e resto dei sensori. Si ottiene, così, un unico file per ogni missione simulata, che è più facilmente leggibile in ambiente Python.
-    
-    \item \textbf{Estrazione dati}: attraverso l'uso delle funzioni integrate nella libreria pandas, si trasformano i dati contenuti in ogni file di telemetria in DataFrames. Una struttura dati simile è, infatti, ideale per effettuare operazioni sui dati. In questa fase, inoltre, si effettua una pulizia dei dati, eliminando eventuali caratteri non numerici presenti nelle misurazioni e segnalando eventuali righe di file corrotte.
-    
+
+    \item \textbf{Unificazione file}: la logica implementata per l'interfacciamento con il simulatore e il conseguente salvataggio dei dati prodotti, comporta una separazione del percorso relativo alle misurazioni DVL e a quelle dei restanti sensori di bordo. Il primo passaggio, pertanto, consiste nell'unificazione, mediante un'operazione di concatenazione ordinata per istante temporale, dei due file generati per ogni missione. Il risultato è un unico dizionario di dataframe, suddiviso per traiettoria e combinazione identificativa di ogni missione. 
+
+    \item \textbf{Pulizia dati}: i dati estratti mediante le funzioni integrate nella libreria pandas vengono successivamente puliti, eliminando eventuali spazi o caratteri non desiderati. Si assegnano, inoltre, i nomi associati alle misurazioni dei vari sensori, che in telemetria sono genericamente segnati con un indice compreso tra $v1 \div v8$.
+
     \item \textbf{Elaborazione DataFrames}: questo è un passaggio più complessi e importanti per garantire la correttezza dell'analisi. I DataFrames ottenuti dalle precedenti fasi, infatti, presentano misurazioni asincrone, che non permettono l'esecuzione di processi, come l'analisi statistica o l'addestramento della rete neurale, necessari al raggiungimento dell'obiettivo preposto. Occorre, dunque, forzare le misurazioni su una griglia temporale con passo temporale uniforme. Un'operazione simile, tuttavia, può modificare profondamente l'attinenza alle reali misurazioni, dovendo necessariamante ipotizzare una o più grandezze rappresentative dello stato del drone in uno specifico istante temporal e bisogna, pertanto, valutare opportunamente la logica con cui ciò viene fatto. In generale, si sono tenuti in considerazione i seguenti metodi per questa fase: 
     
         \begin{itemize}
