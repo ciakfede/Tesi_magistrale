@@ -11,21 +11,157 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%
 
-Nei precedenti capitoli, è stata presentata una panoramica dettagliata sulla teoria alla base del machine learning e si sono introdotte alcune architetture neurali, considerate lo stato dell'arte in merito al dead-reckoning di droni subacquei. Questi elementi, tuttavia, sono inutili senza un solido Dataset alla base. La capacità di generalizzare adeguatamente la dinamica associata all'AUV, infatti, dipende dalla varietà dei dati forniti in input alla rete. Un passo fondamentale, inoltre, consiste nell'elaborare i dati grezzi, ottenuti dalla simulazione, uniformando il passo temporale pur mantenendo allo stesso tempo l'attinenza con la fisica del problema. 
+Fino ad ora sono state valutate le prestazioni e le criticità associate alle reti neurali da un punto di vista puramente teorico e architetturale. In un problema concreto, come la regressione delle informazioni di posizionamento qui trattato, tuttavia, entra in gioco un ulteriore elemento chiave: il dataset. L'opportuna selezione o generazione di quest'ultimo impatta significativamente sulla capacità del modello di generalizzare adeguatamente la dinamica dell'AUV, oltre ad incidere sulle probabilità di riscontrare l'overfitting. Idealmente, infatti, si desidererebbe possedere dati rappresentativi di un'ampia gamma di situazioni operative differenti, in modo da aumentare la varietà di condizioni ambientali e di relazioni tra le misurazioni elaborate dalla rete. Solitamente, le misurazioni provenienti dai sensori di bordo sono asincrone, oltre ad essere caratterizzate da frequenze di aggiornamento differenti. Specialmente per quanto concerne il processo di apprendimento di una rete neurale, fornire il dataset grezzo alla rete potrebbe, quindi, non condurre ad un risultato ottimale. Per ovviare a questa problematica, si sceglie in questo lavoro di tesi di effettuare un'elaborazione preliminare dei dati, uniformandone il passo temporale pur mantenendo l'attinenza con la fisica del problema. Nel seguito, dunque, si presenta il processo seguito per la generazione del dataset, a partire dalla campagna di simulazione fino alla preparazione per l'impiego all'interno del modello prescelto.
+ 
 
-\section{Preparazione simulatore}
+\section{Simulatore GraalTech}
 
-Il Dataset utilizzato in questo lavoro di tesi è stato generato sfruttando un simulatore del drone X300, fornito dalla GraalTech, non avendo possibilità di eseguire una campagna di test con un modello reale del drone. Sebbene l'utilizzo di un approccio virtuale presenti alcuni vantaggi, quali una maggiore semplicità e immediatezza nella raccolta e nell'analisi dei dati, non può ritensersi esente da criticità, che possono portare a prestazioni della rete sovrastimate. La qualità e la stabilità dei dati misurati dai vari sensori montati a bordo, oltre alla precisione del target GPS, infatti, difficilmente risultano replicabili in condizioni reali. 
+Come accennato, quindi, il dataset impiegato è stato generato sfruttando un simulatore del drone X300, fornito dalla GraalTech, non avendo modo di eseguire una lunga e costosa campagna di test con un modello reale del drone. Sebbene l'utilizzo di un approccio virtuale presenti alcuni vantaggi, quali una maggiore semplicità e immediatezza nella raccolta e nell'analisi dei dati, non può ritensersi esente da criticità, che possono portare a prestazioni della rete sovrastimate. La qualità e la stabilità dei dati misurati dai vari sensori montati a bordo, oltre alla precisione del target GPS, infatti, difficilmente risultano replicabili in condizioni reali. In un ambiente virtuale, inoltre, risulta quasi inevitabile introdurre alcune semplificazioni all'interno del modello, sia del drone che dell'ecosistema, in questo caso marittimo, in cui esso si trova a dover operare. Questo può portare, pertanto, a una perdita di attinenza con la dinamica reale del sistema. 
 
-In un ambiente virtuale, inoltre, risulta quasi inevitabile introdurre alcune semplificazioni all'interno del modello, sia del drone che dell'ecosistema, in questo caso marittimo, in cui esso si trova a dover operare. Questo può portare, quindi, a una perdita di realismo del sistema. In riferimento all'ambiente, in particolare, il simulatore offre alcune possibilità di personalizzazione che, tuttavia, risultano spesso rigide e non sufficienti:
+Per quanto concerne l'ambiente marittimo, sebbene il simulatore consenta di riprodurre un'ampia gamma di condizioni differenti, sono presenti diverse limitazioni, la più impattante delle quali è legata alla variabilità delle condizioni stesse in una singola missione. Per la logica interna del simulatore, infatti, i parametri ambientali variabili, di seguito elencati, possono essere modificati solamente prima dell'avvio di una sessione di simulazione, restando poi costanti per l'intera sua durata:  
 
     \begin{itemize}
 
-        \item \textit{Fondale}: il primo parametro modificabile risulta essere proprio il fondale,per cui è possibile specificare la massima profondità al di sotto del livello del mare e la morfologia, che può essere più regolare o più frastagliata. Questo consente di simulare varie condizioni in cui il drone può trovarsi ad operare, soprattutto verificando la qualità e la stabilità delle misurazioni del DVL.
-
-        \item \textit{Correnti}: un elemento particolarmente critico è la corrente, la cui intensità e direzione possono variare repentinamente, generando errori nell'algoritmo di guida e navigazione del drone. Risulta, dunque, evidente l'impatto che può avere su una rete neurale se non opportunamente considerata. 
+        \item \textit{Fondale}: il primo parametro modificabile risulta essere proprio il fondale, per cui è possibile specificare la massima profondità al di sotto del livello del mare e la morfologia, che può essere più o meno regolare. Questo consente di simulare varie condizioni in cui il drone può trovarsi ad operare, verificando così l'impatto sulla rete neurale di cambiamenti nella qualità e nella stabilità delle misurazioni del DVL. Trattando qui missioni non eccesivamente lunghe, è difficile che il fondale cambi drasticamente durante una singola missione e, pertanto, la semplificazione introdotta risulta sufficientemente accurata in questo caso.
         
-        \item \textit{Oggetti}: all'interno del simulatore, inoltre, risulta possibile introdurre oggetti di varie dimensioni e a varie profondità, avendo in questo modo la possibilità di verificare le capacità del drone di riconoscere e reagire a situazioni impreviste. All'interno di questo lavoro di tesi non si sfrutta questo elemento, dovendo verificare unicamente le capacità dell'algoritmo di prevedere la posizione del drone e non eventuali logiche di controllo.  
+        \item \textit{Oggetti}: all'interno del simulatore risulta, poi, possibile introdurre oggetti di varie dimensioni posti a differenti profondità, avendo in questo modo la possibilità di verificare le capacità del drone di riconoscere e reagire a situazioni impreviste. All'interno di questo lavoro di tesi, tuttavia, non si sfrutta questo elemento, dovendo verificare unicamente le capacità dell'algoritmo di prevedere la posizione del drone e non eventuali logiche di controllo.  
+        
+        \item \textit{Correnti}: un elemento particolarmente critico risulta essere la corrente, la cui intensità e direzione possono variare repentinamente in una situazione reale. Questo tendenzialmente è un aspetto particolarmente critico per gli algoritmi di guida e navigazione che, senza informazioni sull'effettivo valore della corrente, devono riuscire a bilanciarne gli effetti, mantenendo l'errorre di deriva ridotto. Naturalmente, non avendo modo di introdurne una variabilità casuale nel simulatore, risulta difficile verificare la robustezza di un'algoritmo di posizionamento basato sul deep learning. 
+        
+    \end{itemize}
+
+Il simulatore offre, poi, la possibilità di modificare anche alcuni parametri caratteristici dell'operatività del drone, permettendo così di aumentare la variabilità del sistema. Anche in questo caso, la personalizzazione dei parametri risulta essere poco flessibile, sebbene qui la modifica nell'ambito di una singola missione sia possibile, tramite apposite linee di comando, e la naturale dinamica di navigazione porti a variazioni del valore di riferimento impostato. Nel seguito si presentano, quindi, i termini considerati in questo lavoro, con gli eventuali limiti associati:
+
+    \begin{itemize}
+
+        \item \textit{Profondità}: impostando una profondità specifica, con la relativa tolleranza, il drone tende a muoversi verticalmente fino al raggiungimento del valore obiettivo, procedendo solamente dopo con la navigazione. Naturalmente, occorre un'opportuna valutazione della profondità impostata, dal momento che un valore eccessivo comporterebbe una perdita di segnale DVL, mentre un valore troppo basso, specialmente in presenza di fondale frastagliato e variazioni di profondità nella missione, aumenterebbe il rischio di un impatto con il fondale stesso.  
+        
+        \item \textit{Velocità}: la velocità, impostata in concomitanza della latitudine e della longitudine del punto da raggiungere, funge da riferimento per la specifica tratta. Il sistema di controllo interno al drone, pertanto, regola la percentuale di potenza erogata dai propulsori in modo da raggiungere tale valore obiettivo, sebbene, specialmente in presenza di una corrente molto intensa, l'accuratezza di tale operazione diminuisca significativamente. Naturalmente, i valori ammissibili per questa grandezza sono vincolati alle capacità operative reali del drone, con una massima velocità consentita pari a 5 nodi.
+
+    \end{itemize}
+
+\section{Definizione missioni}
+
+Sfruttando i parametri fino ad ora introdotti, sono state, quindi, generate 256 possibili combinazioni uniche di condizioni operative e ambientali, presentate nelle \emph{Tabelle} xx e xx. Sulla base della suddivisione osservabile nelle tabelle, per ogni traiettoria presa in esame si sono eseguite 16 simulazioni, una per ogni possibile condizione ambientale. Proprio in quest'ottica, si è reso necessario il raggruppamento delle configurazioni operative in quattro scenari, poi specchiati per arrivare agli otto complessivi presentati. Per massimizzare l'efficienza di utilizzo del simulatore, infatti, si è scelto di eseguire consecutivamente le quattro possibili condizioni operative associate ad uno specifico scenario ambientale. Nel concreto, questo si traduce in un minor numero di riavvii del simulatore e, conseguentemente, in un significativo risparmio di tempo. Tuttavia, la metodologia adottata introduce complessità alla successiva fase di analisi. Volendo valutare ogni ripetizione della traiettoria come una singola missione indipendente, occorre, infatti, individuare gli istanti temporali associati all'inizio e alla fine di ognuna.  
+
+Una volta definiti i parametri di simulazione, è necessario identificare le traiettorie alla base delle missioni stesse. In particolare, tenendo conto sia delle tipiche necessità operative di un drone subacqueo autonomo che delle scelte fatte all'interno del paper di riferimento per l'architettura selezionata\cite{AligNet}, sono state individuate 6 traiettorie. In questo modo risulta possibile sia valutare il comportamento del modello in un possibile scenario reale futuro, sia eseguire un confronto diretto con l'approccio originale, verifcando così la bontà dell'implementazione presentata in questo lavoro di tesi. Queste 6 traiettorie, descritte nel seguito, sono, nel dettaglio, utilizzate per la fase di addestramento e di validazione della rete neurale:
+
+    \begin{itemize}
+
+        \item[\emph{N.B.}]: tutte le traiettorie sono rappresentate con un \emph{Waiting Point}, in modo tale da rendere la simulazione di ogni ripetizione quanto più indipendente ed adattabili ad una reale campagna di test. I tratti $WP \rightarrow SP$ e il corrispettivo $EP \rightarrow WP$, infatti, sono percorsi dal drone in emersione. Questo consente l'utilizzo dei sensori GNSS per la correggere l'eventuale errore di deriva sulla posizione accumulata durante la traiettoria precedente. Solo una volta raggiunto il punto di inizio missione effettivo l'AUV inizia l'immersione, raggiungendo la profondità imposta e iniziando la navigazione subacquea. 
+        
+        \item[\emph{N.B.}]: per ogni traiettoria si riportano in tabella le coordinate in assi NED locali, aventi origine coincidente con il primo punto della missione, e le istruzioni utilizzate sul simulatore per definire la specifica traiettoria. Nel dettaglio, per un'operazione analoga sono richiesti il valore di heading, in gradi, e di distanza, in metri, dal punto di riferimento prescelto. Dal momento che, specialmente per alcune traiettorie, il punto di riferimento non è sempre coincidente con il punto di inizio missione, nel pedice si riporta sempre il punto di riferimento e il punto generato, con una notazione del tipo $P_{\text{reference point} \rightarrow \text{new point}}$.
+
+        \item \textit{Traiettoria 0}: la prima traiettoria presentata corrisponde ad un semplice percorso rettilineo ripetuto in entrambe le direzioni. Pur essendo molto basilare, una simile traiettoria spesso si rivela fondamentale per le missioni di osservazione del fondale, specialmente se l'obiettivo è una struttura artificiale come i cavi per trasporto di energia o dati. Inoltre va sottolineato che, specialmente in presenza di forti correnti perpendicolari alla traiettoria, il drone tende a seguire un percorso caratterizzato da molte oscillazioni intorno alla linea ideale. Questo può rappresentare un punto di criticità per una rete neurale che non ha alcuna informazione sulla corrente presente e, pertanto, può essere fondamentale valutare le prestazioni in simili condizioni. 
+        
+        Per completezza di trattazione, si evidenzia come le missioni associate a questa traiettoria non seguano la stessa nomenclatura delle altre. I dati relativi alla traiettoria, infatti, provengono da una differente campagna di simulazione svolta internamente all'azienda. Tuttavia, a livello strutturale nulla cambia, con 16 missioni ognuna delle quali caratterizzata da 4 ripetizioni della traiettoria in differenti condizioni operative.
+        
+        \item \textit{Traiettoria 1}: questa traiettoria, riprodotta sulla base della descrizione contenuta nel paper di riferimento, rappresenta sostanzialmente un'estensione della precedente. Infatti, dopo una prima traslazione diagonale, che operativamente potrebbe rappresentare una fase di spostamento verso un punto di interesse, il drone segue un duplice percorso rettilineo, inframezzato da una deviazione di $90^\circ$. 
+        
+            \begin{figure}[!htb]
+                \centering
+                \includegraphics[width=0.7\linewidth]{./images/Traiettorie_ideali/Traiettoria_ideale_1.pdf}
+                \caption{Rappresentazione grafica della traiettoria 1}
+                \label{fig:traiettoria1}
+            \end{figure}
+
+            \small
+            \renewcommand{\arraystretch}{1.10}       % Riduce l'altezza delle righe 
+            \setlength{\LTpre}{8pt}                  % Riduce lo spazio prima della longtable
+            \setlength{\LTpost}{6pt}                 % Riduce lo spazio dopo della longtable
+            \setlength{\belowcaptionskip}{5pt}       % Riduce lo spazio sotto la didascalia
+
+            \begin{longtable}{ccccc}
+                \caption{Coordinate e parametri di navigazione per traiettoria 1} 
+                \label{tab:traiettoria_1} \\
+                
+                % --- TESTATA DELLA PRIMA PAGINA ---
+                \cmidrule{1-5}
+                \textbf{ID} & \textbf{Latitudine [\textdegree]} & \textbf{Longitudine [\textdegree]} & \textbf{East [m]} & \textbf{North [m]} \\
+                \cmidrule{1-5}
+                \endfirsthead 
+
+                % --- TESTATA DELLE PAGINE SUCCESSIVE ---
+                \cmidrule{1-5}
+                \textbf{ID} & \textbf{Latitudine [\textdegree]} & \textbf{Longitudine [\textdegree]} & \textbf{East [m]} & \textbf{North [m]} \\
+                \cmidrule{1-5}
+                \endhead
+
+                % --- PIÈ DI PAGINA (Continua...) ---
+                \cmidrule{1-5}
+                \multicolumn{5}{r}{{Continua nella pagina successiva}} \\
+                \endfoot
+
+                % --- PIÈ DI PAGINA FINALE ---
+                \cmidrule{1-5}
+                \endlastfoot
+
+                % --- DATI ---
+                $WP$ & 44.0932665 & 9.8582160 & 0.00 & -20.00 \\
+  
+            \end{longtable}
+
+        \item \textit{Traiettoria 2}: sempre facendo riferimento alle informazioni presenti nel paper, la seconda traiettoria rappresenta un pentagono regolare con lati di crica 40 metri. A livello operativo questa sarebbe una forma molto insolita e, pertanto, difficilmente riscontrabile in una normale missione. Tuttavia, risulta molto utile per valutare la capacità della rete di mantenre un errore di posizionamento accettabile anche in presenza di numerosi e repentini cambi di direzione superiori a $90^\circ$. 
+        
+            \begin{figure}[!htb]
+                \centering
+                \includegraphics[width=0.7\linewidth]{./images/Traiettorie_ideali/Traiettoria_ideale_2.pdf}
+                \caption{Rappresentazione grafica della traiettoria 2}
+                \label{fig:traiettoria2}
+            \end{figure}
+
+            \small
+            \renewcommand{\arraystretch}{1.10}       % Riduce l'altezza delle righe 
+            \setlength{\LTpre}{8pt}                  % Riduce lo spazio prima della longtable
+            \setlength{\LTpost}{6pt}                 % Riduce lo spazio dopo della longtable
+            \setlength{\belowcaptionskip}{5pt}       % Riduce lo spazio sotto la didascalia
+            
+            \begin{longtable}{ccc p{8mm} ccc}
+                \caption{Coordinate di navigazione per traiettoria 2} 
+                \label{tab:traiettoria_2} \\
+
+                % --- TESTATA DELLA PRIMA PAGINA ---
+                \cmidrule{1-3} \cmidrule{5-7}
+                \textbf{ID} & \textbf{East [m]} & \textbf{North [m]} & & 
+                \textbf{ID} & \textbf{Heading [\textdegree]} & \textbf{Lunghezza [m]} \\
+                \cmidrule{1-3} \cmidrule{5-7}
+                \endfirsthead 
+
+                % --- TESTATA DELLE PAGINE SUCCESSIVE ---
+                \cmidrule{1-3} \cmidrule{5-7}
+                \textbf{ID} & \textbf{East [m]} & \textbf{North [m]} & & 
+                \textbf{ID} & \textbf{Heading [\textdegree]} & \textbf{Lunghezza [m]} \\
+                \cmidrule{1-3} \cmidrule{5-7}
+                \endhead
+
+                % --- PIÈ DI PAGINA (Continua...) ---
+                \cmidrule{1-3} \cmidrule{5-7}
+                \multicolumn{7}{r}{{Continua nella pagina successiva}} \\
+                \endfoot
+
+                % --- PIÈ DI PAGINA FINALE ---
+                \cmidrule{1-3} \cmidrule{5-7}
+                \endlastfoot
+
+                $P_{0}$ & 0 & 0 & & $\Delta_{0-0}$ & 0.00 & 0.00 \\
+                $P_{1}$ & 0 & 40 & & $\Delta_{1-0}$ & 0.00 & 40.00 \\
+                $P_{2}$ & 38 & 52.4 & & $\Delta_{2-1}$ & 71.93 & 39.97\\
+                $P_{3}$ & 61.5 & 20 & & $\Delta_{3-2}$ & 144.05 & 40.02 \\
+                $P_{4}$ & 38 & 12.4 & & $\Delta_{4-3}$ & 215.95 & 40.02 \\
+                $P_{5}$ & 0 & 0 & & $\Delta_{5-4}$ & 288.07 & 39.97 \\
+
+            \end{longtable}
+
+        \item \textit{Traiettoria 3}: la terza traiettoria introdotta nel paper, qui presentata, rappresenta un cerchio di raggio pari a circa 80 metri. Un simile percorso, operativamente rappresentativo di un circuito di attesa dell'AUV, consente di valutare le prestazioni della rete neurale in presenza di lunghe traiettorie curvilinee, tipicamente critiche dal punto di vista dell'errore di deriva. 
+        
+            \begin{figure}[!htb]
+                \centering
+                \includegraphics[width=0.7\linewidth]{./images/Traiettorie_ideali/Traiettoria_ideale_3.pdf}
+                \caption{Rappresentazione grafica della traiettoria 3}
+                \label{fig:traiettoria3}
+            \end{figure}
+
+        \item \textbf{Traiettoria 4}:
         
     \end{itemize}
 
