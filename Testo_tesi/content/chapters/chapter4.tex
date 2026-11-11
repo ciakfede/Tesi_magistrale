@@ -11,32 +11,32 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%
 
-Fino ad ora sono state valutate le prestazioni e le criticità associate alle reti neurali da un punto di vista puramente teorico e architetturale. In un problema concreto, come la regressione delle informazioni di posizionamento qui trattato, tuttavia, entra in gioco un ulteriore elemento chiave: il dataset. L'opportuna selezione o generazione di quest'ultimo impatta significativamente sulla capacità del modello di generalizzare adeguatamente la dinamica dell'AUV, oltre ad incidere sulle probabilità di riscontrare il fenomeno dell'overfitting. Idealmente, infatti, si desidererebbe possedere dati rappresentativi di un'ampia gamma di scenari operativi differenti, in modo da aumentare la varietà di condizioni ambientali e di relazioni tra le misurazioni elaborate dalla rete. Solitamente, tuttavia, le misurazioni provenienti dai sensori di bordo sono asincrone, oltre ad essere caratterizzate da frequenze di aggiornamento differenti. Specialmente per quanto concerne il processo di apprendimento di una rete neurale, fornire il dataset grezzo alla rete potrebbe, quindi, non condurre ad un risultato ottimale. Per ovviare a questa problematica, si è scelto in questo lavoro di tesi di effettuare un'elaborazione preliminare dei dati, uniformandone il passo temporale pur mantenendo l'attinenza con la fisica del problema. Nel seguito, dunque, si presenta il processo seguito per la generazione del dataset, a partire dalla campagna di simulazione fino alla preparazione per l'impiego all'interno del modello prescelto.
+Fino ad ora sono state valutate le prestazioni e le criticità associate alle reti neurali da un punto di vista puramente teorico e architetturale. In un problema concreto, come la regressione delle informazioni di posizionamento qui trattato, tuttavia, entra in gioco un ulteriore elemento chiave: il dataset. L'opportuna selezione o generazione di quest'ultimo influisce significativamente sulla capacità del modello di generalizzare adeguatamente la dinamica dell'AUV, oltre ad incidere sulle probabilità di riscontrare il fenomeno dell'overfitting. Idealmente, infatti, si desidererebbe possedere dati rappresentativi di un'ampia gamma di scenari operativi differenti, in modo da aumentare la varietà di condizioni ambientali e di relazioni tra le misurazioni elaborate dalla rete. Solitamente, tuttavia, le misurazioni provenienti dai sensori di bordo sono asincrone, oltre ad essere caratterizzate da frequenze di aggiornamento differenti. Specialmente per quanto concerne il processo di apprendimento di una rete neurale, fornire il dataset grezzo alla rete potrebbe, quindi, non condurre ad un risultato ottimale. Per ovviare a questa problematica, si è scelto in questo lavoro di tesi di effettuare un'elaborazione preliminare dei dati, uniformandone il passo temporale pur mantenendo l'attinenza con la fisica del problema. Nel seguito, dunque, si presenta il processo seguito per la generazione del dataset, a partire dalla campagna di simulazione fino alla preparazione per l'impiego all'interno del modello prescelto.
  
 
 \section{Simulatore GraalTech}
 
-Come accennato, quindi, il dataset impiegato è stato generato sfruttando un simulatore del drone X300, fornito dalla GraalTech, non avendo modo di eseguire una lunga e costosa campagna di test con un modello reale del drone. Sebbene l'utilizzo di un approccio virtuale presenti alcuni vantaggi, quali una maggiore semplicità e immediatezza nella raccolta e nell'analisi dei dati, non può ritensersi esente da criticità, che possono portare a prestazioni della rete sovrastimate. La qualità e la stabilità dei dati misurati dai vari sensori montati a bordo, oltre alla precisione del target GPS, infatti, difficilmente risultano replicabili in condizioni reali. In un ambiente virtuale, inoltre, risulta quasi inevitabile introdurre alcune semplificazioni all'interno del modello, sia del drone che dell'ecosistema, in questo caso marittimo, in cui esso si trova a dover operare. Questo può portare, pertanto, a una perdita di attinenza con la dinamica reale del sistema. 
+Come accennato, quindi, il dataset impiegato è stato generato sfruttando un simulatore del drone X300, fornito dalla GraalTech, non avendo modo di eseguire una lunga e costosa campagna di test con un modello reale del drone. Sebbene l'utilizzo di un approccio virtuale presenti alcuni vantaggi, quali una maggiore semplicità e immediatezza nella raccolta e nell'analisi dei dati, non può ritenersi esente da criticità, che possono portare a prestazioni della rete sovrastimate. La qualità e la stabilità dei dati misurati dai vari sensori montati a bordo, oltre alla precisione del target GPS, infatti, difficilmente risultano replicabili in condizioni reali. In un ambiente virtuale, inoltre, risulta quasi inevitabile introdurre alcune semplificazioni all'interno del modello, sia del drone che dell'ecosistema in cui esso si trova a dover operare. Questo può portare, pertanto, a una perdita di attinenza con la dinamica reale del sistema. 
 
-Per quanto concerne l'ambiente marittimo, sebbene il simulatore consenta di riprodurre un'ampia gamma di condizioni differenti, sono presenti diverse limitazioni, la più impattante delle quali è legata alla variabilità delle condizioni stesse in una singola missione. Per la logica interna del simulatore, infatti, i parametri ambientali variabili, di seguito elencati, possono essere modificati solamente prima dell'avvio di una sessione di simulazione, restando poi costanti per la sua intera durata:  
+Per quanto concerne l'ambiente marittimo, sebbene il simulatore consenta di riprodurre un'ampia gamma di condizioni differenti, sono presenti diverse limitazioni. La più impattante di queste è legata alla variabilità delle condizioni in una singola missione. Per la logica interna del simulatore, infatti, i parametri ambientali variabili, di seguito elencati, possono essere modificati solamente prima dell'avvio di una sessione di simulazione, restando poi costanti per la sua intera durata:  
 
     \begin{itemize}
 
-        \item \textit{Fondale}: il primo elemento modificabile risulta essere il fondale, per cui è possibile specificare la massima profondità al di sotto del livello del mare e la morfologia, che può assumere tratti più o meno regolari. Ciò consente di simulare varie condizioni in cui il drone può trovarsi ad operare, verificando così l'impatto sulla rete neurale di cambiamenti nella qualità e nella stabilità delle misurazioni provenienti dal DVL. Trattando qui traiettorie non eccesivamente lunghe, è difficile che il fondale cambi drasticamente durante una singola missione e, pertanto, la semplificazione introdotta si può ritenere sufficientemente accurata.
+        \item \textit{Fondale}: il primo elemento modificabile risulta essere il fondale, per cui è possibile specificare la massima profondità al di sotto del livello del mare e la morfologia, che può assumere tratti più o meno regolari. Ciò consente di simulare varie condizioni in cui il drone può trovarsi ad operare, verificando così l'impatto sulla rete neurale di cambiamenti nella qualità e nella stabilità delle misurazioni provenienti dal DVL. Trattando qui traiettorie non eccessivamente lunghe, è difficile che il fondale cambi drasticamente durante una singola missione e, pertanto, la semplificazione introdotta si può ritenere sufficientemente accurata.
         
         \item \textit{Oggetti}: all'interno del simulatore risulta, poi, possibile introdurre oggetti di varie dimensioni posti a differenti profondità, avendo in questo modo l'opportunità di verificare la capacità del drone di riconoscere e reagire a situazioni impreviste. All'interno di questo lavoro di tesi, tuttavia, non si sfrutta questo elemento, dovendo verificare unicamente la capacità dell'algoritmo di prevedere la posizione del drone e non eventuali logiche di controllo.  
         
-        \item \textit{Corrente}: un elemento particolarmente critico risulta essere la corrente, la cui intensità e direzione possono variare repentinamente in una situazione reale. Questo tendenzialmente è un aspetto particolarmente critico per gli algoritmi di guida e navigazione che, senza informazioni sull'effettivo valore della corrente, devono riuscire a bilanciarne gli effetti, mantenendo l'errorre di deriva ridotto. Naturalmente, non avendo modo di introdurre una variabilità casuale di questo fenomeno nel simulatore, risulta difficile verificare l'effettiva robustezza di un algoritmo di posizionamento basato sul deep learning. 
+        \item \textit{Corrente}: un elemento particolarmente critico risulta essere la corrente, la cui intensità e direzione possono variare repentinamente in una situazione reale. Questo tendenzialmente è un aspetto particolarmente critico per gli algoritmi di guida e navigazione che, senza informazioni sull'effettivo valore della corrente, devono riuscire a bilanciarne gli effetti e mantenere un errore di deriva ridotto. Naturalmente, non avendo modo di introdurre una variabilità casuale di questo fenomeno nel simulatore, risulta difficile verificare l'effettiva robustezza di un algoritmo di posizionamento basato sul deep learning. 
         
     \end{itemize}
 
-Il simulatore offre, poi, la possibilità di modificare anche alcuni parametri caratteristici dell'operatività del drone, consentendo così di ottenere una maggiore diversificazione degli scenari di simulazione. Anche in questo caso, la personalizzazione dei parametri risulta essere poco flessibile, sebbene qui la modifica nell'ambito di una singola missione sia possibile, tramite apposite linee di comando, e la naturale dinamica di navigazione porti a variazioni del valore di riferimento impostato. Nel seguito si presentano, quindi, i termini considerati in questo lavoro, con gli eventuali limiti associati:
+Il simulatore offre, poi, la possibilità di modificare anche alcuni parametri caratteristici dell'operatività del drone, consentendo così di ottenere una maggiore diversificazione degli scenari di simulazione. Anche in questo caso, la personalizzazione dei parametri risulta essere poco flessibile, sebbene qui la modifica nell'ambito di una singola missione sia possibile tramite apposite linee di comando, e la naturale dinamica di navigazione porti a variazioni del valore di riferimento impostato. Nel seguito si presentano, quindi, i termini considerati in questo lavoro, con gli eventuali limiti associati:
 
     \begin{itemize}
 
-        \item \textit{Profondità}: impostando una profondità specifica, con la relativa tolleranza, il drone tende a muoversi verticalmente fino al raggiungimento del valore obiettivo, procedendo solamente dopo con la navigazione. Naturalmente, occorre un'opportuna valutazione della profondità impostata, dal momento che un valore eccessivamente basso comporterebbe una perdita del segnale DVL, mentre un valore troppo grande, specialmente in presenza di fondale frastagliato e variazioni di profondità nel corso missione, aumenterebbe il rischio di un impatto con il fondale stesso.  
+        \item \textit{Profondità}: impostando una profondità specifica, con la relativa tolleranza, il drone tende a muoversi verticalmente fino al raggiungimento del valore obiettivo, procedendo solamente dopo con la navigazione. Naturalmente, occorre un'opportuna valutazione della profondità impostata, dal momento che un valore eccessivamente basso comporterebbe una perdita del segnale DVL, mentre un valore troppo grande, specialmente in presenza di fondale frastagliato e variazioni di profondità nel corso della missione, aumenterebbe il rischio di un impatto con il fondale stesso.  
         
-        \item \textit{Velocità}: la velocità, impostata in concomitanza della latitudine e della longitudine del punto da raggiungere, funge da riferimento per la specifica tratta. Il sistema di controllo interno al drone, pertanto, regola la percentuale di potenza erogata dai propulsori in modo da raggiungere tale valore obiettivo, sebbene, specialmente in presenza di una corrente molto intensa, l'accuratezza di tale operazione diminuisca significativamente. Naturalmente, i valori ammissibili per questa grandezza sono vincolati alle capacità operative reali del drone, con una massima velocità consentita pari a 5 nodi.
+        \item \textit{Velocità}: la velocità, impostata in concomitanza della latitudine e della longitudine del punto da raggiungere, funge da riferimento per la specifica tratta. Il sistema di controllo interno al drone, pertanto, regola la percentuale di potenza erogata dai propulsori in modo da raggiungere tale valore obiettivo. Tuttavia, specialmente in presenza di una corrente molto intensa, l'accuratezza di tale operazione diminuisce significativamente. Inoltre, i valori ammissibili per questa grandezza sono vincolati alle capacità operative reali del drone, con una massima velocità consentita pari a 5 nodi.
 
     \end{itemize}
 
@@ -44,7 +44,7 @@ Una trattazione approfondita va, inoltre, riservata alle misurazioni che il simu
 
     \begin{itemize}
 
-        \item \textit{Attitude}: sono 3 valori, tipicamente forniti dall'unità di misurazione inerziale, rappresentanti rispettivamente gli angoli di roll, pitch e yaw. Tali misurazioni sono fornite con una frequenza pari a 5 Hz.
+        \item \textit{Attitude}: sono 3 valori, tipicamente forniti dall'unità di misurazione inerziale, rappresentanti rispettivamente gli angoli di roll, pitch e yaw in gradi. Tali misurazioni sono fornite con una frequenza pari a 5 Hz.
 
         \item \textit{AxisRef}: questi 6 valori sono legati alle logiche di controllo interna del drone simulato e, in particolare, esprimono i target delle velocità lineari e angolari sugli assi x, y e z in termini percentuali. La relativa frequenza di aggiornamento è pari a 5 Hz.
 
@@ -62,32 +62,75 @@ Una trattazione approfondita va, inoltre, riservata alle misurazioni che il simu
 
 \section{Definizione missioni}
 
-Sfruttando i parametri fino ad ora introdotti, sono state, quindi, generate 256 possibili combinazioni uniche di condizioni operative e ambientali, presentate nelle \emph{Tabelle} \ref{tab:scenari_ambientali} e \ref{tab:scenari_operativi}. Sulla base della suddivisione osservabile in quest'ultime, per ogni traiettoria presa in esame si sono eseguite 16 simulazioni, una per ogni possibile condizione ambientale. Proprio in quest'ottica, si è reso necessario il raggruppamento delle configurazioni operative in quattro scenari, poi specchiati per arrivare agli otto complessivi presentati. Per massimizzare l'efficienza di utilizzo del simulatore, infatti, si è scelto di eseguire consecutivamente le quattro possibili configurazioni operative associate ad uno specifico scenario ambientale. Nel concreto, questo si traduce in un minor numero di riavvii del simulatore e, conseguentemente, in un significativo risparmio di tempo. Tuttavia, la metodologia adottata introduce complessità nella successiva fase di analisi. Volendo valutare ogni ripetizione della traiettoria come una singola missione indipendente, occorre, infatti, individuare gli istanti temporali associati all'inizio e alla fine di ognuna.  
+Sulla base dei parametri finora introdotti sono stati, quindi, definiti 16 scenari ambientali e 16 configurazioni operative uniche, presentate nelle \emph{Tabelle} \ref{tab:scenari_ambientali} e \ref{tab:scenari_operativi}, in grado di combinarsi per generare 256 potenziali combinazioni differenti. In particolare, per ogni traiettoria presa in esame si sono eseguite 16 simulazioni, una per ogni possibile condizione ambientale. Al fine di massimizzare l'efficienza della campagna di simulazione, infatti, si è reso necessario il raggruppamento delle condizioni operative in quattro scenari, poi specchiati per arrivare agli otto complessivi presentati. Questo perché eseguire consecutivamente le quattro possibili configurazioni associate ad uno specifico scenario ambientale consente di ridurre notevolmente il numero di riavvii del simulatore e, conseguentemente, di ottenere un significativo risparmio di tempo. Tuttavia, la metodologia adottata introduce complessità nella successiva fase di analisi. Volendo valutare ogni ripetizione della traiettoria come una singola missione indipendente occorre, infatti, individuare gli istanti temporali associati all'inizio e alla fine di ognuna.  
 
-Una volta definiti i parametri di simulazione, è necessario identificare le traiettorie alla base delle missioni stesse. In particolare, tenendo conto sia delle tipiche necessità operative di un drone subacqueo autonomo che delle scelte fatte all'interno del paper di riferimento per l'architettura neurale\cite{NavNet}, sono state individuate 6 traiettorie. In questo modo risulta possibile sia valutare il comportamento del modello in un possibile scenario reale, sia eseguire un confronto diretto con l'approccio originale, verifcando così la bontà dell'implementazione presentata in questo lavoro di tesi. Queste 6 traiettorie, descritte nel seguito, sono, nel dettaglio, utilizzate unicamente per la fase di addestramento e di validazione della rete neurale:
+Una volta definiti i parametri di simulazione, è necessario identificare le traiettorie alla base delle missioni stesse. In particolare, tenendo conto sia delle tipiche necessità operative di un drone subacqueo autonomo sia delle scelte effettuate all'interno del paper di riferimento per l'architettura neurale\cite{NavNet}, sono state definite 6 traiettorie. In questo modo risulta possibile al contempo tempo valutare il comportamento del modello in un possibile scenario reale ed eseguire un confronto diretto con l'approccio originale, verificando così la bontà dell'implementazione presentata in questo lavoro di tesi. Le 6 traiettorie descritte nel seguito sono, nel dettaglio, utilizzate unicamente per la fase di addestramento e di validazione della rete neurale:
 
     \begin{itemize}
 
-        \item[\emph{N.B.}]: in tutte le traiettorie è aggiunto un \emph{Waiting Point}, necessario al fine di rendere la simulazione di ogni ripetizione più indipendente ed adattabile ad una reale campagna di test. I tratti tra il punto di attesa e il punto di inizio della traiettoria, così come il corrispettivo tra il punto di fine missione e il punto di attesa, infatti, sono percorsi dal drone in emersione. Questo consente l'utilizzo del sensore GNSS per la correzione dell'eventuale errore di deriva sulla posizione accumulato durante la traiettoria precedente. Solo una volta raggiunto il punto di inizio missione effettivo l'AUV inizia l'immersione, raggiungendo la profondità imposta e iniziando la navigazione subacquea. 
+        \item[\emph{N.B.}] In tutte le traiettorie è aggiunto un \emph{Waiting Point}, necessario al fine di rendere la simulazione di ogni ripetizione più indipendente e adattabile a una reale campagna di test. Le tratte "punto di attesa - punto di inizio traiettoria" e "punto di fine missione - punto di attesa", infatti, sono percorse dal drone in emersione. Questo consente l'utilizzo del sensore GNSS per la correzione dell'eventuale errore di deriva sulla posizione accumulato durante la navigazione precedente. Solo una volta raggiunto il punto di inizio missione effettivo l'AUV avvia la fase di immersione, raggiungendo la profondità imposta e iniziando la navigazione subacquea. 
         
-        \item[\emph{N.B.}]: per ogni traiettoria si è scelto di riportare in tabella le coordinate in assi NED locali, aventi origine coincidente con il primo punto della missione, e le istruzioni utilizzate sul simulatore per definire la specifica traiettoria. Nel dettaglio, per un'operazione analoga sono richiesti il valore di heading, misurato in gradi rispetto al Nord magnetico, e di distanza, misurata in metri rispetto al punto di riferimento prescelto. Dal momento che quest'ultimo non risulta sempre coincidente con il punto di inizio missione, nel pedice si riporta sempre il punto di riferimento e il punto generato, con una notazione del tipo $P_{\text{reference point} \, \rightarrow \, \text{new point}}$.
+        \item[\emph{N.B.}] Per ogni traiettoria si è scelto di riportare in tabella le coordinate in assi NED locali, la cui origine coincide con il primo punto della missione, e le istruzioni utilizzate sul simulatore per definire la specifica traiettoria. Nel dettaglio, per un'operazione analoga sono richiesti il valore di heading, misurato in gradi rispetto al Nord magnetico, e di distanza, misurata in metri rispetto al punto di riferimento prescelto. Dal momento che quest'ultimo non risulta sempre coincidente con il punto di inizio missione, nel pedice si riportano sia il punto di riferimento che il punto generato, con una notazione del tipo $P_{\text{reference point} \, \rightarrow \, \text{new point}}$. Occorre, inoltre, considerare che nella conversione delle coordinate, espresse come latitudine e longitudine nel simulatore, si sono introdotti inevitabilmente degli errori, che spiegano possibili discrepanze tra le istruzioni fornite e i punti effettivamente riportati.
 
-        \item \textbf{Traiettoria 0}: la prima traiettoria presentata corrisponde ad un semplice percorso rettilineo ripetuto in entrambe le direzioni. Pur essendo molto basilare, una simile traiettoria spesso si rivela fondamentale per le missioni di osservazione del fondale, specialmente se l'obiettivo è una struttura artificiale come i cavi per il trasporto di energia o di dati. Inoltre va sottolineato che, specialmente in presenza di forti correnti perpendicolari alla traiettoria, il drone tende a seguire un percorso caratterizzato da molte oscillazioni intorno alla linea ideale. Questo può rappresentare un punto di criticità per una rete neurale che non possiede alcuna informazione sulla corrente presente e, pertanto, può essere fondamentale valutarne la capacità di sopperire a questa mancanza. 
+        \item \textbf{Traiettoria 0}: la prima traiettoria presentata corrisponde ad un semplice percorso rettilineo ripetuto in entrambe le direzioni. Pur essendo molto basilare, un simile tragitto spesso si rivela fondamentale per le missioni di osservazione del fondale, specialmente se l'obiettivo è una struttura artificiale come i cavi per il trasporto di energia o di dati. Inoltre, va sottolineato che, soprattutto in presenza di forti correnti perpendicolari alla traiettoria, il drone tende a seguire un percorso caratterizzato da molte oscillazioni intorno alla linea ideale. Questo può rappresentare un punto di criticità per una rete neurale che non dispone di alcuna informazione sulla corrente presente. Pertanto, risulta fondamentale valutarne la capacità di sopperire a questa mancanza. Per completezza di trattazione, si evidenzia come le missioni associate a questa traiettoria non seguano la stessa nomenclatura delle altre. I dati relativi alla traiettoria, infatti, provengono da una differente campagna di simulazione svolta internamente all'azienda. Tuttavia, a livello strutturale nulla cambia, con 16 missioni ciascuna caratterizzata da quattro ripetizioni della traiettoria in differenti condizioni operative.
         
             \begin{figure}[!htb]
                 \centering
-                \includegraphics[width=0.7\linewidth]{./images/Traiettorie_ideali/Traiettoria_ideale_0.pdf}
+                \includegraphics[width=0.8\linewidth]{./images/Traiettorie_ideali/Traiettoria_ideale_0.pdf}
                 \caption{Rappresentazione grafica della traiettoria 0}
                 \label{fig:traiettoria0}
             \end{figure}
+
+            \small
+            \renewcommand{\arraystretch}{1.10}       % Riduce l'altezza delle righe 
+            \setlength{\LTpre}{8pt}                  % Riduce lo spazio prima della longtable
+            \setlength{\LTpost}{6pt}                 % Riduce lo spazio dopo della longtable
+            \setlength{\belowcaptionskip}{5pt}       % Riduce lo spazio sotto la didascalia
+
+            \begin{longtable}{ccc p{8mm} ccc}
+                \caption{Coordinate e parametri di navigazione per la traiettoria 0} 
+                \label{tab:traiettoria_0} \\
+                
+                % --- TESTATA DELLA PRIMA PAGINA ---
+                \cmidrule{1-3} \cmidrule{5-7}
+                \textbf{ID} & \textbf{East [m]} & \textbf{North [m]} & & 
+                \textbf{ID} & \textbf{Heading [\textdegree]} & \textbf{Lunghezza [m]} \\
+                \cmidrule{1-3} \cmidrule{5-7}
+                \endfirsthead 
+
+                % --- TESTATA DELLE PAGINE SUCCESSIVE ---
+                \multicolumn{7}{@{}l}{{Continua dalla pagina precedente}} \\
+                \cmidrule{1-3} \cmidrule{5-7}
+                \textbf{ID} & \textbf{East [m]} & \textbf{North [m]} & & 
+                \textbf{ID} & \textbf{Heading [\textdegree]} & \textbf{Lunghezza [m]} \\
+                \cmidrule{1-3} \cmidrule{5-7}
+                \endhead
+
+                % --- PIÈ DI PAGINA (Continua...) ---
+                \cmidrule{1-3} \cmidrule{5-7}
+                \multicolumn{7}{r}{{Continua nella pagina successiva}} \\
+                \endfoot
+
+                % --- PIÈ DI PAGINA FINALE ---
+                \cmidrule{1-3} \cmidrule{5-7}
+                \endlastfoot
+
+                % --- DATI ---
+                $P_{1}$ & 0.00 & 0.00 & & $P_{1 \rightarrow 1}$ & 0.00 & 0.00 \\
+                $P_{2}$ & 4.88 & 8.71 & & $P_{1 \rightarrow 2}$ & 29.75 & 10.00 \\
+                $P_{3}$ & 9.75 & 17.43 & & $P_{1 \rightarrow 3}$ & 29.75 & 20.00 \\
+                $P_{4}$ & 14.63 & 26.14 & & $P_{1 \rightarrow 4}$ & 29.75 & 30.00 \\
+                $P_{5}$ & 19.81 & 35.04 & & $P_{1 \rightarrow 5}$ & 29.75 & 40.25 \\
+                $P_{6}$ & 19.71 & 45.01 & & $P_{5 \rightarrow 6}$ & 0.00 & 10.00 \\
+                $P_{7}$ & 19.70 & 55.00 & & $P_{6 \rightarrow 6}$ & 0.00 & 10.00 
+
+            \end{longtable}
         
-        Per completezza di trattazione, si evidenzia come le missioni associate a questa traiettoria non seguano la stessa nomenclatura delle altre. I dati relativi alla traiettoria, infatti, provengono da una differente campagna di simulazione svolta internamente all'azienda. Tuttavia, a livello strutturale nulla cambia, con 16 missioni ognuna delle quali caratterizzata da 4 ripetizioni della traiettoria in differenti condizioni operative.
-        
-        \item \textbf{Traiettoria 1}: questa traiettoria, riprodotta sulla base della descrizione contenuta nel paper di riferimento, rappresenta sostanzialmente un'estensione della precedente. Infatti, dopo una prima traslazione diagonale, che operativamente potrebbe rappresentare una fase di spostamento verso un punto di interesse, il drone segue un duplice percorso rettilineo, inframezzato da una deviazione di $90^\circ$. 
+        \item \textbf{Traiettoria 1}: questa traiettoria, riprodotta sulla base della descrizione contenuta nel paper di Zhang, rappresenta sostanzialmente un'estensione della precedente. Infatti, dopo una prima traslazione diagonale, che operativamente potrebbe rappresentare una fase di spostamento verso un punto di interesse, il drone segue un duplice percorso rettilineo, intervallato da una rotazione di $90^\circ$. 
         
             \begin{figure}[!htb]
                 \centering
-                \includegraphics[width=0.7\linewidth]{./images/Traiettorie_ideali/Traiettoria_ideale_1.pdf}
+                \includegraphics[width=0.8\linewidth]{./images/Traiettorie_ideali/Traiettoria_ideale_1.pdf}
                 \caption{Rappresentazione grafica della traiettoria 1}
                 \label{fig:traiettoria1}
             \end{figure}
@@ -99,7 +142,7 @@ Una volta definiti i parametri di simulazione, è necessario identificare le tra
             \setlength{\belowcaptionskip}{5pt}       % Riduce lo spazio sotto la didascalia
 
             \begin{longtable}{ccc p{8mm} ccc}
-                \caption{Coordinate e parametri di navigazione per traiettoria 1} 
+                \caption{Coordinate e parametri di navigazione per la traiettoria 1} 
                 \label{tab:traiettoria_1} \\
                 
                 % --- TESTATA DELLA PRIMA PAGINA ---
@@ -110,6 +153,7 @@ Una volta definiti i parametri di simulazione, è necessario identificare le tra
                 \endfirsthead 
 
                 % --- TESTATA DELLE PAGINE SUCCESSIVE ---
+                \multicolumn{7}{@{}l}{{Continua dalla pagina precedente}} \\
                 \cmidrule{1-3} \cmidrule{5-7}
                 \textbf{ID} & \textbf{East [m]} & \textbf{North [m]} & & 
                 \textbf{ID} & \textbf{Heading [\textdegree]} & \textbf{Lunghezza [m]} \\
@@ -126,59 +170,27 @@ Una volta definiti i parametri di simulazione, è necessario identificare le tra
                 \endlastfoot
 
                 % --- DATI ---
-                $WP$ & 0 & -20 & & $P_{1 \rightarrow WP}$ & 180 & 20 \\
-                $P_{1}$ & 0  & 0  & & $P_{1 \rightarrow 1}$ & 0.00 & 0.00 \\
-                %$P_{2}$ & 
-                $P_{2}$ & 35 & 20 & & $\Delta_{2-1}$ & 29.75 & 40.31 \\
-                $P_{3}$ & 35 & 50 & & $\Delta_{3-2}$ & 0.00 & 20.00 \\
-                $P_{4}$ & 40 & 55 & & $\Delta_{4-3}$ & 45.00 & 7.07 \\
-                $P_{5}$ & 70 & 55 & & $\Delta_{5-4}$ & 90.00 & 30.00 \\
+                $WP$ & 0.00 & -20.00 & & $P_{1 \rightarrow WP}$ & 180.00 & 20.00 \\
+                $P_{1}$ & 0.00 & 0.00 & & $P_{1 \rightarrow 1}$ & 0.00 & 0.00 \\
+                $P_{2}$ & 4.88 & 8.71 & & $P_{1 \rightarrow 2}$ & 29.75 & 10.00 \\
+                $P_{3}$ & 9.75 & 17.43 & & $P_{1 \rightarrow 3}$ & 29.75 & 20.00 \\
+                $P_{4}$ & 14.63 & 26.14 & & $P_{1 \rightarrow 4}$ & 29.75 & 30.00 \\
+                $P_{5}$ & 19.81 & 35.04 & & $P_{1 \rightarrow 5}$ & 29.75 & 40.00 \\
+                $P_{6}$ & 19.71 & 45.01 & & $P_{5 \rightarrow 6}$ & 0.00 & 10.00 \\
+                $P_{7}$ & 19.70 & 55.00 & & $P_{6 \rightarrow 6}$ & 0.00 & 10.00 \\
+                $P_{8}$ & 19.50 & 64.97 & & $P_{7 \rightarrow 8}$ & 0.00 & 10.00 \\
+                $P_{9}$ & 24.45 & 70.01 & & $P_{8 \rightarrow 9}$ & 45.00 & 7.00 \\
+                $P_{10}$ & 34.47 & 70.12 & & $P_{9 \rightarrow 10}$ & 90.00 & 10.00 \\
+                $P_{11}$ & 44.48 & 70.22 & & $P_{10 \rightarrow 11}$ & 90.00 & 10.00 \\
+                $P_{12}$ & 54.49 & 70.32 & & $P_{11 \rightarrow 12}$ & 90.00 & 10.00
 
             \end{longtable}
 
-
-
-            \small
-            \renewcommand{\arraystretch}{1.10}       % Riduce l'altezza delle righe 
-            \setlength{\LTpre}{8pt}                  % Riduce lo spazio prima della longtable
-            \setlength{\LTpost}{6pt}                 % Riduce lo spazio dopo della longtable
-            \setlength{\belowcaptionskip}{5pt}       % Riduce lo spazio sotto la didascalia
-
-            \begin{longtable}{ccccc}
-                \caption{Coordinate e parametri di navigazione per traiettoria 1} 
-                \label{tab:traiettoria_1} \\
-                
-                % --- TESTATA DELLA PRIMA PAGINA ---
-                \cmidrule{1-5}
-                \textbf{ID} & \textbf{Latitudine [\textdegree]} & \textbf{Longitudine [\textdegree]} & \textbf{East [m]} & \textbf{North [m]} \\
-                \cmidrule{1-5}
-                \endfirsthead 
-
-                % --- TESTATA DELLE PAGINE SUCCESSIVE ---
-                \cmidrule{1-5}
-                \textbf{ID} & \textbf{Latitudine [\textdegree]} & \textbf{Longitudine [\textdegree]} & \textbf{East [m]} & \textbf{North [m]} \\
-                \cmidrule{1-5}
-                \endhead
-
-                % --- PIÈ DI PAGINA (Continua...) ---
-                \cmidrule{1-5}
-                \multicolumn{5}{r}{{Continua nella pagina successiva}} \\
-                \endfoot
-
-                % --- PIÈ DI PAGINA FINALE ---
-                \cmidrule{1-5}
-                \endlastfoot
-
-                % --- DATI ---
-                $WP$ & 44.0932665 & 9.8582160 & 0.00 & -20.00 \\
-  
-            \end{longtable}
-
-        \item \textit{Traiettoria 2}: sempre facendo riferimento alle informazioni presenti nel paper, la seconda traiettoria rappresenta un pentagono regolare con lati di crica 40 metri. A livello operativo questa sarebbe una forma molto insolita e, pertanto, difficilmente riscontrabile in una normale missione. Tuttavia, risulta molto utile per valutare la capacità della rete di mantenre un errore di posizionamento accettabile anche in presenza di numerosi e repentini cambi di direzione superiori a $90^\circ$.
+        \item \textbf{Traiettoria 2}: sempre facendo riferimento alle informazioni contenute nel paper di riferimento, si definisce la terza traiettoria come un pentagono regolare avente lati di circa 40 metri. Da un punto di vista operativo, questa sarebbe una forma molto insolita e, pertanto, difficilmente riscontrabile in una normale missione. Tuttavia, risulta molto utile per valutare la capacità della rete di mantenere un errore di posizionamento accettabile anche in presenza di numerosi e repentini cambi di direzione superiori a $90^\circ$.
         
             \begin{figure}[!htb]
                 \centering
-                \includegraphics[width=0.7\linewidth]{./images/Traiettorie_ideali/Traiettoria_ideale_2.pdf}
+                \includegraphics[width=0.8\linewidth]{./images/Traiettorie_ideali/Traiettoria_ideale_2.pdf}
                 \caption{Rappresentazione grafica della traiettoria 2}
                 \label{fig:traiettoria2}
             \end{figure}
@@ -188,11 +200,11 @@ Una volta definiti i parametri di simulazione, è necessario identificare le tra
             \setlength{\LTpre}{8pt}                  % Riduce lo spazio prima della longtable
             \setlength{\LTpost}{6pt}                 % Riduce lo spazio dopo della longtable
             \setlength{\belowcaptionskip}{5pt}       % Riduce lo spazio sotto la didascalia
-            
-            \begin{longtable}{ccc p{8mm} ccc}
-                \caption{Coordinate di navigazione per traiettoria 2} 
-                \label{tab:traiettoria_2} \\
 
+            \begin{longtable}{ccc p{8mm} ccc}
+                \caption{Coordinate e parametri di navigazione per la traiettoria 2} 
+                \label{tab:traiettoria_2} \\
+                
                 % --- TESTATA DELLA PRIMA PAGINA ---
                 \cmidrule{1-3} \cmidrule{5-7}
                 \textbf{ID} & \textbf{East [m]} & \textbf{North [m]} & & 
@@ -201,6 +213,7 @@ Una volta definiti i parametri di simulazione, è necessario identificare le tra
                 \endfirsthead 
 
                 % --- TESTATA DELLE PAGINE SUCCESSIVE ---
+                \multicolumn{7}{@{}l}{{Continua dalla pagina precedente}} \\
                 \cmidrule{1-3} \cmidrule{5-7}
                 \textbf{ID} & \textbf{East [m]} & \textbf{North [m]} & & 
                 \textbf{ID} & \textbf{Heading [\textdegree]} & \textbf{Lunghezza [m]} \\
@@ -216,20 +229,26 @@ Una volta definiti i parametri di simulazione, è necessario identificare le tra
                 \cmidrule{1-3} \cmidrule{5-7}
                 \endlastfoot
 
-                $P_{0}$ & 0 & 0 & & $\Delta_{0-0}$ & 0.00 & 0.00 \\
-                $P_{1}$ & 0 & 40 & & $\Delta_{1-0}$ & 0.00 & 40.00 \\
-                $P_{2}$ & 38 & 52.4 & & $\Delta_{2-1}$ & 71.93 & 39.97\\
-                $P_{3}$ & 61.5 & 20 & & $\Delta_{3-2}$ & 144.05 & 40.02 \\
-                $P_{4}$ & 38 & 12.4 & & $\Delta_{4-3}$ & 215.95 & 40.02 \\
-                $P_{5}$ & 0 & 0 & & $\Delta_{5-4}$ & 288.07 & 39.97 \\
+                % --- DATI ---
+                $WP$ & -20.02 & -0.20 & & $P_{1 \rightarrow WP}$ & 270.00 & 20.00 \\
+                $P_{1}$ & 0.00 & 0.00 & & $P_{1 \rightarrow 1}$ & 0.00 & 0.00 \\
+                $P_{2}$ & -0.21 & 19.97 & & $P_{1 \rightarrow 2}$ & 0.00 & 20.00 \\
+                $P_{3}$ & -0.41 & 39.91 & & $P_{2 \rightarrow 3}$ & 0.00 & 20.00 \\
+                $P_{4}$ & 18.55 & 46.30 & & $P_{3 \rightarrow 4}$ & 71.93 & 20.00 \\
+                $P_{5}$ & 37.50 & 52.69 & & $P_{4 \rightarrow 5}$ & 71.93 & 20.00 \\
+                $P_{6}$ & 49.44 & 36.65 & & $P_{5 \rightarrow 6}$ & 144.05 & 20.00 \\
+                $P_{7}$ & 61.37 & 20.60 & & $P_{6 \rightarrow 7}$ & 144.05 & 20.00 \\
+                $P_{8}$ & 49.77 & 4.32 & & $P_{7 \rightarrow 8}$ & 215.95 & 20.00 \\
+                $P_{9}$ & 38.17 & -11.96 & & $P_{8 \rightarrow 9}$ & 215.95 & 20.00 \\
+                $P_{10}$ & 19.09 & -5.98 & & $P_{9 \rightarrow 10}$ & 288.07 & 20.00 \\
 
             \end{longtable}
 
-        \item \textit{Traiettoria 3}: la terza traiettoria introdotta nel paper, qui presentata, rappresenta un cerchio di raggio pari a circa 80 metri. Un simile percorso, operativamente rappresentativo di un circuito di attesa dell'AUV, consente di valutare le prestazioni della rete neurale in presenza di lunghe traiettorie curvilinee, tipicamente critiche dal punto di vista dell'errore di deriva. 
+        \item \textbf{Traiettoria 3}: la terza traiettoria introdotta nel paper, qui presentata, rappresenta un cerchio di raggio pari a circa 80 metri. Un simile percorso, operativamente rappresentativo di un circuito di attesa dell'AUV, consente di valutare le prestazioni della rete neurale in presenza di lunghe traiettorie curvilinee, tipicamente critiche dal punto di vista dell'errore di deriva. 
         
             \begin{figure}[!htb]
                 \centering
-                \includegraphics[width=0.7\linewidth]{./images/Traiettorie_ideali/Traiettoria_ideale_3.pdf}
+                \includegraphics[width=0.8\linewidth]{./images/Traiettorie_ideali/Traiettoria_ideale_3.pdf}
                 \caption{Rappresentazione grafica della traiettoria 3}
                 \label{fig:traiettoria3}
             \end{figure}
@@ -240,7 +259,7 @@ Una volta definiti i parametri di simulazione, è necessario identificare le tra
             \setlength{\LTpost}{6pt}                 % Riduce lo spazio dopo della longtable
             \setlength{\belowcaptionskip}{5pt}       % Riduce lo spazio sotto la didascalia
             \begin{longtable}{ccc p{8mm} ccc}
-                \caption{Coordinate di navigazione per traiettoria 3} 
+                \caption{Coordinate e parametri di navigazione per la traiettoria 3} 
                 \label{tab:traiettoria_3} \\
                 
                 % --- TESTATA DELLA PRIMA PAGINA ---
@@ -251,6 +270,7 @@ Una volta definiti i parametri di simulazione, è necessario identificare le tra
                 \endfirsthead 
 
                 % --- TESTATA DELLE PAGINE SUCCESSIVE ---
+                \multicolumn{7}{@{}l}{{Continua dalla pagina precedente}} \\
                 \cmidrule{1-3} \cmidrule{5-7}
                 \textbf{ID} & \textbf{East [m]} & \textbf{North [m]} & & 
                 \textbf{ID} & \textbf{Heading [\textdegree]} & \textbf{Lunghezza [m]} \\
@@ -266,25 +286,24 @@ Una volta definiti i parametri di simulazione, è necessario identificare le tra
                 \cmidrule{1-3} \cmidrule{5-7}
                 \endlastfoot
 
-                $P_{0}$ & 0 & 0 & & $\Delta_{0-0}$ & 0.00  & 0.00 \\
-                $P_{ref}\footnote{Punto fittizio al centro del cerchio.}$ & -80 & 0 & & $\Delta_{ref-0}$ & 80.00 & 270.00 \\
-                $P_{1}$ & -23.4 & -56.6 & & $\Delta_{1-ref}$ & 135 & 80.00 \\
-                $P_{2}$ & -80 & -80 & & $\Delta_{2-ref}$ & 180 & 80.00 \\
-                $P_{3}$ & -136.6 & -56.6 & & $\Delta_{3-ref}$ & 225 & 80.00 \\
-                $P_{4}$ & -160 & 0 & & $\Delta_{4-ref}$ & 270 & 80.00 \\
-                $P_{5}$ & -136.6 & 56.6 & & $\Delta_{5-ref}$ & 315 & 80.00 \\
-                $P_{6}$ & -80 & 80 & & $\Delta_{6-ref}$ & 0 & 80.00 \\
-                $P_{7}$ & -23.4 & 56.6 & & $\Delta_{7-ref}$ & 45 & 80.00 \\
-                $P_{8}$ & 0 & 0 & & $\Delta_{8-ref}$ & 90 & 80.00 \\
-                $P_{wait}$ & 20 & 0 & & $\Delta_{wait-ref}$ & 90.00 & 100.00 \\
+                $P_{ref}\footnote{Punto fittizio al centro del cerchio.}$ & -80.00 & 0.00 & & $P_{1 \rightarrow ref}$ & 270.00 & 80.00 \\
+                $WP$ & 30.03 & 0.31 & & $P_{1 \rightarrow WP}$ & 90.00 & 30.00 \\
+                $P_{1}$ & 0.00 & 0.00 & & $P_{1 \rightarrow 1}$ & 0.00 & 0.00 \\
+                $P_{2}$ & -22.84 & -56.72 & & $P_{ref \rightarrow 2}$ & 135.00 & 80.00 \\
+                $P_{3}$ & -79.27 & -80.66 & & $P_{ref \rightarrow 3}$ & 180.00 & 80.00 \\
+                $P_{4}$ & -136.18 & -57.90 & & $P_{ref \rightarrow 4}$ & 225.00 & 80.00 \\
+                $P_{5}$ & -160.19 & -1.66 & & $P_{ref \rightarrow 5}$ & 270.00 & 80.00 \\
+                $P_{6}$ & -137.35 & 55.05 & & $P_{ref \rightarrow 6}$ & 315.00 & 80.00 \\
+                $P_{7}$ & -80.93 & 78.98 & & $P_{ref \rightarrow 7}$ & 360.00 & 80.00 \\
+                $P_{8}$ & -24.02 & 56.22 & & $P_{ref \rightarrow 8}$ & 45.00 & 80.00 \\
 
             \end{longtable}
 
-        \item \textit{Traiettoria 4}: l'ultima traiettoria derivata dal papaer di riferimento rappresenta sostanzialmente una variante della traiettoria 2, con un percorso di forma quadrata con lato pari a circa 120 metri.
+        \item \textbf{Traiettoria 4}: l'ultima traiettoria derivata dal paper di riferimento rappresenta sostanzialmente una variante della traiettoria 2, con un percorso chiuso di forma quadrata avente lati pari a circa 120 metri.
         
             \begin{figure}[!htb]
                 \centering
-                \includegraphics[width=0.7\linewidth]{./images/Traiettorie_ideali/Traiettoria_ideale_4.pdf}
+                \includegraphics[width=0.8\linewidth]{./images/Traiettorie_ideali/Traiettoria_ideale_4.pdf}
                 \caption{Rappresentazione grafica della traiettoria 4}
                 \label{fig:traiettoria4}
             \end{figure}
@@ -295,7 +314,7 @@ Una volta definiti i parametri di simulazione, è necessario identificare le tra
             \setlength{\LTpost}{6pt}                 % Riduce lo spazio dopo della longtable
             \setlength{\belowcaptionskip}{5pt}       % Riduce lo spazio sotto la didascalia
             \begin{longtable}{ccc p{8mm} ccc}
-                \caption{Coordinate di navigazione per traiettoria 4} 
+                \caption{Coordinate e parametri di navigazione per la traiettoria 4} 
                 \label{tab:traiettoria_4} \\
                 
                 % --- TESTATA DELLA PRIMA PAGINA ---
@@ -306,6 +325,7 @@ Una volta definiti i parametri di simulazione, è necessario identificare le tra
                 \endfirsthead 
 
                 % --- TESTATA DELLE PAGINE SUCCESSIVE ---
+                \multicolumn{7}{@{}l}{{Continua dalla pagina precedente}} \\
                 \cmidrule{1-3} \cmidrule{5-7}
                 \textbf{ID} & \textbf{East [m]} & \textbf{North [m]} & & 
                 \textbf{ID} & \textbf{Heading [\textdegree]} & \textbf{Lunghezza [m]} \\
@@ -321,20 +341,36 @@ Una volta definiti i parametri di simulazione, è necessario identificare le tra
                 \cmidrule{1-3} \cmidrule{5-7}
                 \endlastfoot
 
-                1 & 0 & 0 & / \\
-                2 & -60 & 30 & 206.565 \\
-                3 & -113.7 & -77.3 & 206.586 \\
-                4 & -6.3 & -131 & 116.565 \\
-                5 & 47.3 & -23.7 & 26.544 \\
-                6 & 0 & 0 & 26.544 \\
+                $WP$ & 21.02 & 21.39 & & $P_{1 \rightarrow WP}$ & 45.00 & 30.00 \\
+                $P_{1}$ & 0.00 & 0.00 & & $P_{1 \rightarrow 1}$ & 0.00 & 0.00 \\
+                $P_{2}$ & -27.00 & 13.11 & & $P_{1 \rightarrow 2}$ & 296.57 & 30.00 \\
+                $P_{3}$ & -60.39 & 29.30 & & $P_{2 \rightarrow 3}$ & 296.57 & 30.00 \\
+                $P_{4}$ & -69.16 & 11.36 & & $P_{3 \rightarrow 4}$ & 206.57 & 20.00 \\
+                $P_{5}$ & -77.94 & -6.57 & & $P_{4 \rightarrow 5}$ & 206.57 & 20.00 \\
+                $P_{6}$ & -86.72 & -24.52 & & $P_{5 \rightarrow 6}$ & 206.57 & 20.00 \\
+                $P_{7}$ & -95.49 & -42.46 & & $P_{6 \rightarrow 7}$ & 206.57 & 20.00 \\
+                $P_{8}$ & -104.26 & -60.40 & & $P_{7 \rightarrow 8}$ & 206.57 & 20.00 \\
+                $P_{9}$ & -113.03 & -78.32 & & $P_{8 \rightarrow 9}$ & 206.57 & 20.00 \\
+                $P_{10}$ & -95.03 & -87.05 & & $P_{9 \rightarrow 10}$ & 116.57 & 20.00 \\
+                $P_{11}$ & -77.02 & -95.80 & & $P_{10 \rightarrow 11}$ & 116.57 & 20.00 \\
+                $P_{12}$ & -59.02 & -104.53 & & $P_{11 \rightarrow 12}$ & 116.57 & 20.00 \\
+                $P_{13}$ & -41.01 & -113.26 & & $P_{12 \rightarrow 13}$ & 116.57 & 20.00 \\
+                $P_{14}$ & -23.01 & -122.01 & & $P_{13 \rightarrow 14}$ & 116.57 & 20.00 \\
+                $P_{15}$ & -4.94 & -130.77 & & $P_{14 \rightarrow 15}$ & 116.57 & 20.00 \\
+                $P_{16}$ & 3.83 & -112.83 & & $P_{15 \rightarrow 16}$ & 26.57 & 20.00 \\
+                $P_{17}$ & 12.59 & -94.88 & & $P_{16 \rightarrow 17}$ & 26.57 & 20.00 \\
+                $P_{18}$ & 21.35 & -76.94 & & $P_{17 \rightarrow 18}$ & 26.57 & 20.00 \\
+                $P_{19}$ & 30.11 & -58.99 & & $P_{18 \rightarrow 19}$ & 26.57 & 20.00 \\
+                $P_{20}$ & 38.87 & -41.04 & & $P_{19 \rightarrow 20}$ & 26.57 & 20.00 \\
+                $P_{21}$ & 47.61 & -23.15 & & $P_{20 \rightarrow 21}$ & 26.57 & 20.00 \\
 
             \end{longtable}
 
-        \item \textit{Traiettoria 5}: la sesta traiettoria introdotta per questo lavoro di tesi, composta da un percorso triangolare, è stata pensata come rappresentazione di una missione di ricognizione di un tratto di fondale, in direzione obliqua, con ritorno al punto di partenza. Una traiettoria di questo tipo risulta particolarmente utile per valutare la capacità della rete neurale di effettuare una missione tipica e tornare nel punto di partenza con un buon livello di precisione.
+        \item \textbf{Traiettoria 5}: la sesta traiettoria introdotta nell'ambito di questo lavoro di tesi e caratterizzata da un percorso triangolare, è stata pensata come rappresentazione di una missione di ricognizione di un tratto di fondale in direzione obliqua, con ritorno al punto di partenza. Una traiettoria di questo tipo risulta particolarmente utile per valutare la capacità della rete neurale di effettuare una missione tipica e raggiungere il punto di inizio con un buon livello di precisione.
         
             \begin{figure}[!htb]
                 \centering
-                \includegraphics[width=0.7\linewidth]{./images/Traiettorie_ideali/Traiettoria_ideale_5.pdf}
+                \includegraphics[width=0.8\linewidth]{./images/Traiettorie_ideali/Traiettoria_ideale_5.pdf}
                 \caption{Rappresentazione grafica della traiettoria 5}
                 \label{fig:traiettoria5}
             \end{figure}
@@ -345,7 +381,7 @@ Una volta definiti i parametri di simulazione, è necessario identificare le tra
             \setlength{\LTpost}{6pt}                 % Riduce lo spazio dopo della longtable
             \setlength{\belowcaptionskip}{5pt}       % Riduce lo spazio sotto la didascalia
             \begin{longtable}{ccc p{8mm} ccc}
-                \caption{Coordinate di navigazione per traiettoria 5} 
+                \caption{Coordinate e parametri di navigazione per la traiettoria 5} 
                 \label{tab:traiettoria_5} \\
                 
                 % --- TESTATA DELLA PRIMA PAGINA ---
@@ -356,6 +392,7 @@ Una volta definiti i parametri di simulazione, è necessario identificare le tra
                 \endfirsthead 
 
                 % --- TESTATA DELLE PAGINE SUCCESSIVE ---
+                \multicolumn{7}{@{}l}{{Continua dalla pagina precedente}} \\
                 \cmidrule{1-3} \cmidrule{5-7}
                 \textbf{ID} & \textbf{East [m]} & \textbf{North [m]} & & 
                 \textbf{ID} & \textbf{Heading [\textdegree]} & \textbf{Lunghezza [m]} \\
@@ -371,95 +408,341 @@ Una volta definiti i parametri di simulazione, è necessario identificare le tra
                 \cmidrule{1-3} \cmidrule{5-7}
                 \endlastfoot
 
-                $P_{0}$ & 0 & 0 & & $\Delta_{0-0}$ & 0.00 & 0.00 \\
-                $P_{1}$ & 0 & 50 & & $\Delta_{1-0}$ & 0.00 & 50.00 \\
-                $P_{2}$ & 25 & 25 & & $\Delta_{2-1}$ & 135 & 35.35 \\
-                $P_{3}$ & 50 & 0 & & $\Delta_{3-2}$ & 135 & 35.35 \\
-                $P_{4}$ & 0 & 0 & & $\Delta_{4-3}$ & 270 & 50.00 \\
-                $P_{wait}$ & -30 & 0 & & $\Delta_{wait-0}$ & 270.00 & 30.00 \\
+                $WP$ & -20.03 & -0.21 & & $P_{1 \rightarrow WP}$ & 270.00 & 20.00 \\
+                $P_{1}$ & 0.00 & 0.00 & & $P_{1 \rightarrow 1}$ & 0.00 & 0.00 \\
+                $P_{2}$ & -0.10 & 9.97 & & $P_{1 \rightarrow 2}$ & 0.00 & 10.00 \\
+                $P_{3}$ & -0.21 & 19.96 & & $P_{2 \rightarrow 3}$ & 0.00 & 10.00 \\
+                $P_{4}$ & -0.31 & 29.93 & & $P_{3 \rightarrow 4}$ & 0.00 & 10.00 \\
+                $P_{5}$ & -0.42 & 39.91 & & $P_{4 \rightarrow 5}$ & 0.00 & 10.00 \\
+                $P_{6}$ & -0.52 & 49.89 & & $P_{5 \rightarrow 6}$ & 0.00 & 10.00 \\
+                $P_{7}$ & 6.63 & 42.91 & & $P_{6 \rightarrow 7}$ & 135.00 & 10.00 \\
+                $P_{8}$ & 13.79 & 35.93 & & $P_{7 \rightarrow 8}$ & 135.00 & 10.00 \\
+                $P_{9}$ & 20.94 & 28.94 & & $P_{8 \rightarrow 9}$ & 135.00 & 10.00 \\
+                $P_{10}$ & 28.10 & 21.97 & & $P_{9 \rightarrow 10}$ & 135.00 & 10.00 \\
+                $P_{11}$ & 35.25 & 14.99 & & $P_{10 \rightarrow 11}$ & 135.00 & 10.00 \\
+                $P_{12}$ & 42.40 & 8.01 & & $P_{11 \rightarrow 12}$ & 135.00 & 10.00 \\
+                $P_{13}$ & 50.06 & 0.52 & & $P_{12 \rightarrow 13}$ & 135.00 & 10.00 \\
+                $P_{14}$ & 40.05 & 0.42 & & $P_{13 \rightarrow 14}$ & 270.00 & 10.00 \\
+                $P_{15}$ & 30.03 & 0.31 & & $P_{14 \rightarrow 15}$ & 270.00 & 10.00 \\
+                $P_{16}$ & 20.03 & 0.21 & & $P_{15 \rightarrow 16}$ & 270.00 & 10.00 \\
+                $P_{17}$ & 10.01 & 0.10 & & $P_{16 \rightarrow 17}$ & 270.00 & 10.00 \\
 
         \end{longtable}
         
     \end{itemize}
 
-Per valutare adeguatamente la capacità di generalizzazione della rete, verificare le prestazioni solamente su traiettorie già incontrate durante l'addestramento, seppur con condizioni ambientali e operative differenti, non risulta sufficiente. Pertanto, sono state generate 4 ulteriori traiettorie, eseguite una sola volta per ogni combinazione ambientale/operativa secondo quanto presentato nella \emph{Tabella} \ref{tab:scenari_operativi_Test}:
+Per valutare adeguatamente la capacità di generalizzazione della rete, verificare le prestazioni solamente su traiettorie già incontrate durante l'addestramento, seppur con condizioni ambientali e operative differenti, non risulta sufficiente. Pertanto, sono state definite 4 ulteriori traiettorie, eseguite una sola volta per ogni combinazione ambientale/operativa secondo quanto presentato nella \emph{Tabella} \ref{tab:scenari_operativi_Test}:
 
 \begin{itemize}
 
-    \item \textbf{Traiettoria T1}: la prima traiettoria di test presentata richiama concettualmente la traiettoria 5, seppur con un maggiore grado di complessità. Tendenzialmente, dunque, dovrebbe presentare valori di accuratezza quantomento in linea con le restanti traiettorie.
-    
-        \begin{figure}[!htb]
+    \item \textbf{Traiettoria T1}: la prima rotta di test presentata richiama concettualmente la traiettoria 5, seppur con un maggiore grado di complessità. Ci sia aspetta, pertanto, che presenti valori di accuratezza quantomento in linea con quelli registrati per le restanti traiettorie.
+
+        \small
+        \renewcommand{\arraystretch}{1.10}       % Riduce l'altezza delle righe 
+        \setlength{\LTpre}{8pt}                  % Riduce lo spazio prima della longtable
+        \setlength{\LTpost}{6pt}                 % Riduce lo spazio dopo della longtable
+        \setlength{\belowcaptionskip}{5pt}       % Riduce lo spazio sotto la didascalia
+        \begin{longtable}{ccc p{8mm} ccc}
+            \caption{Coordinate e parametri di navigazione per la traiettoria T1} 
+            \label{tab:traiettoria_T1} \\
+            
+            % --- TESTATA DELLA PRIMA PAGINA ---
+            \cmidrule{1-3} \cmidrule{5-7}
+            \textbf{ID} & \textbf{East [m]} & \textbf{North [m]} & & 
+            \textbf{ID} & \textbf{Heading [\textdegree]} & \textbf{Lunghezza [m]} \\
+            \cmidrule{1-3} \cmidrule{5-7}
+            \endfirsthead 
+
+            % --- TESTATA DELLE PAGINE SUCCESSIVE ---
+            \multicolumn{7}{@{}l}{{Continua dalla pagina precedente}} \\
+            \cmidrule{1-3} \cmidrule{5-7}
+            \textbf{ID} & \textbf{East [m]} & \textbf{North [m]} & & 
+            \textbf{ID} & \textbf{Heading [\textdegree]} & \textbf{Lunghezza [m]} \\
+            \cmidrule{1-3} \cmidrule{5-7}
+            \endhead
+
+            % --- PIÈ DI PAGINA (Continua...) ---
+            \cmidrule{1-3} \cmidrule{5-7}
+            \multicolumn{7}{r}{{Continua nella pagina successiva}} \\
+            \endfoot
+
+            % --- PIÈ DI PAGINA FINALE ---
+            \cmidrule{1-3} \cmidrule{5-7}
+            \endlastfoot
+
+            $WP$ & -20.03 & -0.21 & & $P_{1 \rightarrow WP}$ & 270.00 & 20.00 \\
+            $P_{1}$ & 0.00 & 0.00 & & $P_{1 \rightarrow 1}$ & 0.00 & 0.00 \\
+            $P_{2}$ & 19.81 & 20.16 & & $P_{1 \rightarrow 2}$ & 45.00 & 30.00 \\
+            $P_{3}$ & 39.63 & 40.32 & & $P_{2 \rightarrow 3}$ & 45.00 & 30.00 \\
+            $P_{4}$ & 69.67 & 40.64 & & $P_{3 \rightarrow 4}$ & 90.00 & 30.00 \\
+            $P_{5}$ & 69.88 & 20.68 & & $P_{4 \rightarrow 5}$ & 180.00 & 20.00 \\
+            $P_{6}$ & 70.08 & 0.73 & & $P_{5 \rightarrow 6}$ & 180.00 & 20.00 \\
+            $P_{7}$ & 70.29 & -19.23 & & $P_{6 \rightarrow 7}$ & 180.00 & 20.00 \\
+
+        \end{longtable}
+
+        \begin{figure}[H]
             \centering
-            \includegraphics[width=0.7\linewidth]{./images/Traiettorie_ideali/Traiettoria_ideale_T1.pdf}
+            \includegraphics[width=0.8\linewidth]{./images/Traiettorie_ideali/Traiettoria_ideale_T1.pdf}
             \caption{Rappresentazione grafica della traiettoria T1}
             \label{fig:traiettoriaT1}
         \end{figure}
     
-    \item \textbf{Traiettoria T2}: la seconda traiettoria trattata rappresenta una delle più complesse introdotte, essendo composta da più cerchi concentrici a raggio crescente. Questa traiettoria in particolare, risponde ad una specifica necessità operativa. Spesso, infatti, un drone subacqueo al termine della propria missione deve tornare al punto di partenza, in cui potrebbe trovarsi il punto di estrazione o il resto dello sciame, se presente. Spesso, però, l'errore di deriva impedisce di arrivare nel punto previsto e, pertanto, è possibile attivare un circuito di ricerca a raggio crescente.
+    \item \textbf{Traiettoria T2}: la seconda traiettoria trattata rappresenta una delle più complesse introdotte, essendo composta da più cerchi concentrici a raggio crescente. Proprio questa rotta, in particolare, risponde ad una specifica necessità operativa. Spesso, infatti, un drone subacqueo al termine della propria missione necessita di tornare al punto di partenza, in cui potrebbe trovarsi il punto di estrazione o il resto dello sciame, se presente. Frequentemente, però, l'errore di deriva impedisce di giungere nel punto previsto e, per ovviare a tale problematica, si immette l'AUV all'interno di un circuito di ricerca a raggio crescente.
 
-        \begin{figure}[!htb]
+        \small
+        \renewcommand{\arraystretch}{1.10}       % Riduce l'altezza delle righe 
+        \setlength{\LTpre}{8pt}                  % Riduce lo spazio prima della longtable
+        \setlength{\LTpost}{6pt}                 % Riduce lo spazio dopo della longtable
+        \setlength{\belowcaptionskip}{5pt}       % Riduce lo spazio sotto la didascalia
+        \begin{longtable}{ccc p{8mm} ccc}
+            \caption{Coordinate e parametri di navigazione per la traiettoria T2} 
+            \label{tab:traiettoria_T2} \\
+            
+            % --- TESTATA DELLA PRIMA PAGINA ---
+            \cmidrule{1-3} \cmidrule{5-7}
+            \textbf{ID} & \textbf{East [m]} & \textbf{North [m]} & & 
+            \textbf{ID} & \textbf{Heading [\textdegree]} & \textbf{Lunghezza [m]} \\
+            \cmidrule{1-3} \cmidrule{5-7}
+            \endfirsthead 
+
+            % --- TESTATA DELLE PAGINE SUCCESSIVE ---
+            \multicolumn{7}{@{}l}{{Continua dalla pagina precedente}} \\
+            \cmidrule{1-3} \cmidrule{5-7}
+            \textbf{ID} & \textbf{East [m]} & \textbf{North [m]} & & 
+            \textbf{ID} & \textbf{Heading [\textdegree]} & \textbf{Lunghezza [m]} \\
+            \cmidrule{1-3} \cmidrule{5-7}
+            \endhead
+
+            % --- PIÈ DI PAGINA (Continua...) ---
+            \cmidrule{1-3} \cmidrule{5-7}
+            \multicolumn{7}{r}{{Continua nella pagina successiva}} \\
+            \endfoot
+
+            % --- PIÈ DI PAGINA FINALE ---
+            \cmidrule{1-3} \cmidrule{5-7}
+            \endlastfoot
+
+            $P_{1}$ & 0.21 & -19.96 & & $P_{1 \rightarrow WP}$ & 180.00 & 20.00 \\
+            $P_{2}$ & 0.00 & 0.00 & & $P_{1 \rightarrow 1}$ & 0.00 & 0.00 \\
+            $P_{3}$ & 14.22 & -5.71 & & $P_{WP \rightarrow 2}$ & 45.00 & 20.00 \\
+            $P_{4}$ & 20.23 & -19.75 & & $P_{WP \rightarrow 3}$ & 90.00 & 20.00 \\
+            $P_{5}$ & 14.52 & -33.92 & & $P_{WP \rightarrow 4}$ & 135.00 & 20.00 \\
+            $P_{6}$ & 0.42 & -39.92 & & $P_{WP \rightarrow 5}$ & 180.00 & 20.00 \\
+            $P_{7}$ & -13.81 & -34.21 & & $P_{WP \rightarrow 6}$ & 225.00 & 20.00 \\
+            $P_{8}$ & -19.82 & -20.17 & & $P_{WP \rightarrow 7}$ & 270.00 & 20.00 \\
+            $P_{9}$ & -17.89 & -2.30 & & $P_{WP \rightarrow 8}$ & 315.00 & 25.00 \\
+            $P_{20}$ & -0.21 & 19.95 & & $P_{WP \rightarrow 9}$ & 360.00 & 40.00 \\
+            $P_{11}$ & 28.23 & 8.56 & & $P_{WP \rightarrow 10}$ & 45.00 & 40.00 \\
+            $P_{12}$ & 40.26 & -19.54 & & $P_{WP \rightarrow 11}$ & 90.00 & 40.00 \\
+            $P_{13}$ & 28.82 & -47.89 & & $P_{WP \rightarrow 12}$ & 135.00 & 40.00 \\
+            $P_{14}$ & 0.62 & -59.87 & & $P_{WP \rightarrow 13}$ & 180.00 & 40.00 \\
+            $P_{15}$ & -27.82 & -48.48 & & $P_{WP \rightarrow 14}$ & 225.00 & 40.00 \\
+            $P_{16}$ & -39.84 & -20.38 & & $P_{WP \rightarrow 15}$ & 270.00 & 40.00 \\
+            $P_{17}$ & -33.46 & 12.90 & & $P_{WP \rightarrow 16}$ & 315.00 & 47.07 \\
+            $P_{18}$ & -0.42 & 39.91 & & $P_{WP \rightarrow 17}$ & 360.00 & 60.00 \\
+            $P_{19}$ & 42.24 & 22.81 & & $P_{WP \rightarrow 18}$ & 45.00 & 60.00 \\
+            $P_{20}$ & 60.28 & -19.33 & & $P_{WP \rightarrow 19}$ & 90.00 & 60.00 \\
+            $P_{21}$ & 43.12 & -61.85 & & $P_{WP \rightarrow 20}$ & 135.00 & 60.00 \\
+            $P_{22}$ & 0.83 & -79.83 & & $P_{WP \rightarrow 21}$ & 180.00 & 60.00 \\
+            $P_{23}$ & -41.83 & -62.73 & & $P_{WP \rightarrow 22}$ & 225.00 & 60.00 \\
+            $P_{24}$ & -59.87 & -20.58 & & $P_{WP \rightarrow 23}$ & 270.00 & 60.00 \\
+            $P_{25}$ & -48.35 & 27.43 & & $P_{WP \rightarrow 24}$ & 315.00 & 67.88 \\
+            $P_{26}$ & -0.62 & 59.87 & & $P_{WP \rightarrow 25}$ & 360.00 & 80.00 \\
+
+        \end{longtable}
+
+         \begin{figure}[H]
             \centering
-            \includegraphics[width=0.7\linewidth]{./images/Traiettorie_ideali/Traiettoria_ideale_T2.pdf}
+            \includegraphics[width=0.8\linewidth]{./images/Traiettorie_ideali/Traiettoria_ideale_T2.pdf}
             \caption{Rappresentazione grafica della traiettoria T2}
             \label{fig:traiettoriaT2}
         \end{figure}
+
     
-    \item \textbf{Traiettoria T3}: la terza traiettoria di test estende al massimo il concetto alla base di una missione di osservazione del fondale. Essa, infatti, risulta composta da più percorsi rettilinei paralleli, tutti della medesima lunghezza. Ognuno, poi, è collegato tramite una deviazione molto più ampia rispetto a quelle implementate nelle traiettorie di test, pari a $180^\circ$. E', quindi, utile per verificare che nei cambi di direzione non accumuli eccessivo errore sulla posizione, che potrebbe inficiare significativamente sulla riuscita di una missione con un profilo analogo. 
-    
-        \begin{figure}[!htb]
+    \item \textbf{Traiettoria T3}: la terza traiettoria di test estende al massimo il concetto alla base di una missione di osservazione del fondale. Essa, infatti, risulta composta da più percorsi rettilinei paralleli, tutti della medesima lunghezza. Ognuno, poi, è collegato tramite una deviazione molto più ampia rispetto a quelle implementate nelle traiettorie di addestramento, pari a $180^\circ$\footnote{Analogamente a quanto fatto per la traiettoria 2, si introducono dei punti fittizi che rappresentano il centro delle semicirconferenze necessarie al cambio di direzione}. Un simile percorso è, quindi, utile per verificare che il modello non presenti un'eccessiva accumulazione dell'errore in prossimità dei cambi di direzione. Ciò, infatti, potrebbe inficiare significativamente la riuscita di una missione con un profilo analogo. 
+
+        \small
+        \renewcommand{\arraystretch}{1.10}       % Riduce l'altezza delle righe 
+        \setlength{\LTpre}{8pt}                  % Riduce lo spazio prima della longtable
+        \setlength{\LTpost}{6pt}                 % Riduce lo spazio dopo della longtable
+        \setlength{\belowcaptionskip}{5pt}       % Riduce lo spazio sotto la didascalia
+
+        \begin{longtable}{ccc p{8mm} ccc}
+            \caption{Coordinate e parametri di navigazione per la traiettoria T3} 
+            \label{tab:traiettoria_T3} \\
+            
+            % --- TESTATA DELLA PRIMA PAGINA ---
+            \cmidrule{1-3} \cmidrule{5-7}
+            \textbf{ID} & \textbf{East [m]} & \textbf{North [m]} & & 
+            \textbf{ID} & \textbf{Heading [\textdegree]} & \textbf{Lunghezza [m]} \\
+            \cmidrule{1-3} \cmidrule{5-7}
+            \endfirsthead 
+
+            % --- TESTATA DELLE PAGINE SUCCESSIVE ---
+            \multicolumn{7}{@{}l}{{Continua dalla pagina precedente}} \\
+            \cmidrule{1-3} \cmidrule{5-7}
+            \textbf{ID} & \textbf{East [m]} & \textbf{North [m]} & & 
+            \textbf{ID} & \textbf{Heading [\textdegree]} & \textbf{Lunghezza [m]} \\
+            \cmidrule{1-3} \cmidrule{5-7}
+            \endhead
+
+            % --- PIÈ DI PAGINA (Continua...) ---
+            \cmidrule{1-3} \cmidrule{5-7}
+            \multicolumn{7}{r}{{Continua nella pagina successiva}} \\
+            \endfoot
+
+            % --- PIÈ DI PAGINA FINALE ---
+            \cmidrule{1-3} \cmidrule{5-7}
+            \endlastfoot
+
+            % --- DATI ---
+            $WP$ & 0.21 & -19.96 & & $P_{1 \rightarrow WP}$ & 180.00 & 20.00 \\
+            $P_{1}$ & 0.00 & 0.00 & & $P_{1 \rightarrow 1}$ & 0.00 & 0.00 \\
+            $P_{2}$ & 30.03 & 0.31 & & $P_{1 \rightarrow 2}$ & 90.00 & 30.00 \\
+            $P_{3}$ & 60.08 & 0.63 & & $P_{2 \rightarrow 3}$ & 90.00 & 30.00 \\
+            $P_{4}$ & 90.11 & 0.94 & & $P_{3 \rightarrow 4}$ & 90.00 & 30.00 \\
+            $P_{5}$ & 120.15 & 1.25 & & $P_{4 \rightarrow 5}$ & 90.00 & 30.00 \\
+            $P{\text{ref,1}}$ & 120.02 & 13.73 & & $P_{5 \rightarrow ref,1}$ & 0.00 & 12.50 \\
+            $P_{6}$ & 128.91 & 5.04 & & $P_{ref,1 \rightarrow 6}$ & 135.00 & 12.50 \\
+            $P_{7}$ & 132.54 & 13.86 & & $P_{ref,1 \rightarrow 7}$ & 90.00 & 12.50 \\
+            $P_{8}$ & 128.74 & 22.59 & & $P_{ref,1 \rightarrow 8}$ & 45.00 & 12.50 \\
+            $P_{9}$ & 119.89 & 26.20 & & $P_{ref,1 \rightarrow 9}$ & 0.00 & 12.50 \\
+            $P_{10}$ & 89.85 & 25.88 & & $P_{9 \rightarrow 10}$ & 270.00 & 30.00 \\
+            $P_{11}$ & 59.82 & 25.57 & & $P_{10 \rightarrow 11}$ & 270.00 & 30.00 \\
+            $P_{12}$ & 29.77 & 25.26 & & $P_{11 \rightarrow 12}$ & 270.00 & 30.00 \\ 
+            $P_{13}$ & -0.26 & 24.95 & & $P_{12 \rightarrow 13}$ & 270.00 & 30.00 \\
+            $P_{\text{ref,2}}$ & -0.40 & 37.42 & & $P_{13 \rightarrow ref,2}$ & 0.00 & 12.50 \\
+            $P_{14}$ & -9.11 & 28.54 & & $P_{ref,2 \rightarrow 14}$ & 225.00 & 12.50 \\
+            $P_{15}$ & -12.90 & 37.29 & & $P_{ref,2 \rightarrow 15}$ & 270.00 & 12.50 \\
+            $P_{16}$ & -9.29 & 46.10 & & $P_{ref,2 \rightarrow 16}$ & 315.00 & 12.50 \\
+            $P_{17}$ & -0.52 & 49.88 & & $P_{ref,2 \rightarrow 17}$ & 0.00 & 12.50 \\
+            $P_{18}$ & 29.52 & 50.21 & & $P_{17 \rightarrow 18}$ & 90.00 & 30.00 \\
+            $P_{19}$ & 59.56 & 50.52 & & $P_{18 \rightarrow 19}$ & 90.00 & 30.00 \\
+            $P_{20}$ & 89.59 & 50.83 & & $P_{19 \rightarrow 20}$ & 90.00 & 30.00 \\
+            $P_{21}$ & 119.63 & 51.14 & & $P_{20 \rightarrow 21}$ & 90.00 & 30.00 \\
+            $P_{\text{ref,3}}$ & 119.52 & 63.61 & & $P_{21 \rightarrow ref,3}$ & 0.00 & 12.50 \\
+            $P_{22}$ & 128.41 & 54.91 & & $P_{ref,3 \rightarrow 22}$ & 135.00 & 12.50 \\
+            $P_{23}$ & 132.02 & 63.74 & & $P_{ref,3 \rightarrow 23}$ & 90.00 & 12.50 \\
+            $P_{24}$ & 128.22 & 72.48 & & $P_{ref,3 \rightarrow 24}$ & 45.00 & 12.50 \\
+            $P_{25}$ & 119.37 & 76.08 & & $P_{ref,3 \rightarrow 25}$ & 0.00 & 12.50 \\
+            $P_{26}$ & 89.33 & 75.77 & & $P_{25 \rightarrow 26}$ & 270.00 & 30.00 \\
+            $P_{27}$ & 59.30 & 75.45 & & $P_{26 \rightarrow 27}$ & 270.00 & 30.00 \\
+            $P_{28}$ & 29.26 & 75.14 & & $P_{27 \rightarrow 28}$ & 270.00 & 30.00 \\
+            $P_{29}$ & -0.78 & 74.83 & & $P_{28 \rightarrow 29}$ & 270.00 & 30.00 \\
+
+        \end{longtable}
+
+        \begin{figure}[H]
             \centering
             \includegraphics[width=0.7\linewidth]{./images/Traiettorie_ideali/Traiettoria_ideale_T3.pdf}
             \caption{Rappresentazione grafica della traiettoria T3}
             \label{fig:traiettoriaT3}
         \end{figure}
     
-    \item \textbf{Traiettoria T4}: l'ultima traiettoria rappresenta semplicemente un percorso sinusoidale. Sebbene in apparenza sembri semplice, è stata scelta per verificare le prestazioni del modello su un tipo di manovra mai vista durante l'addestramento. Inoltre, tipicamente una traiettoria simile crea problemi alle reti neurali, che faticano a mantenere un profilo vicino a quello ideale.
+    \item \textbf{Traiettoria T4}: l'ultima traiettoria rappresenta un percorso sinusoidale. Sebbene in apparenza sembri semplice, una simile forma è stata scelta appositamente per verificare le prestazioni del modello su un tipo di manovra mai incontrato durante l'addestramento. Inoltre, tipicamente una traiettoria simile si rivela essere problematica per le reti neurali, che faticano a mantenere un profilo vicino a quello ideale.
     
         \begin{figure}[!htb]
             \centering
-            \includegraphics[width=0.7\linewidth]{./images/Traiettorie_ideali/Traiettoria_ideale_T4.pdf}
+            \includegraphics[width=0.8\linewidth]{./images/Traiettorie_ideali/Traiettoria_ideale_T4.pdf}
             \caption{Rappresentazione grafica della traiettoria T4}
             \label{fig:traiettoriaT4}
         \end{figure}
+
+        \small
+        \renewcommand{\arraystretch}{1.10}       % Riduce l'altezza delle righe 
+        \setlength{\LTpre}{8pt}                  % Riduce lo spazio prima della longtable
+        \setlength{\LTpost}{6pt}                 % Riduce lo spazio dopo della longtable
+        \setlength{\belowcaptionskip}{5pt}       % Riduce lo spazio sotto la didascalia
+        \begin{longtable}{ccc p{8mm} ccc}
+            \caption{Coordinate e parametri di navigazione per la traiettoria T4} 
+            \label{tab:traiettoria_T4} \\
+            
+            % --- TESTATA DELLA PRIMA PAGINA ---
+            \cmidrule{1-3} \cmidrule{5-7}
+            \textbf{ID} & \textbf{East [m]} & \textbf{North [m]} & & 
+            \textbf{ID} & \textbf{Heading [\textdegree]} & \textbf{Lunghezza [m]} \\
+            \cmidrule{1-3} \cmidrule{5-7}
+            \endfirsthead 
+
+            % --- TESTATA DELLE PAGINE SUCCESSIVE ---
+            \multicolumn{7}{@{}l}{{Continua dalla pagina precedente}} \\
+            \cmidrule{1-3} \cmidrule{5-7}
+            \textbf{ID} & \textbf{East [m]} & \textbf{North [m]} & & 
+            \textbf{ID} & \textbf{Heading [\textdegree]} & \textbf{Lunghezza [m]} \\
+            \cmidrule{1-3} \cmidrule{5-7}
+            \endhead
+
+            % --- PIÈ DI PAGINA (Continua...) ---
+            \cmidrule{1-3} \cmidrule{5-7}
+            \multicolumn{7}{r}{{Continua nella pagina successiva}} \\
+            \endfoot
+
+            % --- PIÈ DI PAGINA FINALE ---
+            \cmidrule{1-3} \cmidrule{5-7}
+            \endlastfoot
+
+            $P_{1}$ & 0.21 & -19.96 & & $P_{1 \rightarrow 1}$ & 0.00 & 0.00 \\
+            $P_{2}$ & 0.00 & 0.00 & & $P_{1 \rightarrow 2}$ & 0.00 & 20.00 \\
+            $P_{3}$ & 19.85 & 17.87 & & $P_{2 \rightarrow 3}$ & 48.53 & 26.69 \\
+            $P_{4}$ & 39.79 & 25.36 & & $P_{3 \rightarrow 4}$ & 69.89 & 21.30 \\
+            $P_{5}$ & 59.89 & 18.28 & & $P_{4 \rightarrow 5}$ & 110.11 & 21.30 \\
+            $P_{6}$ & 80.10 & 0.83 & & $P_{5 \rightarrow 6}$ & 131.47 & 26.69 \\
+            $P_{7}$ & 100.30 & -16.62 & & $P_{6 \rightarrow 7}$ & 131.47 & 26.69 \\
+            $P_{8}$ & 120.40 & -23.70 & & $P_{7 \rightarrow 8}$ & 110.11 & 21.30 \\
+            $P_{9}$ & 140.35 & -16.22 & & $P_{8 \rightarrow 9}$ & 69.89 & 21.30 \\
+            $P_{10}$ & 160.19 & 1.66 & & $P_{9 \rightarrow 10}$ & 48.53 & 26.69 \\
+            $P_{11}$ & 180.04 & 19.54 & & $P_{10 \rightarrow 11}$ & 48.53 & 26.69 \\
+            $P_{12}$ & 199.99 & 27.03 & & $P_{11 \rightarrow 12}$ & 69.89 & 21.30 \\
+            $P_{13}$ & 220.09 & 19.94 & & $P_{12 \rightarrow 13}$ & 110.11 & 21.30 \\
+            $P_{14}$ & 240.29 & 2.49 & & $P_{13 \rightarrow 14}$ & 131.47 & 26.69 \\
+            $P_{15}$ & 340.42 & 3.51 & & $P_{14 \rightarrow 15}$ & 90.00 & 100.00 \\
+
+        \end{longtable}
     
 \end{itemize}
 
-Una volta presentate tutte le traiettorie e le possibili configurazioni ambientali e operative, occorre evidenziare come esse siano state combinate per ottenere il dataset completo. In \emph{Tabella} xx, quindi, sono mostrati gli accoppiamenti utilizzati per ogni traiettoria. Come si evince osservando la tabella, si è scelto di traslare di una posizione le configurazioni operative rispetto allo scenario ambientale per ogni traiettoria differente. Questo, infatti, introduce ulteriore variabilità all'interno dei dati, riducendo il rischio di overfitting della rete.
+Una volta presentate tutte le traiettorie e le possibili configurazioni ambientali e operative, occorre evidenziare come esse siano state combinate per ottenere il dataset completo. Nella \emph{Tabella} \ref{tab:matrice_configurazioni} sono, quindi, mostrati gli accoppiamenti utilizzati per ogni traiettoria. Come si evince osservando la tabella, si è scelto di traslare di una posizione le configurazioni operative rispetto allo scenario ambientale per ogni traiettoria differente. Questo introduce ulteriore variabilità all'interno dei dati, riducendo il rischio di overfitting della rete.
 
 
 \section{Pre - processing telemetria}
 
-Al termine della campagna di raccolta dati effettuata sul simulatore del drone X300, si sono ottenuti diversi file, in formato csv, contenenti le telemetrie di ogni missione. I dati così acquisiti risultano essere asincroni, come è lecito aspettarsi data la metodologia utilizzata, e non associati ad una tabulazione uniforme. Come visto nel primo paragrafo del capitolo, infatti, ogni sensore di bordo, caratterizzato da una frequenza specifica, fornisce un differente numero di valori per ogni istante di misurazione. Possono, inoltre, essere presenti celle o intere sezioni dei file csv formattate diversamente o corrotte. Tutte queste caratteristiche rendono i dati grezzi difficilmente leggibili e utilizzabili all'interno di un algoritmo di posizionamento. Risulta, dunque, inevitabile passare da una fase di pre-processing delle telemetrie. Un processo di questo tipo, specialmente se si vuole rendere estremamente scalabile e versatile, richiede molteplici operazioni, raggruppate nelle seguenti fasi:
+Al termine della campagna di raccolta dati effettuata sul simulatore del drone X300, si sono ottenuti diversi file in formato CSV, contenenti le telemetrie di ogni missione. I dati così acquisiti risultano essere asincroni, come è lecito aspettarsi data la metodologia utilizzata, e non organizzati secondo una struttura tabulare uniforme. Come visto nel primo paragrafo del capitolo, infatti, ogni sensore di bordo, caratterizzato da una frequenza specifica, fornisce un differente numero di valori per ogni istante di misurazione. Possono, inoltre, essere presenti celle o intere sezioni dei file formattate diversamente o corrotte. Tutte queste caratteristiche rendono i dati grezzi difficilmente leggibili e utilizzabili all'interno di un algoritmo di posizionamento. Risulta, dunque, inevitabile prevedere una fase di pre-processing delle telemetrie. Un processo di questo tipo, specialmente se si vuole rendere estremamente scalabile e versatile, richiede molteplici operazioni, raggruppate nelle seguenti fasi:
 
 \begin{itemize}
 
     \item \textbf{Unificazione file}: la logica implementata per il collegamento con il simulatore e il conseguente salvataggio dei dati prodotti comporta una separazione del percorso relativo alle misurazioni DVL e a quelle dei restanti sensori di bordo. Il primo passaggio, pertanto, consiste nell'unificazione, mediante un'operazione di concatenazione ordinata per istante temporale, dei due file generati per ogni missione. Il risultato è un unico dizionario di dataframe, suddiviso per traiettoria e combinazione identificativa di ogni missione. 
 
-    \item \textbf{Pulizia dati}: i dati estratti mediante le funzioni integrate nella libreria Pandas vengono successivamente puliti, eliminando eventuali spazi o caratteri non desiderati. Si assegnano, inoltre, i nomi identificativi prescelti alle misurazioni dei vari sensori, che in telemetria sono genericamente segnati con un indice compreso tra $v1 \div v8$.
+    \item \textbf{Pulizia dati}: i dati estratti mediante le funzioni integrate nella libreria Pandas vengono successivamente puliti, eliminando eventuali spazi o caratteri non desiderati. Si assegnano, inoltre, i nomi identificativi prescelti alle misurazioni dei vari sensori, che in telemetria sono genericamente segnati con un indice compreso tra $v1$ e $v8$.
 
-    \item \textbf{Elaborazione dataframe}: dopo aver svolto le operazioni preliminari di preparazione dei dati occorre procedere concretamente all'elaborazione dei dataframe associati ad ogni missione. Nel dettaglio, lo scopo di questa fase è l'uniformazione delle misurazioni asincrone, "forzandole" in una griglia temporale regolare e comune. Tuttavia, una simile operazione comporta una traslazione temporale, seppur molto piccola, dei dati e, in presenza di una o più misurazioni consecutive non registrate correttamente, l'aggiunta di valori ipotizzati sulla base dello stato passato del drone. Questi fattori, se non opportunamente trattati, possono inficiare la correlazione tra i dati e l'effettiva dinamica del drone, portando a prestazioni del modello non realistiche. In generale, si sono tenuti in considerazione due metodologie di elaborazione per questo lavoro di tesi:
+    \item \textbf{Elaborazione dataframe}: dopo aver svolto le operazioni preliminari di preparazione dei dati occorre procedere concretamente all'elaborazione dei dataframe associati a ogni missione. Nel dettaglio, lo scopo di questa fase è uniformare le misurazioni asincrone, "forzandole" all'interno di una griglia temporale regolare e comune. Tuttavia, una simile operazione comporta una traslazione temporale dei dati, seppur molto piccola. Inoltre, in presenza di una o più misurazioni consecutive non registrate correttamente, è richiesta l'aggiunta di valori ipotizzati sulla base dello stato passato del drone. Questi fattori, se non opportunamente trattati, possono inficiare la correlazione tra i dati e l'effettiva dinamica del drone, portando a prestazioni del modello non realistiche. In generale, si sono tenuti in considerazione due metodologie di elaborazione per questo lavoro di tesi:
     
         \begin{itemize}
 
-            \item \textit{Ricampionamento}: il primo approccio introdotto sfrutta un'operazione di fusione tra il dataframe prodotto mediante la simulazione e un dataframe vuoto appositamente generato. Nel dettaglio, questo secondo dataframe corrisponde ad una griglia temporale con passo pari a $100 \ ms$, equivalente alla più alta frequenza di aggiornamento raggiunta tra i sensori (legata in questo caso al DVL). Per limitare il numero di grandezze ipotizzate, la griglia inizia solamente dopo che è stata registrata almeno una misurazione da parte di ogni sensore presente. Analogamente, termina in corrispondenza dell'istante temporale coincidente con la prima interruzione continuativa di aggiornamenti da parte di uno dei sensori. Mediante la funzione merge della libreria Pandas di Python, si assegnano poi le misurazioni al più vicino istante temporale della griglia, sempre con metodo \emph{"backward"}. Ciò, in particolare, garantisce che venga sempre presa in considerazione una misura antecedente rispetto all'istante considerato, nonostante possa non essere la più prossima in assoluto. Questo è necessario per far si che l'intero processo possa replicare le caratteristiche di un'esecuzione online dell'algoritmo.       
+            \item \textit{Ricampionamento}: il primo approccio introdotto sfrutta un'operazione di fusione tra il dataframe prodotto mediante la simulazione e un dataframe vuoto appositamente generato. Nel dettaglio, questo secondo dataframe corrisponde ad una griglia temporale con passo pari a $100 \ ms$, equivalente alla più alta frequenza di aggiornamento raggiunta tra i sensori (legata in questo caso al DVL). Per limitare il numero di grandezze ipotizzate, la griglia inizia solamente dopo che è stata registrata almeno una misurazione da parte di ogni sensore presente. Analogamente, termina in corrispondenza dell'istante temporale coincidente con la prima interruzione continuativa di aggiornamenti da parte di uno dei sensori. Mediante la funzione merge della libreria Pandas di Python, si assegnano poi le misurazioni al più vicino istante temporale della griglia, sempre con metodo \emph{"backward"}. Ciò, in particolare, garantisce che venga sempre presa in considerazione una misura antecedente rispetto all'istante considerato, nonostante possa non essere la più prossima in assoluto. Questo è necessario per far sì che l'intero processo si avvicini il più possibile alle caratteristiche di un'esecuzione online dell'algoritmo.       
             
-            \item \textit{Interpolazione}: il secondo approccio risulta notevolmente più immediato, basandosi sull'utilizzo dell'apposita funzione della libreria Pandas di Python. Nel dettaglio, essa stima i valori mancanti sulla base delle due misurazioni poste agli estremi dell'intervallo di interesse. Tale calcolo si può basare su varie tecniche, la più diffusa delle quali è l'interpolazione lineare. In questo caso, tuttavia, tenendo conto dell'asincronia delle misurazioni, si è scelto di implementare il metodo basato sul tempo. In questo modo, per stimare uno o più valori tra due misurazioni, l'algoritmo tiene conto anche dell'effettivo istante temporale associato e non solo del numero di valori rispetto all'ampiezza dell'intervallo, garantendo una variazione dei dati più graduale e correlata all'effettiva dinamica del drone. La scelta di questa particolare tecnica è, inoltre, quasi obbligata dal momento che le misurazioni non vengono riscalate su una griglia temporale uniforme. Ciò, infatti, elimina le possibili incertezze e imprecisioni derivanti da una simile operazione, bilanciando almeno in parte quelle inevitabilmente introdotte dall'interpolazione stessa.    
+            \item \textit{Interpolazione}: il secondo approccio risulta notevolmente più immediato da applicare, basandosi sull'utilizzo dell'apposita funzione della libreria Pandas di Python. Nel dettaglio, essa stima i valori mancanti sulla base delle due misurazioni poste agli estremi dell'intervallo di interesse. Tale calcolo si può basare su varie tecniche, la più diffusa delle quali è l'interpolazione lineare. In questo caso, tuttavia, tenendo conto dell'asincronia delle misurazioni, si è scelto di implementare il metodo basato sul tempo. In questo modo, per stimare uno o più valori tra due misurazioni, l'algoritmo tiene conto anche dell'effettivo istante temporale associato e non solo del numero di valori rispetto all'ampiezza dell'intervallo, garantendo una variazione dei dati più graduale e correlata all'effettiva dinamica del drone. La scelta di questa particolare tecnica risulta, inoltre, pressoché obbligata dal momento che le misurazioni non vengono ricampionate su una griglia temporale uniforme. Ciò, infatti, elimina le possibili incertezze e imprecisioni derivanti da una simile operazione, bilanciando almeno in parte quelle inevitabilmente introdotte dall'interpolazione stessa.    
         
         \end{itemize}
 
-    Tenendo conto dei pregi e dei difetti di entrambi gli approcci, il ricampionamento risulta maggiormente adatto all'elaborazione dei dati qui trattati. Esso, infatti, consente una maggiore versatilità e correlazione con lo stato del drone in un approccio real-time, potenzialmente implementabile in futuro. L'interpolazione, invece, pur sfruttando misurazioni successive per stimare i valori mancanti, è in grado di generare una mole di dati notevolmente superiore. Questa caratteristica in particolare, rende tale metodo particolarmente indicato per l'analisi statistica di correlazione svolta nel seguito.    
+    Tenendo conto dei pregi e dei difetti di entrambi gli approcci, il ricampionamento risulta maggiormente adatto all'elaborazione dei dati qui trattati. Esso, infatti, consente una maggiore versatilità e correlazione con lo stato del drone in un approccio real-time, potenzialmente implementabile in futuro. L'interpolazione, invece, pur sfruttando misurazioni successive per stimare i valori mancanti, è in grado di generare una mole di dati notevolmente superiore. Questa caratteristica, in particolare, rende tale metodo particolarmente indicato per l'analisi statistica di correlazione svolta nel seguito.    
     
-    Una volta ottenuti i dataframe elaborati, è stata effettuata un'operazione di conversione delle coordinate GPS del drone, passando da valori \emph{Universal Transverse Mercator (UTM)} a grandezze espresse in assi NED locali, centrati sul primo valore di posizione misurato nella missione. Si sono, poi, calcolati gli spostamenti tra rilevazioni contigue, fondamentali per l'addestramento della rete. Da questi valori e dalle misurazioni di assetto corrispondenti, infine, si sono stimati i valori di posizione espressi in assi body, centrati nel centro di massa del drone:
+    Una volta ottenuti i dataframe elaborati, è stata effettuata un'operazione di conversione delle coordinate GPS del drone, passando da valori \emph{Universal Transverse Mercator (UTM)} a grandezze espresse in assi NED locali, centrati sul primo valore di posizione misurato nella missione. Si sono, poi, calcolati gli spostamenti tra rilevazioni contigue. Da questi valori e dalle misurazioni di assetto corrispondenti (convertite in radianti), infine, si sono stimati i valori di posizione istantanei espressi in assi body, centrati nel centro di massa del drone:
 
-    % Inserire tutte e 3 le formule usate
+        \begin{equation}
+            \begin{cases}
+                X_{\text{body, ist}} = \Delta N \cdot cos(\psi) + \Delta E \cdot sin(\psi) \\[0.3cm]
+                Y_{\text{body, ist}} = \Delta N \cdot sin(\psi) + \Delta E \cdot cos(\psi)
+            \end{cases}
+        \end{equation}
     
-    \item \textbf{Trasformazione in tensori}: le strutture generate fino ad ora, definite dataframe, non sono adatte per l'utilizzo in una rete neurale. Spesso, infatti, presentano dati di tipi misti, includono metadati non necessari come le etichette associate ad ogni colonna e, in generale, non sono ottimizzati per le complesse operazioni matematiche richieste. Pertanto, occorre effettuare una conversione in un differente tipo di struttura, definito tensore, tramite l'apposita funzione della libreria Pytorch. In particolare, un tensore di questo tipo è un array multidimensionale, specificamente progettatato per l'utilizzo all'interno di algoritmi di deep learning.    
+    \item \textbf{Trasformazione in tensori}: le strutture generate finora, definite dataframe, non sono adatte per l'utilizzo in una rete neurale. Spesso, infatti, presentano dati di tipi misti, includono metadati non necessari come le etichette associate ad ogni colonna e, in generale, non sono ottimizzati per le complesse operazioni matematiche richieste. Pertanto, occorre effettuare una conversione in un differente tipo di struttura, definito tensore, tramite l'apposita funzione della libreria Pytorch. In particolare, un tensore di questo tipo è un array multidimensionale, specificamente progettato per l'utilizzo all'interno di algoritmi di deep learning.    
     
-    \item \textbf{Suddivisione in batch unitarie}: l'ultimo passaggio necessario prima di poter fornire i dati in input alla rete consiste nella suddivisione del tensore in batch corrispondenti ad un solo secondo di osservazione. Naturalmente, ogni sensore caratterizzato da una differente frequenza di aggiornamento presenta un diverso numero di elementi in ogni batch (10 per il DVL, 1 per il GPS e 5 per i restanti sensori). Inoltre, occorre evidenziare che per le missioni di addestramento si elimina la suddivisione in traiettorie e missioni precedentemente creata, andando a generare una unica lista comprensiva dei singoli secondi. Per favorire un corretto apprendimento della rete neurale, infatti, mantenere i dati divisi risulta deleterio, aumentando il rischio di far imparare al modello le singole traiettorie piuttosto che le relazioni generali alla base della dinamica del drone.
+    \item \textbf{Suddivisione in batch unitari}: l'ultimo passaggio necessario prima di poter fornire i dati in input alla rete consiste nella suddivisione del tensore in batch corrispondenti ad un solo secondo di osservazione. Naturalmente, ogni sensore caratterizzato da una differente frequenza di aggiornamento presenta un diverso numero di elementi in ogni batch (10 per il DVL, 1 per il GPS e 5 per i restanti sensori). Inoltre, occorre evidenziare che per le missioni di addestramento si elimina la suddivisione in traiettorie e missioni precedentemente introdotta, andando a generare un'unica lista comprensiva dei singoli secondi. Per favorire un corretto apprendimento della rete neurale, infatti, mantenere i dati divisi risulta deleterio, portando unicamente ad un incremento del rischio di apprendimento delle singole traiettorie piuttosto che delle relazioni generali alla base della dinamica del drone.
     
 \end{itemize}
 
-Quanto appena descritto, è stato implementato in ambiente Python sfruttando la logica presentata all'interno della \emph{Figura} (xx):
+Quanto appena descritto è stato implementato in ambiente Python sfruttando la logica presentata all'interno della \emph{Figura} (xx):
 
 % Inserire diagramma di flusso codice
 
