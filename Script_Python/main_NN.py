@@ -40,15 +40,15 @@ import json                                 # libreria per la gestione del forma
 # ======================================================
 
 # Variabili legate alla configurazione della rete neurale
-window_size = 16                                            # Numero di secondi di missione consecutivi accorpati in una singola finestra
-batch_size = 4                                              # Numero di finestre forniti contemporaneamente alla rete --> la dimensione della mini-batch è pari a window_size * batch_size
+window_size = 1                                            # Numero di secondi di missione consecutivi accorpati in una singola finestra
+batch_size = 32                                              # Numero di finestre forniti contemporaneamente alla rete --> la dimensione della mini-batch è pari a window_size * batch_size
 batch_size_test = 1                                         # Per il test si usa una batch size di 1s --> si ottiene la stima della posizione per ogni secondo di navigazione (coincidenza perfetta con batch GPS)
-num_epoch = 80                                              # Numero di epoche di iterazione per l'addestramento
+num_epoch = 60                                              # Numero di epoche di iterazione per l'addestramento
 network_config = {'IMU': 9, 'DVL': 3, 'GPS': 2}             # Dizionario di configurazione della rete neurale --> utile per impostare ordine, numero e nome dei rami associati a LSTM e SAM
-hidden_size = 100                                           # Numero di neuroni appartenenti al layer nascosto del LSTM
-FC_layers = 2                                               # Numero di FC Layers della rete
-#loss_function = nn.MSELoss                                  # Loss function prescelta per la rete --> per LogCosh e MixedLpNorm non serve usare il modulo nn --> in tutti i casi non servono le parentesi tonde
-loss_function = MixedLpNavLoss
+hidden_size = 200                                           # Numero di neuroni appartenenti al layer nascosto del LSTM
+FC_layers = 3                                              # Numero di FC Layers della rete
+loss_function = nn.MSELoss                                  # Loss function prescelta per la rete --> per LogCosh e MixedLpNorm non serve usare il modulo nn --> in tutti i casi non servono le parentesi tonde
+#loss_function = MixedLpNavLoss
 
 # Si definisce il dizionario di configurazione per stabilire quali dati non devono essere utilizzati e con quale target (NED/body) --> di IMU si usano sempre tutti quindi si sfrutta questo dizionario per selezionare la modalità (deg o sin/cos)
 data_config = {'target': 'body', 'DVL': ['DVL_Altitude [m]'], 'IMU_format': 'deg', 'MOT': ['Mot_RV [%]', 'Mot_RL [%]'], 'V_ref': ['Ref_Vy [%]', 'Ref_Vz [%]', 'Ref_ωx [%]', 'Ref_ωy [%]']}
@@ -98,7 +98,7 @@ print('===================================================')
 pre_processing = PreProcessing()
 post_processing = PostProcessing()
 
-post_processing.eval_metrics_analysis(ROOT_DIR)
+#post_processing.eval_metrics_analysis(ROOT_DIR)
 
 print(f"\nSelezione parametri di pre-processing:")
 
@@ -418,7 +418,7 @@ rete_neurale = NavNet(network_config, hidden_size, FC_layers)        # Si inizia
 rete_neurale.initialize_weights()                                    # Si inizializzano i pesi tramite funzione definita
 
 # Scheduler --> dimezza il learning rate se la Val_Loss non scende per 5 epoche
-scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(rete_neurale.optimizer, mode='min', factor=0.7, patience=3)
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(rete_neurale.optimizer, mode='min', factor=0.5, patience=3)
 
 # Si recuperano le statistiche del GPS salvate nel pre-processing --> trasformandole in tensori per compatibilità con output rete neurale (servono alla loss per riportare in metri e al test)
 GPS_mean = torch.tensor(pre_processing.normalization_parameters_dict['GPS']['media'])
