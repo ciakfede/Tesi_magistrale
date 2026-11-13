@@ -18,7 +18,7 @@ Nel 2025, Damari e Klein presentano \textbf{AlignNet}\cite{AlignNet}, una rete n
 
     \begin{figure}[!htb]
         \centering
-        \includegraphics[width=0.8\linewidth]{./images/Literature_review/AlignNet.pdf}
+        \includegraphics[width=1\linewidth]{./images/Literature_review/AlignNet.pdf}
         \caption{Rappresentazione schematica dell'AlignNet\cite{AlignNet}}
         \label{fig:AlignNet}
     \end{figure}
@@ -65,7 +65,7 @@ In risposta a tali limitazioni, l'implementazione di approcci puramente data-dri
 
     \begin{figure}[!htb]
         \centering
-        \includegraphics[width=0.8\linewidth]{./images/Literature_review/BeamsNet.pdf}
+        \includegraphics[width=0.9\linewidth]{./images/Literature_review/BeamsNet.pdf}
         \caption{Rappresentazione grafica BeamsNet}
         \label{fig:BeamsNet}
     \end{figure}
@@ -74,7 +74,21 @@ A seguito di una campagna di test, svolta nel Mediterraneo con il drone Snapir, 
 
 Nel corso della navigazione in ambiente subacqueo, specialmente in presenza di un fondale non regolare, spesso uno o più raggi acustici emessi dal DVL vengono deflessi in direzioni non compatibili con la ricezione di ritorno. Ciò degrada significativamente l'accuratezza del vettore velocità stimato, sia impiegando un approccio model-based tradizionale sia un'architettura neurale come la precedente. Nel dettaglio, con un operatore classico, come un LSE, in mancanza di informazioni su due o più raggi la regressione della velocità diventa impossibile. Nell'affrontare questa criticità, Cohen, Yona e Klein propongono in varie pubblicazioni due possibili evoluzioni dell'architettura già discussa: \textbf{LiBeamsNet}\cite{LiBeamsNet} e \textbf{MissBeamNet}\cite{MissBeamNet}. In un paper risalente al 2024\cite{Confronto_parziali} è, poi, presentato un confronto diretto tra le due architetture e un approccio tradizionale. Quest'ultimo, in particolare, sfrutta una media delle precedenti misurazioni del raggio mancante per stimarne il valore attuale da fornire ad un LSE. Nel dettaglio, entrambe le reti neurali mostrano un miglioramento dell'acuratezza rispetto a quest'ultima tecnica, con una riduzione dell'RMSE sulla velocità del DVL rispettivamente del 17.75\% e 16.62\%. 
 
-A livello strutturale, come si può dedurre dalla \emph{Figura} xx, l'architettura LiBeamsNet è sostanzialmente una versione modificata della BeamsNet già presentata. L'unica differenza, infatti, si trova nei dati forniti in input, ovvero i precedenti tre valori di velocità stimati dal DVL per il primo ramo e l'attuale misurazione dei soli due raggi disponibili per il secondo. Sebbene anche la MissBeamNet ricalchi la struttura della BeamsNet, sono presenti differenze sostanziali, come mostrato in \emph{Figura} xx. Il cuore della rete neurale, infatti, diventa un blocco LSTM con una hidden size pari a 500. Inoltre, mentre i dati forniti in input al secondo ramo restano i due raggi acustici correttamente misurati, il primo ramo richiede informazioni sulle misurazioni complete dei raggi stessi in 6 istanti temporali antecedenti. 
+    \begin{figure}[!htb]
+        \centering
+        \includegraphics[width=0.9\linewidth]{./images/Literature_review/LiBeamsNet.pdf}
+        \caption{Rappresentazione grafica della LiBeamsNet}
+        \label{fig:LiBeamsNet}
+    \end{figure}
+
+    \begin{figure}[!htb]
+        \centering
+        \includegraphics[width=0.9\linewidth]{./images/Literature_review/MissBeamNet.pdf}
+        \caption{Rappresentazione grafica della LiBeamsNet}
+        \label{fig:MissBeamNet}
+    \end{figure}
+
+A livello strutturale, come si può dedurre dalla \emph{Figura} \ref{fig:LiBeamsNet}, l'architettura LiBeamsNet è sostanzialmente una versione modificata della BeamsNet già presentata. L'unica differenza, infatti, si trova nei dati forniti in input, ovvero i precedenti tre valori di velocità stimati dal DVL per il primo ramo e l'attuale misurazione dei soli due raggi disponibili per il secondo. Sebbene anche la MissBeamNet ricalchi la struttura della BeamsNet, sono presenti differenze sostanziali, come mostrato in \emph{Figura} \ref{fig:MissBeamNet}. Il cuore della rete neurale, infatti, diventa un blocco LSTM con una hidden size pari a 500. Inoltre, mentre i dati forniti in input al secondo ramo restano i due raggi acustici correttamente misurati, il primo ramo richiede informazioni sulle misurazioni complete dei raggi stessi in 6 istanti temporali antecedenti. 
 
 
 % Valutare se inserirlo o meno
