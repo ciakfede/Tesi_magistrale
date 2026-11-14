@@ -45,7 +45,7 @@ batch_size = 32                                              # Numero di finestr
 batch_size_test = 1                                         # Per il test si usa una batch size di 1s --> si ottiene la stima della posizione per ogni secondo di navigazione (coincidenza perfetta con batch GPS)
 num_epoch = 60                                              # Numero di epoche di iterazione per l'addestramento
 network_config = {'IMU': 9, 'DVL': 3, 'GPS': 2}             # Dizionario di configurazione della rete neurale --> utile per impostare ordine, numero e nome dei rami associati a LSTM e SAM
-hidden_size = 200                                           # Numero di neuroni appartenenti al layer nascosto del LSTM
+hidden_size = 150                                           # Numero di neuroni appartenenti al layer nascosto del LSTM
 FC_layers = 3                                              # Numero di FC Layers della rete
 loss_function = nn.MSELoss                                  # Loss function prescelta per la rete --> per LogCosh e MixedLpNorm non serve usare il modulo nn --> in tutti i casi non servono le parentesi tonde
 #loss_function = MixedLpNavLoss
@@ -98,7 +98,7 @@ print('===================================================')
 pre_processing = PreProcessing()
 post_processing = PostProcessing()
 
-post_processing.eval_metrics_analysis(ROOT_DIR)
+#post_processing.eval_metrics_analysis(ROOT_DIR)
 
 print(f"\nSelezione parametri di pre-processing:")
 
@@ -418,7 +418,7 @@ rete_neurale = NavNet(network_config, hidden_size, FC_layers)        # Si inizia
 rete_neurale.initialize_weights()                                    # Si inizializzano i pesi tramite funzione definita
 
 # Scheduler --> dimezza il learning rate se la Val_Loss non scende per 5 epoche
-scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(rete_neurale.optimizer, mode='min', factor=0.7, patience=3)
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(rete_neurale.optimizer, mode='min', factor=0.5, patience=3)
 
 # Si recuperano le statistiche del GPS salvate nel pre-processing --> trasformandole in tensori per compatibilità con output rete neurale (servono alla loss per riportare in metri e al test)
 GPS_mean = torch.tensor(pre_processing.normalization_parameters_dict['GPS']['media'])
