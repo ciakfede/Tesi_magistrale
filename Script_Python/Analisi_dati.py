@@ -27,6 +27,11 @@ import re
 import seaborn as sns                           # Libreria per la gestione dei box plot e dei violin plot più curati
 from matplotlib.lines import Line2D
 
+from matplotlib.markers import MarkerStyle
+from matplotlib.path import Path
+
+# Freccia a ">" (due tratti aperti): punta verso l'alto nel sistema del marker, poi viene ruotata lungo la tangente
+CHEVRON = Path([(-0.75, -0.6), (0.0, 0.6), (0.75, -0.6)], [Path.MOVETO, Path.LINETO, Path.LINETO])
 
 pd.set_option('display.max_columns', None)              # Visualizza tutte le colonne (nessun limite al numero)
 pd.set_option('display.max_colwidth', None)             # Visualizza tutto il contenuto della cella (evita di troncare stringhe lunghe)
@@ -1154,7 +1159,7 @@ class PostProcessing:
         self.axis_font = {
             'family': 'serif',      # Simula il font serif di Latin Modern usato all'interno del template Latex per la tesi
             'color': 'black',       # Testo nero ad alto contrasto per la massima leggibilità
-            'weight': 'normal',     # Peso normale per le etichette descrittive
+            'weight': 'bold',     # Peso normale per le etichette descrittive
             'size': 11,             # Dimensione leggibile ma subordinata al titolo
             'style': 'normal'
         }
@@ -1273,7 +1278,7 @@ class PostProcessing:
         return self
 
     # Funzione per la creazione dei grafici delle traiettorie ideali, partendo dal dizionario di waypoints generato
-    def ideal_trajectories_plot(self, ROOT_DIR):
+    def ideal_trajectories_plot1(self, ROOT_DIR):
 
         print("\nDefinizione delle traiettorie ideali basate sui waypoints definiti:")
 
@@ -1298,16 +1303,16 @@ class PostProcessing:
                             North_list.append(North)
 
                 # noinspection PyTypeChecker
-                plt.figure(figsize=(10, 6))
+                plt.figure(figsize=(10, 6), constrained_layout=True)
 
                 # Si richiama il plot dei punti utilizzando come input il dizionario tramite formulazione data
-                plt.plot(East_list, North_list, label='Traiettoria ideale', linewidth=2, linestyle='--', marker='s', markersize=7)
+                plt.plot(East_list, North_list, label='Traiettoria ideale', linewidth=2.5, linestyle='--', marker='s', markersize=7)
                 plt.xlabel("East [m]", fontdict=self.axis_font)
                 plt.ylabel("North [m]", fontdict=self.axis_font)
-                plt.title(f"Traiettoria del {trajectory_name}", fontdict=self.title_font, loc='center', pad=10)
+                #plt.title(f"Traiettoria del {trajectory_name}", fontdict=self.title_font, loc='center', pad=10)
                 plt.minorticks_on()
-                plt.grid(visible=True, which='both', alpha=0.5)
-                plt.legend()
+                plt.grid(visible=True, which='both', alpha=0.3)
+                #plt.legend(loc="best")
                 plt.axis('equal')
 
                 OUTPUT_FOLDER_PATH = os.path.join(ROOT_DIR, 'Risultati_NN/Traiettorie_ideali')
@@ -1320,6 +1325,231 @@ class PostProcessing:
             except Exception as e:
                 warn_counts += 1
                 print(f"  [WARNING] Errore nella generazione dei grafici ideali per la traiettoria {trajectory_name}--> {e}")
+                continue
+
+        print(f"  Traiettorie generate e salvate con {warn_counts} warnings (ogni warning è una figura non salvata).")
+
+    # Versione generata da Claude
+    @staticmethod
+    def _add_direction_arrows(path_x, path_y, East_list, North_list, color, min_len_frac=0.04, size=8, lw=2.0):
+        """
+        Aggiunge una piccola freccia a ">" a metà di ogni tratto tra waypoints consecutivi, orientata nel
+        verso di percorrenza. Il punto medio è calcolato lungo la linea realmente disegnata (path_x, path_y),
+        quindi sugli archi la freccia segue la curva. I tratti più corti di min_len_frac * estensione
+        del grafico (es. waypoints quasi coincidenti) vengono saltati per non affollare la figura.
+        """
+        px, py = np.asarray(path_x, float), np.asarray(path_y, float)
+        s = np.r_[0.0, np.cumsum(np.hypot(np.diff(px), np.diff(py)))]  # ascissa curvilinea lungo la linea
+        span = max(np.ptp(px), np.ptp(py), 1e-9)
+        tol = 1e-6 * span
+
+        # Posizione di ogni waypoint lungo la linea: ricerca "in avanti", così i punti ripetuti
+        # (es. origine a inizio e fine percorso) vengono associati all'occorrenza corretta
+        idx, start = [], 0
+        for e, n in zip(East_list, North_list):
+            d = np.hypot(px[start:] - e, py[start:] - n)
+            hit = np.flatnonzero(d < tol)
+            start += int(hit[0]) if hit.size else int(np.argmin(d))
+            idx.append(start)
+
+        for a, b in zip(idx[:-1], idx[1:]):
+            seg_len = s[b] - s[a]
+            if seg_len < min_len_frac * span:
+                continue
+            s_mid = 0.5 * (s[a] + s[b])
+            h = 0.05 * seg_len
+            xm, ym = np.interp(s_mid, s, px), np.interp(s_mid, s, py)
+            dx = np.interp(s_mid + h, s, px) - np.interp(s_mid - h, s, px)
+            dy = np.interp(s_mid + h, s, py) - np.interp(s_mid - h, s, py)
+            angle = np.degrees(np.arctan2(dy, dx))
+            # Freccia ">" orientata lungo la tangente (il marker base punta verso l'alto, da cui il -90):
+            # prima un alone bianco più spesso, poi il tratto colorato sopra
+            arrow = MarkerStyle(CHEVRON, fillstyle='none', joinstyle='miter', capstyle='round').rotated(deg=angle - 90)
+            plt.plot([xm], [ym], linestyle='none', marker=arrow, markersize=size,
+                     markeredgecolor='white', markeredgewidth=lw + 2.4, zorder=3)
+            plt.plot([xm], [ym], linestyle='none', marker=arrow, markersize=size,
+                     markeredgecolor=color, markeredgewidth=lw, zorder=3.1)
+
+    @staticmethod
+    def _build_spiral_path(East_list, North_list, n_arc=60, min_turns=1.0, max_step_deg=120, tol=0.03):
+        """
+        Riconosce una spirale centrata sul primo (o sull'ultimo) waypoint e ne costruisce la curva.
+        Condizioni: angolo sempre crescente o sempre decrescente, raggio non decrescente
+        (tolleranza relativa tol), almeno min_turns giri completi.
+        Il raggio è interpolato in funzione dell'angolo con PCHIP (monotono): i tratti a raggio costante
+        restano archi di cerchio perfetti e la curva passa esattamente per i waypoint.
+        Restituisce (path_x, path_y) oppure None se la traiettoria non è una spirale.
+        """
+        x = np.asarray(East_list, float)
+        y = np.asarray(North_list, float)
+        if len(x) < 5:
+            return None
+
+        # Il centro può essere il primo waypoint (spirale verso l'esterno) o l'ultimo (verso l'interno)
+        for reverse in (False, True):
+            xs, ys = (x[::-1], y[::-1]) if reverse else (x, y)
+            cx, cy = xs[0], ys[0]
+            dx, dy = xs[1:] - cx, ys[1:] - cy
+            r = np.hypot(dx, dy)
+            if r.min() <= 1e-9:
+                continue
+            if np.any(np.diff(r) < -tol * r[:-1]):          # il raggio non deve diminuire
+                continue
+            theta = np.unwrap(np.arctan2(dy, dx))
+            dth = np.diff(theta)
+            if not (np.all(dth > 0) or np.all(dth < 0)):    # verso di rotazione costante
+                continue
+            if np.abs(dth).max() > np.radians(max_step_deg):
+                continue
+            sign = 1.0 if dth[0] > 0 else -1.0
+            phi = sign * (theta - theta[0])                 # angolo percorso, sempre crescente
+            if phi[-1] < min_turns * 2 * np.pi:             # almeno un giro completo
+                continue
+
+            # Campionamento fitto dell'angolo tra waypoint consecutivi
+            phi_d = np.concatenate([np.linspace(phi[i], phi[i + 1], n_arc, endpoint=False)
+                                    for i in range(len(phi) - 1)] + [[phi[-1]]])
+            try:
+                from scipy.interpolate import PchipInterpolator
+                r_d = PchipInterpolator(phi, r)(phi_d)
+            except ImportError:                             # senza scipy: raggio interpolato linearmente
+                r_d = np.interp(phi_d, phi, r)
+            th_d = theta[0] + sign * phi_d
+
+            # Il centro è un waypoint: il tratto centro -> primo punto resta rettilineo
+            path_x = np.r_[cx, cx + r_d * np.cos(th_d)]
+            path_y = np.r_[cy, cy + r_d * np.sin(th_d)]
+            if reverse:
+                path_x, path_y = path_x[::-1], path_y[::-1]
+            return path_x, path_y
+        return None
+
+    @staticmethod
+    def _fit_circle_trimmed(x, y, tol=0.05, min_pts=6, max_gap_deg=120, min_frac=0.6):
+        """
+        Verifica se i punti descrivono (almeno in parte) una circonferenza.
+        Fit ai minimi quadrati (Kåsa) scartando iterativamente il punto con residuo maggiore.
+        Restituisce (cx, cy, r, mask_inlier) se il cerchio è riconosciuto, altrimenti None.
+        """
+        x, y = np.asarray(x, float), np.asarray(y, float)
+        idx = np.arange(len(x))
+        # Almeno min_frac dei waypoints deve stare sul cerchio: evita che una spezzata con pochi punti
+        # casualmente allineati su un cerchio venga disegnata come arco (rientranze sui tratti dritti)
+        min_keep = max(min_pts, int(np.ceil(min_frac * len(x))))
+        while len(idx) >= min_keep:
+            A = np.c_[2 * x[idx], 2 * y[idx], np.ones(len(idx))]
+            b = x[idx] ** 2 + y[idx] ** 2
+            cx, cy, c = np.linalg.lstsq(A, b, rcond=None)[0]
+            r = np.sqrt(c + cx ** 2 + cy ** 2)
+            res = np.abs(np.hypot(x[idx] - cx, y[idx] - cy) - r)
+            if res.max() <= tol * r:
+                # I punti devono circondare il centro (esclude allineamenti e archi parziali)
+                ang = np.sort(np.arctan2(y[idx] - cy, x[idx] - cx))
+                gaps = np.diff(np.r_[ang, ang[0] + 2 * np.pi])
+                if np.degrees(gaps.max()) > max_gap_deg:
+                    return None
+                mask = np.zeros(len(x), bool)
+                mask[idx] = True
+                return cx, cy, r, mask
+            idx = np.delete(idx, res.argmax())  # scarta il punto più lontano dal cerchio
+        return None
+
+    @staticmethod
+    def _build_circular_path(East_list, North_list, circle_fit, n_arc=60):
+        """
+        Costruisce la polilinea da disegnare: archi di cerchio tra waypoint consecutivi
+        che appartengono al cerchio, segmenti rettilinei per tutti gli altri.
+        Il raggio viene interpolato tra i due punti, quindi la curva passa per i waypoint originali.
+        """
+        cx, cy, r, mask = circle_fit
+        path_x, path_y = [East_list[0]], [North_list[0]]
+        s = np.linspace(0, 1, n_arc)[1:]
+
+        for i in range(len(East_list) - 1):
+            if mask[i] and mask[i + 1]:
+                a0 = np.arctan2(North_list[i] - cy, East_list[i] - cx)
+                a1 = np.arctan2(North_list[i + 1] - cy, East_list[i + 1] - cx)
+                r0 = np.hypot(East_list[i] - cx, North_list[i] - cy)
+                r1 = np.hypot(East_list[i + 1] - cx, North_list[i + 1] - cy)
+                da = (a1 - a0 + np.pi) % (2 * np.pi) - np.pi  # percorso angolare più breve
+                ang = a0 + da * s
+                rad = r0 + (r1 - r0) * s
+                path_x.extend(cx + rad * np.cos(ang))
+                path_y.extend(cy + rad * np.sin(ang))
+            else:
+                path_x.append(East_list[i + 1])
+                path_y.append(North_list[i + 1])
+
+        return path_x, path_y
+
+    def ideal_trajectories_plot(self, ROOT_DIR, show_arrows=True):
+
+        print("\nDefinizione delle traiettorie ideali basate sui waypoints definiti:")
+
+        # Si itera per ogni percorso contenuto all'interno del dizionario di punti
+        points_dict = self.waypoints_dict.copy()
+        warn_counts = 0
+        for trajectory_name, trajectory_points_list in points_dict.items():
+
+            try:
+
+                # Si itera per ogni metodo di espressione delle coordinate contenuto all'interno del dizionario --> per estrarre una lista con le sole coordinate East e una con quelle North
+                East_list = []
+                North_list = []
+                for coord_type, coord_list in trajectory_points_list.items():
+
+                    # Si salvano i soli dati associati al metodo UTM in un nuovo dizionario
+                    if coord_type == "UTM":
+
+                        # Si itera su ogni punto contenuto all'interno della lista di tuple contenenti le coordinate
+                        for (East, North) in coord_list:
+                            East_list.append(East)
+                            North_list.append(North)
+
+                # noinspection PyTypeChecker
+                plt.figure(figsize=(10, 6), constrained_layout=True)
+
+                # Si verifica il tipo di traiettoria: prima spirale, poi cerchio (anche parziale), altrimenti spezzata
+                curve_path = self._build_spiral_path(East_list, North_list)
+                circle_fit = None if curve_path is not None else self._fit_circle_trimmed(East_list, North_list)
+                is_curved = curve_path is not None or circle_fit is not None
+
+                # Si richiama il plot dei punti: se la traiettoria è curva si disegnano i soli marker,
+                # altrimenti la linea tratteggiata che unisce i waypoints come in precedenza
+                line, = plt.plot(East_list, North_list, label='Traiettoria ideale', linewidth=2.5,
+                                 linestyle='none' if is_curved else '--', marker='s', markersize=7,
+                                 color='#6cb0e0', markerfacecolor='#1f77b4', markeredgecolor='#1f77b4')
+
+                # Nei casi curvi la linea è disegnata a parte, passando per tutti i waypoints
+                if circle_fit is not None:
+                    curve_path = self._build_circular_path(East_list, North_list, circle_fit)
+                if is_curved:
+                    plt.plot(*curve_path, linewidth=2.5, linestyle='--', color=line.get_color(), zorder=line.get_zorder() - 0.1)
+
+                # Frecce di direzione a metà di ogni tratto (sulla linea realmente disegnata)
+                if show_arrows:
+                    arrow_x, arrow_y = curve_path if is_curved else (East_list, North_list)
+                    self._add_direction_arrows(arrow_x, arrow_y, East_list, North_list, color=line.get_color())
+
+                plt.xlabel("East [m]", fontdict=self.axis_font)
+                plt.ylabel("North [m]", fontdict=self.axis_font)
+                # plt.title(f"Traiettoria del {trajectory_name}", fontdict=self.title_font, loc='center', pad=10)
+                plt.minorticks_on()
+                plt.grid(visible=True, which='both', alpha=0.3)
+                # plt.legend(loc="best")
+                plt.axis('equal')
+
+                OUTPUT_FOLDER_PATH = os.path.join(ROOT_DIR, 'Risultati_NN/Traiettorie_ideali')
+                os.makedirs(OUTPUT_FOLDER_PATH, exist_ok=True)
+                output_file_path = os.path.join(OUTPUT_FOLDER_PATH, f"Traiettoria_ideale_{trajectory_name}.pdf")
+                plt.savefig(output_file_path, bbox_inches='tight')
+                # plt.show()
+                plt.close()
+
+            except Exception as e:
+                warn_counts += 1
+                print(
+                    f"  [WARNING] Errore nella generazione dei grafici ideali per la traiettoria {trajectory_name}--> {e}")
                 continue
 
         print(f"  Traiettorie generate e salvate con {warn_counts} warnings (ogni warning è una figura non salvata).")
