@@ -954,6 +954,8 @@ class PreProcessing:
         if sensor_name in data_config.keys():
             cols_to_drop = data_config[sensor_name]
 
+        # Verifico che tutti i nomi associati alle misurazioni effettivamente facciano parte del dataset --> altrimenti si esce dal codice perché darebbe errore nell'esecuzione della rete per le dimensioni errate
+
         # Si eliminano le colonne non necessarie per il training --> il GPS va trattato separatamente perché ho solo un indicazione sul tipo di target così come l'IMU, che usa sempre tutti gli angoli ma cambia il formato
         if sensor_name == 'GPS':
 
