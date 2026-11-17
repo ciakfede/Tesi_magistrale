@@ -1278,7 +1278,7 @@ class PostProcessing:
         return self
 
     # Funzione per la creazione dei grafici delle traiettorie ideali, partendo dal dizionario di waypoints generato
-    def ideal_trajectories_plot1(self, ROOT_DIR):
+    def ideal_trajectories_plot_old(self, ROOT_DIR):
 
         print("\nDefinizione delle traiettorie ideali basate sui waypoints definiti:")
 
@@ -1856,11 +1856,6 @@ class PostProcessing:
         NN_East = [p[0] for p in NN_coordinates_array]
         NN_North = [p[1] for p in NN_coordinates_array]
 
-        waypoints = self.waypoints_dict[mission[0]]['UTM_abs']
-        (east0, north0) = GPS_origin[0], GPS_origin[1]
-        waypoints_East = [p[0]-east0 for p in waypoints]
-        waypoints_North = [p[1]-north0 for p in waypoints]
-
         # noinspection PyTypeChecker
         plt.figure(figsize=(10, 6))
 
@@ -1891,6 +1886,39 @@ class PostProcessing:
 
         plt.savefig(output_file_path, bbox_inches='tight')
         plt.close()
+
+    # Funzione che genera un grafico dell'evoluzione dell'errore in ogni istante dati i valori di posizione del GPS e quelli prodotti dalla rete --> occorre prevedere un meccanismo che la attivi unicamente
+    def error_evolution_plot(self, GPS_coordinates_list, NN_coordinates_list, mission, path_name, title, ROOT_DIR):
+
+        # Si inizializza il percorso del file di output che verrà generato
+        OUTPUT_FOLDER_PATH = os.path.join(ROOT_DIR, f'Risultati_NN/Evoluzione_errore')
+        os.makedirs(OUTPUT_FOLDER_PATH, exist_ok=True)
+        output_file_path = os.path.join(OUTPUT_FOLDER_PATH, f'Evoluzione_errore_M{mission}_{path_name}.pdf')
+
+        # Si trasformano le liste di tensori in array numpy --> in modo da poter effettuare operazioni matematiche vettoriali
+        GPS_coordinates_array = torch.cat(GPS_coordinates_list, dim=0).cpu().numpy()
+        NN_coordinates_array = torch.cat(NN_coordinates_list, dim=0).cpu().numpy()
+
+        # Si calcola l'errore sui due assi e si fa la conversione in componenti assolute
+        err = np.linalg.norm(GPS_coordinates_array - NN_coordinates_array, axis=1)
+        time = np.arange(len(err))
+
+        # noinspection PyTypeChecker
+        plt.figure(figsize=(10, 6))
+
+        #plt.plot(waypoints_East, waypoints_North, label = 'Waypoints', marker = 's', markersize = 6)
+        plt.plot(time, err, color='blue', linewidth=2, linestyle='--')
+
+        # Definizione parametri grafico
+        plt.title(title, fontdict = self.title_font, loc ="center", pad = 10)
+        plt.xlabel('Time [s]', fontdict = self.axis_font)
+        plt.ylabel('Position Error [m]', fontdict = self.axis_font)
+        plt.minorticks_on()
+        plt.grid(True, linestyle=':', alpha=0.5)
+
+        plt.savefig(output_file_path, bbox_inches='tight')
+        plt.close()
+
 
     # Funzione che permette di stampare il grafico relativo alla loss function durante il training
     def plot_loss_function(self, loss_train, loss_val, epoche, ROOT_DIR, titolo='Evoluzione della Loss function'):
