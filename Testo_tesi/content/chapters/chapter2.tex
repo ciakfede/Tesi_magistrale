@@ -1,13 +1,13 @@
 
 \chapter{Fondamenti di Machine learning}
 
-Prima di descrivere dettagliatamente il processo che ha portato alla creazione dell'algoritmo di deep learning prescelto, occorre definire in maniera più accurata cosa si intenda con questo termine. Il mondo dell'intelligenza artificiale, infatti, è molto vasto e ramificato e, pertanto, può essere complicato orientarsi al suo interno. In questo capitolo, dunque, si cercherà di presentare in maniera quanto più chiara possibile cosa si intende con IA, machine learning e reti neurali, descrivendone le caratteristiche principali e il principio di funzionamento. 
+Prima di poter valutare e discutere le principali soluzioni innovative proposte in letteratura per il posizionamento di un AUV, è necessario comprendere meglio cosa si intende con il termine \emph{Intelligenza Artificiale (IA)}. L'individuazione di una definizione univoca ed esaustiva di IA, tuttavia, può essere un esercizio complesso, dato l'elevato numero di ramificazioni interne esistenti. Nel seguito, pertanto, si cerca di delineare più chiaramente i confini di questo campo, proponendo una possibile classificazione degli algoritmi che vi appartengono e analizzandone il funzionamento.   
 
 \section{IA e Machine Learning}
 
-Più nel concreto, con il termine \textit{Intelligenza Artificiale} si identifica la branca dell'informatica che si occupa di studiare e sviluppare algoritmi in grado di simulare i processi alla base dell'intelletto umano. Naturalmente, questa definizione è molto generica e include un'ampia gamma di possibili utilizzi pratici, dal semplice impiego di regole logiche o sistemi esperti, caratterizzati da un livello di indipendenza molto basso, ad algoritmi capaci di apprendere autonomamente, direttamente dall'analisi dei dati forniti, eventuali relazioni o pattern ricorsivi presenti nel dataset. Proprio quest'ultimi, appartenenti all'ambito del \textit{Machine Learning}, negli ultimi anni hanno subito una enorme diffusione, grazie anche all'evoluzione tecnologica che ha permesso di addestrare modelli su enormi set di dati a costi contenuti. 
+Più nel concreto, con il termine \textit{Intelligenza Artificiale} si identifica la branca dell'informatica che si occupa di studiare e sviluppare algoritmi in grado di emulare alcuni dei processi caratteristici dell'intelletto umano. Naturalmente, una simile definizione risulta molto generica e include un'ampia gamma di possibili tecniche, anche molto differenti tra loro. A questo settore, infatti, appartengono sia algoritmi basati sull'impiego di semplici regole logiche o di sistemi esperti, dotati di un basso livello di indipendenza, sia algoritmi di apprendimento autonomo, capaci di estrarre direttamente dai dati e senza una guida concreta eventuali relazioni o pattern ricorsivi presenti. Proprio quest'ultimi, appartenenti alla categoria del \textit{Machine Learning}, risultano essere più affini agli obiettivi di questo lavoro di tesi. 
 
-Nonostante con questa prima distinzione interna all'IA si sia ristretto il campo di interesse, restano ancora molte ramificazioni collegate al Machine Learning. Nel seguito, pertanto, si cerca di addentrarsi in questo mondo, definendo dettagliatamente le principali caratteristiche associate ai vari algoritmi. In particolare, come suggerito all'interno del lavoro di Alpaydin\cite{ML_Introduction}, due possibili classificazioni sono legate alla tecnica di addestramento impiegata e al target del modello, che ne condiziona, ovviamente, la struttura. 
+Nonostante con questa prima distinzione interna all'IA si sia ristretto il campo di interesse, restano ancora molte possibili ramificazioni collegate al Machine Learning. Nel seguito, pertanto, si cerca di addentrarsi ulteriormente in questo mondo, definendo dettagliatamente le principali caratteristiche delle varie classi di algoritmi. In particolare, come suggerito all'interno del lavoro di Alpaydin\cite{ML_Introduction}, due possibili classificazioni sono legate alla tecnica di addestramento impiegata e al target del modello, che ne condiziona inevitabilmente la struttura. 
 
 \subsection{Classificazione algoritmi ML}
 
@@ -15,13 +15,11 @@ Per quanto concerne le possibili tecniche di apprendimento impiegate in modelli 
 
     \begin{itemize}
 
-        \item \textbf{Supervised Learning}: in questo caso, il processo è guidato dall'esterno, con i valori di output desiderati che vengono forniti insieme al resto dei dati. L'algoritmo migliora, quindi, l'accuratezza della previsione cercando di minimizzare l'errore tra output prodotto e desiderato. 
+        \item \textbf{Supervised Learning}: in questo caso, il processo è guidato dall'esterno, con i valori di output voluti che vengono forniti insieme al resto dei dati. L'algoritmo migliora, quindi, l'accuratezza della previsione attraverso un processo di minimizzazione dell'errore tra output prodotto e valore desiderato. 
         
-        \item \textbf{Unsupervised Learning}: come si può intuire dal nome stesso, questa metodologia prevede un maggiore grado di autonomia affidato all'algoritmo, che riceve in input i dati senza alcuna indicazione aggiuntiva e identifica pattern ricorsivi o relazioni interne, non facilmente individuabili dall'essere umano.
+        \item \textbf{Unsupervised Learning}: come si può intuire dal nome stesso, questa metodologia prevede un maggiore grado di autonomia affidato all'algoritmo, che riceve in input i dati senza alcuna indicazione aggiuntiva e identifica relazioni o pattern ricorsivi, non facilmente individuabili altrimenti.
         
-        \item \textbf{Reinforcement Learning}: l'ultima tecnica presentata 0permette al modello di apprendere e migliorare il proprio comportamento sfruttando un meccanismo di premi e penalità. In sostanza, l'algoritmo produce una sequenza di azioni che portano ad un risultato. Se quest'ultimo si rivela essere soddisfacente si premia la sequenza registrata, altrimenti la si penalizza. Un processo iterativo di questo tipo prosegue finché l'algoritmo non è in grado di individuare nella quasi totalità dei casi la successione migliore nel rispetto di eventuali vincoli imposti.
-        
-        Appare evidente come una simile tecnica sia solitamente impiegata per algoritmi di \emph{game playing}, ad esempio negli scacchi, o di \emph{autonomous navigation}. In questi casi, infatti, si vuole che l'algoritmo produca, rispettivamente, una serie di mosse in grado di condurre il computer allo scacco matto prima dell'avversario umano e un percorso in grado di portare il veicolo in questione a destinazione senza impattare su nessun ostacolo eventualmente presente lungo il percorso. 
+        \item \textbf{Reinforcement Learning}: l'ultima tecnica presentata consente al modello di apprendere e migliorare il proprio comportamento sfruttando un meccanismo di premi e penalità. In sostanza, l'algoritmo produce una sequenza di azioni che portano ad un risultato. Se quest'ultimo si rivela essere soddisfacente si premia la sequenza registrata, altrimenti la si penalizza. Un processo iterativo di questo tipo prosegue finché l'algoritmo non è in grado di individuare nella quasi totalità dei casi la successione migliore nel rispetto di eventuali vincoli imposti. Appare evidente come una simile tecnica possa trovare spazio all'interno di algoritmi di \emph{game playing}, legati ad esempio agli scacchi, o di \emph{autonomous navigation}. In questi casi, infatti, si vuole che l'algoritmo produca, rispettivamente, una serie di mosse in grado di condurre il computer allo scacco matto prima dell'avversario umano e un percorso in grado di portare il veicolo in questione a destinazione senza impattare su nessun ostacolo eventualmente presente lungo il percorso. 
         
     \end{itemize}
 
@@ -29,60 +27,59 @@ Una classificazione più completa e dettagliata si può fare tenendo conto dello
 
     \begin{itemize}
 
-        \item \textbf{Classificazione}: una grande fetta di problemi in campo finnziario, medico e informatico, più in generale, riguarda la suddivisione di grandi moli di dati all'interno di specifiche classi di appartenenza. Per ottenere risultati soddisfacenti, naturalmente, non è possibile definire manualmente delle condizioni o delle regole in grado di coprire ogni casistica potenzialmente riscontrata. Una soluzione a tale problema può, dunque, essere l'utilizzo di algoritmi in grado di apprendere, tramite tecniche di supervised learning, le proprietà e i pattern che permettono di stabilire la classe più adatta per ogni oggetto di input direttamente dai dati forniti. 
+        \item \textbf{Classificazione}: una grande fetta di problemi in campo finnziario, medico e informatico, riguarda la suddivisione di grandi moli di dati secondo specifiche classi di appartenenza. Naturalmente, la definizione manuale delle condizioni o delle regole in grado di coprire ogni casistica potenzialmente riscontrata non risulta possibile. Una soluzione a tale problema consiste, dunque, nell'utilizzo di algoritmi capaci di apprendere direttamente dai dati disponibili, tramite tecniche di supervised learning, le proprietà e i pattern che permettono di stabilire la classe più adatta per ogni oggetto di input. 
         
-        Un primo esempio di utilizzo di tecniche simili, si ha con algoritmi di \emph{data recognition}, in cui l'obiettivo è la scomposizione di dati, quali parole scritte, immagini o dialoghi, in specifiche classi, che possono essere, rispettivamente, caratteri alfabetici, tratti di un viso e singole parole. In questo caso, il grado di complessità del sistema impatta significativamente sulle performance dell'algoritmo. Il riconoscimento di un viso, ad esempio, presenta un gran numero di variabili, quali cambiamenti nelle condizioni di luminosità ambientale, nell'inclinazione del viso, presenza di trucco o di elementi esterni (occhiali, piercing...), mentre l'individuazione di singole parole in un dialogo può avere carenze in base al dialetto usato o alla presenza di rumori ambientali di sottofondo. Un altro ambito in cui modelli di questo tipo sono molto usati è quello medico, con algoritmi di \emph{medical diagnosis}, in cui, forniti in input i dati associati ad un paziente quali età, genere, storia medica e sintomi attuali, si cerca di individuare la malattia che meglio spiega la problematica in atto. In questi casi, ovviamente, la diagnosi può essere fornita dal modello solo sotto la supervisione di un medico, avendo impatti diretti sulla salute di altri esseri umani. Un'ultimo ambito di interesse riguarda la finanza, con algoritmi di \emph{credit scoring}. Essi considerano il profilo finanziario di un cliente, valutando un eventuale storico, le entrate e i risparmi accumulati per determinare il livello di rischio associato ad un prestito. 
+        Un primo esempio di utilizzo di tecniche simili si ha con gli algoritmi di \emph{data recognition}, in cui l'obiettivo è la scomposizione di dati, quali parole scritte, immagini o dialoghi, in specifiche classi, che possono essere, rispettivamente, caratteri alfabetici, tratti di un viso e singole parole. In questo caso, il grado di complessità del sistema impatta significativamente sulle prestazioni dell'algoritmo. Il riconoscimento di un viso, ad esempio, presenta un gran numero di variabili, quali cambiamenti nella sua inclinazione, nelle condizioni di luminosità ambientale e l'eventuale presenza di trucco o di elementi esterni (occhiali, piercing...). Allo stesso modo, l'individuazione di singole parole in un dialogo può manifestare carenze in base al dialetto usato o alla presenza di rumori ambientali di sottofondo. Un altro ambito in cui modelli di questo tipo sono molto impiegati è quello medico, con i cosiddetti algoritmi di \emph{medical diagnosis}, in cui, forniti in input i dati associati ad un paziente quali età, genere, storia medica e sintomi attuali, si cerca di individuare la malattia che meglio spiega la problematica in atto. In questi casi, ovviamente, la diagnosi può essere fornita dal modello solo sotto la supervisione di un medico, avendo impatti diretti sulla salute di altri esseri umani. Un ultimo ambito di interesse riguarda la finanza, con algoritmi di \emph{credit scoring}. Essi considerano il profilo finanziario di un cliente, valutando un eventuale storico, le entrate e i risparmi accumulati per determinare il livello di rischio associato ad un prestito. 
         
         Infine, un'interessante conseguenza di un procedimento di questo tipo è la possibilità di ottenere, tramite una sorta di reverse engineering, informazioni sulle caratteristiche comuni di un oggetto che appartiene ad una specifica classe. 
 
-        \item \textbf{Regressione}: una seconda classe di problemi associati al supervised learning, si occupa di determinare uno o più valori numerici a partire da diversi dati forniti in input. Avendo in comune la tecnica di apprendimento con gli algoritmi di classificazione, la struttura di base risulta simile, sebbene l'obiettivo finale differisca. 
+        \item \textbf{Regressione}: una seconda classe di problemi, sempre associati al supervised learning, si occupa di determinare uno o più valori numerici a partire da diversi dati forniti in input. Avendo in comune la tecnica di apprendimento con gli algoritmi di classificazione, la struttura di base risulta simile, sebbene l'obiettivo finale differisca. 
         
-        Anche in questo caso si possono trovare molteplici utilizzi in vari settori. Uno dei più classici riguarda la \emph{navigazione autonoma}, basata sulla stima di uno o più parametri associati allo stato dinamico di un drone autonomo, che sia aereo, terrestre o sottomarino, partendo da misurazioni provenienti da più sensori. Un secondo possibile utilizzo riguarda il \emph{response surface design}, che permette di individuare la configurazione di parametri di un macchinario al fine di ottenere il miglior risultato (ad esempio i settaggi di una macchinetta del caffé). Un ulteriore esempio di utilizzo consiste nella stima del prezzo di un oggetto sulla base di uno storico di valutazioni per elementi uguali o simili. 
+        Anche in questo caso si possono trovare molteplici utilizzi in vari settori. Uno dei più classici riguarda la \emph{navigazione autonoma}, basata sulla stima di uno o più parametri associati allo stato di un drone autonomo, che sia aereo, terrestre o sottomarino, partendo da misurazioni provenienti da più sensori. Un secondo possibile impiego riguarda il \emph{response surface design}, che permette di individuare la configurazione ottimale dei parametri di un macchinario (ad esempio i settaggi di una macchinetta del caffé). Un ulteriore esempio di utilizzo consiste nella stima del prezzo di un oggetto sulla base di uno storico di valutazioni di elementi uguali o simili. 
         
         \item \textbf{Clustering}: questi algoritmi, tipicamente associati a tecniche di unsupervised learning, si prefiggono l'obiettivo di suddividere un set di dati in sottogruppi, legati da una o più caratteristiche comuni. 
         
-        Una tecnica simile risulta essere molto versatile potendo, dunque, essere utilizzata in campi anche molto differenti. Un primo esempio riguarda la \emph{customer segmentation}, ovvero la suddivisione dei clienti di un'azienda in base a diverse caratteristiche, quali l'età, il genere, le abitudini di acquisto o la zona geografica. Un utilizzo in ambito grafico può riguardare l'\emph{image compression}, che permette di ridurre notevolmente le dimensioni associate ad un'immagine, al costo di una significativa perdita di dettaglio visivo. Algoritmi simili raggruppano i pixel caratterizzati da sfumature di uno stesso colore, associandoli al relativo valore medio. Un altro possibile metodo di riduzione delle dimensioni consiste nell'estrarre da un'immagine le caratteristiche di alto livello che si ripetono (oggetti, textures, persone...), descrivendola solo tramite quest'ultime. Infine, un ultimo impiego preso in considerazione riguarda il \emph{document clustering}, che permette di classificare dei documenti per tematica trattata, quali sport, politica, arte...
+        Una tecnica simile risulta essere molto versatile e può, dunque, essere utilizzata in una grande varietà di settori. Un primo esempio riguarda la \emph{customer segmentation}, ovvero la suddivisione dei clienti di un'azienda in base a diverse caratteristiche, quali l'età, il genere, le abitudini di acquisto o la zona geografica. Un impiego in ambito grafico può riguardare l'\emph{image compression}, che permette di ridurre notevolmente le dimensioni associate ad un'immagine al costo di una significativa perdita di dettaglio visivo. Algoritmi simili raggruppano i pixel caratterizzati da sfumature di uno stesso colore, associandoli al relativo valore medio. Un altro possibile metodo di riduzione delle dimensioni consiste nell'estrarre da un'immagine le caratteristiche di alto livello che si ripetono (oggetti, textures, persone...), descrivendola solo tramite quest'ultime. Infine, un ultimo impiego preso in considerazione riguarda il \emph{document clustering}, che permette di classificare dei documenti per tematica trattata, quali sport, politica, arte...
         
     \end{itemize}
 
-Tenendo conto della classificazione introdotta, appare evidente che, per la stima della posizione di un drone autonomo in dead-reckoning, la migliore soluzione sia l'uso di un modello di regressione addestrato con supervised learning. All'interno di questo ambito esistono, naturalmente, vari algoritmi che si possono impiegare, con livelli di complessità e prestazioni molto differenti. % Introduzione dei principali algoritmi 
+Tenendo conto della classificazione introdotta, appare evidente che, per la stima della posizione di un drone autonomo in dead-reckoning, la migliore soluzione consista nell'uso di un modello di regressione addestrato mediante supervised learning. All'interno di questo ambito esistono, naturalmente, vari algoritmi che si possono impiegare, con livelli di complessità e prestazioni molto differenti, la cui descrizione va oltre gli scopi di questa tesi. 
 
+% Introduzione dei principali algoritmi di ML?
 
 \section{Reti neurali}
 
-Oltre a questi algoritmi di stampo più classico, negli ultimi anni si è verificata una rapida diffusione di una nuova classe di modelli di Machine Learning: le reti neurali\cite{NN_Introduction}. Esse, infatti, data la loro struttura, sono in grado di analizzare enormi quantità di dati non elaborati, identificando autonomamente pattern complessi, spesso fortemente non lineari, ed appredendo da essi. 
+Oltre a questi algoritmi di stampo più classico, negli ultimi anni ha avuto luogo la rapida diffusione di una nuova classe di modelli di Machine Learning: le reti neurali\cite{NN_Introduction}. Data la loro struttura, infatti, quest'ultime risultano essere particolarmente indicate per l'analisi di enormi quantità di dati non elaborati, riuscendo ad identificare autonomamente pattern complessi, spesso fortemente non lineari, ed apprendendo da essi. 
 
-L'ispirazione alla base di tali algoritmi proviene dal cervello umano, un organo capace di analizzare in pochi millisecondi problemi estremamente complessi e, sfruttando anche informazioni passate, immagazzinate all'interno delle singole sinapsi, generare una risposta ottimale. Naturalmente, replicarne la capacità di ricordare nel tempo grandi quantità di dati e l'elevato numero di interconnessioni, che determinano il livello di sofisticatezza delle soluzioni ipotizzate, è quasi impossibile, data l'enorme potenza di calcolo necessaria. Nonostante queste limitazioni, le reti neurali riescono a migliorare con l'esperienza, affinando la propria capacità predittiva e riuscendo, pertanto, a processare al meglio problemi mai incontrati durante l'addestramento.
+L'ispirazione alla base di tali algoritmi proviene dal cervello umano, un organo capace di analizzare in pochi millisecondi problemi estremamente articolati e, sfruttando anche le informazioni passate immagazzinate all'interno delle singole sinapsi, generare una risposta ottimale. Naturalmente, replicarne la capacità di ricordare nel tempo grandi quantità di dati e l'elevato numero di interconnessioni, che determinano il livello di sofisticatezza delle soluzioni ipotizzate, è quasi impossibile, data l'enorme potenza di calcolo necessaria. Nonostante queste limitazioni, le reti neurali riescono a migliorare con l'esperienza, affinando la propria capacità predittiva e riuscendo, pertanto, a processare al meglio problemi mai incontrati durante l'addestramento.
 
-L'elemento elementare di una rete neurale risulta essere il \emph{neurone}, in grado di ricevere in input molteplici parametri, elaborarli e, come si vedrà più dettagliatamente in seguito, produrre un output. Solitamente, in una struttura complessa, questi neuroni vengono aggregati all'interno dei cosiddetti \emph{layer}, in grado di interfacciarsi vicendevolmente. Come appare logico, per poter funzionare correttamente, una rete deve possedere almeno due layer fondamentali: l'\emph{input layer}, che riceve direttamente i dati grezzi forniti all'algoritmo, e l'\emph{output layer}, che produce il risultato ricercato. Normalmente, tuttavia, a questi si aggiungono uno o più layer intermedi, definiti \emph{hidden layers}. Essi, infatti, sono necessari per aumentare la capacità della rete di estrarre relazioni non lineari dai dati, sebbene ciò comporti un incremento della complessità e della potenza di calcolo associati al modello. Inoltre, in caso siano presenti più di 3 layer complessivi, si entra nell'ambito del \textbf{deep learning}.   
+Coerentemente rispetto all'analogia con il cervello umano, l'unità fondamentale di una rete neurale risulta essere proprio il neurone; come si vedrà più dettagliatamente in seguito, esso è in grado di ricevere in input molteplici parametri, elaborarli e produrre un valore scalare in output. Solitamente, in un'architettura complessa, questi neuroni vengono aggregati all'interno dei cosiddetti \emph{layer}, strutture in grado di interfacciarsi vicendevolmente. Come appare logico, per poter funzionare correttamente, una rete deve possedere almeno due layer fondamentali: l'\emph{input layer}, che riceve direttamente i dati grezzi forniti all'algoritmo, e l'\emph{output layer}, che produce il risultato ricercato. Al fine di aumentare le capacità di predizione e generalizzazione del modello, tuttavia, risulta spesso necessario prevedere la presenza di uno o più layer intermedi, definiti \emph{hidden layers}. Proprio questi ultimi diventano la discriminante per determinarne l'eventuale appartenenza all'ambito del \textbf{deep learning}, l'ultima sotto-categoria presentata in questa tesi; in caso siano presenti più di tre layer complessivi, infatti, il modello risulta notevolemente più articolato e capace di apprendere e, di conseguenza, rientra in questa definizione.
 
-\begin{figure}[!htb]
-    \centering
-    \includegraphics[width=0.8\linewidth]{images/NN/Struttura_base_DL.png}
-    \caption{Struttura tipica di un algoritmo di Deep Learning\cite{IBM_NN}}
-    \label{fig:DL_struct}
-\end{figure}
+    \begin{figure}[!htb]
+        \centering
+        \includegraphics[width=0.55\linewidth]{images/NN/Struttura_base_DL.pdf}
+        \caption{Struttura tipica di un algoritmo di Deep Learning\cite{IBM_NN}}
+        \label{fig:DL_struct}
+    \end{figure}
 
-Un algoritmo di deep learning, dunque, si basa su un processo di \emph{forward propagation}, che porta ad un elaborazione dei dati forniti in ingresso, andando dall'input layer all'output layer. In questo processo i parametri subiscono varie trasformazioni in funzione di alcune costanti numeriche, definite come pesi e bias, associate ad ogni singolo collegamento tra neuroni, e della cosiddetta funzione di attivazione, in grado di aggiungere non linearità al modello. La capacità di apprendere dai dati stessi autonomamente è legata ad un secondo meccanismo, noto come \emph{backward propagation}, che permette di modificare i pesi ad ogni passo di iterazione nella direzione di minimizzazione dell'errore. Questo è un processo estremamente complesso e delicato, essendo fondamentale per le prestazioni associate al modello. Le criticità che si possono verificare, in particolare, saranno discusse approfonditamente nel seguito. 
+Una rete neurale classica, definita anche \textbf{feed-forward network} e caratterizzata da una struttura analoga a quella osservabile in \emph{Figura} \ref{fig:DL_struct}, si contraddistingue per la presenza di un flusso delle informazioni lineare. Per ogni passo temporale, infatti, ogni layer elabora direttamente quanto prodotto dal layer precedente fino all'ottenimento dei valori ricercati in output, in un processo che prende il nome di \emph{forward propagation}. Questa fase, che rappresenta l'esecuzione vera e propria della rete neurale, può subire delle variazioni, pensate per adattare meglio il processo alla tipologia di problematica affrontata. Questo tema, in particolare, verrà trattato più dettagliatamente alla fine del capitolo, con l'introduzione di diverse architetture elementari alternative. In generale, comunque, la forward propagation si basa sull'utilizzo di due parametri, definiti \emph{pesi} e \emph{bias}, univoci per ogni legame esistente tra i neuroni di due layer contigui, e su una \emph{funzione di attivazione}. Trattandosi di un numero elevatissimo di valori da definire con grande precisione, è impensabile l'utilizzo di tecniche manuali. Proprio in questo processo, definito \emph{backward propagation}, si nasconde la capacità di apprendimento della rete neurale. Tramite degli appositi algoritmi di ottimizzazione, infatti, questi parametri vengono aggiornati ad ogni passo di iterazione, in modo tale da muoversi sempre verso la direzione di minimizzazione dell'errore, misurato attraverso una \emph{funzione obiettivo} specifica. Questa è una fase che risulta essere estremamente delicata e va, pertanto, opportunamente trattata al fine di evitare fenomeni come il \emph{vanishing gradient} o l'\emph{exploding gradient}, che possono impedire l'apprendimento del modello. Facendo riferimento ad un metodo di discesa del gradiente, concetto approfondito più dettagliatamente nel seguito, è possibile schematizzare graficamente il meccanismo di predizione e addestramento di una rete neurale:
+
+    \begin{figure}[!htb]
+        \centering
+        \includegraphics[width=0.7\linewidth, height=7.5cm]{./images/NN/Schema_NN.pdf}
+        \caption{Rappresentazione schematica del funzionamento di una rete neurale}
+        \label{fig:schema_NN}
+    \end{figure}
 
 \subsection{Elementi rete neurale}
 
-Conclusa questa prima introduzione alle reti neurali, di cui una rappresentazione schematica è presentata in \emph{Figura} \ref{fig:DL_struct}, è necessario analizzarne il funzionamento più nel dettaglio, in modo tale da comprendere, anche a livello matematico, come si arriva all'output desiderato. Nelle sezioni che seguiranno, pertanto, verranno descritti e valutati individualmente tutti gli elementi che compongono una rete neurale. 
+All'interno della breve presentazione fatta per le reti neurali sono stati introdotti numerosi termini tecnici, rappresentativi degli elementi del modello. Naturalmente, ognuno di questi ha uno specifico compito all'interno della rete neurale e, al fine di comprenderne appieno il meccanismo di funzionamento, si rende necessario analizzarli singolarmente, evidenziandone il ruolo e le eventuali criticità associate. 
 
 \subsubsection{Neuroni}
 
-Come anticipato, l'entità fondamentale di una rete è il neurone, che risulta concettualmente identico rispetto alla controparte biologica, come si può notare dal confronto mostrato in \emph{Figura} \ref{fig:confronto_neuroni}. Più dettagliatamente, un neurone tradizionale riceve informazioni da altri neuroni tramite i dendriti, le elabora internamente e produce un output sotto forma di impulsi elettrici, trasmessi ad altri elettroni attraverso le sinapsi poste alla fine della coda. Particolare attenzione va riservata al meccanismo di trasmissione delle informazioni, che avviene grazie a dei messaggeri chimici, chiamati \textit{neurotrasmettitori}, rilasciati, in risposta al segnale elettrico, dalle vescicole sinaptiche poste lungo l'assone. 
+Il primo elemento considerato per tale analisi, naturalmente, è proprio il cuore della rete neurale stessa, ovvero il neurone; come si evince dal confronto mostrato in \emph{Figura} \ref{fig:confronto_neuroni}, esso risulta concettualmente identico alla controparte biologica, che riceve informazioni da altri neuroni tramite i dendriti, le elabora internamente e produce un output sotto forma di impulsi elettrici, trasmessi ad altri neuroni attraverso le sinapsi poste alla fine della coda. Particolare attenzione va riservata al meccanismo di trasmissione delle informazioni, che avviene grazie a dei messaggeri chimici, chiamati \textit{neurotrasmettitori}, rilasciati, in risposta al segnale elettrico, dalle vescicole sinaptiche poste lungo l'assone. 
 
 Un neurone artificiale, pur non necessitando della presenza di tutti questi elementi complessi, è in grado di replicare fedelmente il comportamento appena descritto. Ogni neurone, infatti, riceve informazioni da tutti i neuroni del layer antecedente, le elabora tramite l'utilizzo di una funzione lineare e di una funzione di attivazione e produce un singolo output, trasmesso al layer successivo. Naturalmente, analogamente a ciò che avviene nel cervello umano, non tutti i percorsi tra neuroni impattano allo stesso modo per giungere al miglior output possibile. Per tenere conto di ciò, ad ogni connessione è associato uno specifico peso $w_{i}$, determinato durante la fase di apprendimento della rete. 
-
-Un neurone, pertanto, produce un primo output $z$ effettuando una somma pesata degli $n$ valori ricevuti in input:
-
-    \begin{equation}
-        z = \sum_{i=1}^{n} w_{i}*x_{i} + b
-        \label{eq:linear_function}
-    \end{equation}
-
-All'interno di questa relazione, implementata efficacemente in una rete neurale per la prima volta da Rosenblatt all'interno del Perceptron, una rete elementare sviluppata nel 1957, compare anche un termine costante, noto come \textit{bias}. Anch'esso viene modificato durante la fase di addestramento della rete al fine di ottimizzare il risultato del modello, sebbene abbia un impatto inferiore rispetto ai pesi sul risultato complessivo. 
 
     \begin{figure}[!htb]
         \centering
@@ -91,19 +88,28 @@ All'interno di questa relazione, implementata efficacemente in una rete neurale 
                 \includegraphics[width=0.50\linewidth]{images/NN/Neurone_bio_2.png}%
                 }\hfill
         \subfloat[Neurone artificiale]{%
-                \includegraphics[width=0.49\linewidth]{images/NN/Neurone_artificiale_1.png}%
+                \includegraphics[width=0.49\linewidth]{images/NN/Neurone_artificiale.pdf}%
                 }\\[8pt]
 
         \caption{Confronto tra tipologie di neuroni}
         \label{fig:confronto_neuroni}
     \end{figure}
 
+Un neurone, pertanto, produce un primo output $z$ effettuando una somma pesata degli $n$ valori ricevuti in input:
+
+    \begin{equation}
+        z = \sum_{i=1}^{n} w_{i}*x_{i} + b
+        \label{eq:linear_function}
+    \end{equation}
+
+All'interno di questa relazione, implementata efficacemente in una rete neurale per la prima volta da Rosenblatt con il Perceptron, una rete elementare di tipo feed-fworard sviluppata nel 1957, compare anche un termine costante, noto come \textit{bias}. Anch'esso viene modificato durante la fase di addestramento della rete al fine di ottimizzare il risultato del modello, sebbene abbia un impatto inferiore rispetto ai pesi sul risultato complessivo. 
+
 
 \subsubsection{Funzione di attivazione}
 
-Il valore ottenuto della funzione lineare applicata alle informazioni in ingresso al neurone necessita di un ulteriore passaggio prima di essere trasmesso ai layer successivi. Occorre, infatti, normalizzarlo, in modo tale che gli output dei vari neuroni siano confrontabili tra loro. Questa operazione, eseguita grazie ad una funzione di attivazione specifica, inoltre, permette di introdurre una non linearità all'interno della rete neurale, fondamentale per renderla capace di apprendere pattern più complessi.
+Prima di poter trasmettere un output ai layer successivi il valore $z$, ottenuto mediante l'applicazione della funzione lineare alle informazioni in ingresso al neurone, necessita di un ulteriore elaborazione; occorre, infatti, normalizzarlo, in modo tale da rendere confrontabili tra loro gli output dei vari neuroni. Questa operazione, eseguita grazie ad una funzione di attivazione specifica, inoltre, permette di introdurre una non linearità all'interno della rete neurale, fondamentale per renderla capace di apprendere pattern più complessi.
 
-Durante gli anni sono state proposte numerose funzioni di attivazione, via via più sofisticate, nel tentativo di incrementare l'efficacia e la velocità del processo di addestramento, oltre a migliorare le prestazioni complessive della rete. Nel seguito si presentano alcune delle funzioni più efficaci e, di conseguenza, più utilizzate in letteratura, facendo riferimento al lavoro di Rasamoelina et al.\cite{Activation_function}:
+Durante gli anni sono state proposte numerose funzioni di attivazione, via via più sofisticate, nel tentativo di incrementare l'efficacia e la velocità del processo di addestramento e, di conseguenza, migliorare le prestazioni complessive della rete. Nel seguito si presentano alcune delle funzioni più efficaci e più utilizzate in letteratura, facendo riferimento al lavoro di Rasamoelina et al.\cite{Activation_function}:
 
 \begin{itemize}
 
@@ -119,45 +125,43 @@ Durante gli anni sono state proposte numerose funzioni di attivazione, via via p
         \end{equation}
     \end{center}
     
-    Data la sua natura, essa risulta sufficiente per i casi in cui l'obiettivo si basa su segnali di tipo binario ma non indicata quando si cercano pattern complessi o non lineari.
+    Data la sua natura binaria, una simile funzione risulta sufficiente per i casi in cui l'obiettivo consiste nella suddivisione in gruppi discreti ma non indicata quando si cercano pattern complessi o non lineari.
     
-    \item \textbf{Sigmoid}: un modo per superare le limitazioni della threshold function, consiste nel rendere graduale la variazione tra gli estremi dell'intervallo, che resta pari a [0, 1]. In particolare, l'output $Y$ è determinato a partire dal valore $z$ tramite la seguente relazione:
+    \item \textbf{Sigmoid}: una possibile soluzione alternativa alla precedente funzione prevede di introdurre una maggiore gradualità nella variazione tra gli estremi dell'intervallo, che restano sempre pari a [0, 1]. In particolare, l'output $Y$ è determinato a partire dal valore $z$ tramite la seguente relazione:
     
         \begin{equation}
             Y(z) = \sigma (z) = \displaystyle \frac{1}{1 + e^{-z}}
             \label{eq:sigmoid}
         \end{equation}
     
-    Nonostante il miglioramento prestazionale evidente, restano alcune importanti criticità. L'input, infatti, viene ancora compresso in un intervallo molto piccolo e, inoltre, la derivata della funzione risulta essere eccessivamente graduale, portando a problemi di \textit{vanishing gradient}.
+    Nonostante l'evidente miglioramento prestazionale, restano alcune importanti criticità. L'input, infatti, viene ancora compresso in un intervallo molto piccolo e, inoltre, la derivata della funzione risulta essere eccessivamente piccola, portando potenzialmente a problemi di \textit{vanishing gradient}.
 
-    % Parlare potenzialmente l'uso dell'inizializzazione ortogonale dei pesi per ottenere migliori prestazioni
-
-    \item \textbf{Hyperbolic Tangent}: tenendo conto delle criticità riscontrate nella sigmoid function, si è proposta ad una sua evoluzione, contraddistinta da un codominio più ampio, pari a [-1, +1], ed una derivata più ripida:
+    \item \textbf{Hyperbolic Tangent}: nel tentativo di superare le principali criticità riscontrate nella sigmoid function, è stata individuata una evoluzione della stessa, contraddistinta da un codominio più ampio, pari a $[-1, +1]$, e da una derivata tendenzialmente maggiore in modulo:
     
         \begin{equation}
             Y(z) = \text{tanh}(z) = \displaystyle \frac{1}{1 + e^{-2z}} - 1
             \label{eq:hyperbolic}
         \end{equation}
     
-    Ad ogni modo, sebbene ci siano dei passi avanti, questa formulazione non permette di risolvere completamente i problemi riscontrati con le precedenti funzioni. 
+    Ad ogni modo, sebbene dei passi avanti siano evidenti, questa formulazione non permette di risolvere completamente i problemi riscontrati con le precedenti funzioni. 
 
-    \item \textbf{ReLu}: per ottenere significativi miglioramenti, dunque, si è reso necessario cambiare approccio al problema, giungendo ad una funzione caratterizzata da un codominio notevolmente più esteso, potendo l'output $Y$ assumere valori compresi tra [0, $+\infty$], e da una derivata pari a 1 per l'intero dominio:
+    \item \textbf{ReLu}: per ottenere significativi miglioramenti, dunque, si è reso necessario cambiare approccio rispetto al problema, giungendo ad una funzione caratterizzata da un codominio notevolmente più esteso, potendo l'output $Y$ assumere valori compresi tra $[0, +\infty)$, e da una derivata pari a 1 per la parte positiva del dominio:
     
         \begin{equation}
             Y(z) = max(0, z)
             \label{eq:Relu}
         \end{equation}
     
-    Data l'estrema semplicità e le elevate prestazioni associate, questa funzione risulta essere la più impiegata, nonostante non sia esente da problematiche, la più rilevante delle quali è il \textit{dying ReLu}. Trasformando in 0 tutti i valori negativi, infatti, si può arrivare ad un effetto a catena che porta, infine, ad un appiattimento sul valore nullo dell'intera rete.
-
-    \item \textbf{Parametric Leaky ReLu}: nel tentativo di ridurre o persino eliminare il problema del dying ReLu, si è proposta l'introduzione di un termine aggiuntivo alla formulazione classica, vista in \ref{eq:Relu}:
+    Data l'estrema semplicità e le elevate prestazioni associate, questa funzione si rivela essere la più impiegata in letteratura, nonostante non sia esente da problematiche; la più rilevante, in particolare, consiste nel cosiddetto \textit{dying ReLu}. In presenza di molteplici input negativi, a causa dell'elaborazione mediante la funzione di attivazione che produce un output nulllo per i singoli neuroni, risulta possibile l'innesco di un effetto a catena, che conduce, infine, ad una drastica riduzione della capacità di apprendimento della rete.   
+    
+    \item \textbf{Parametric Leaky ReLu}: nel tentativo di ridurre o persino eliminare il problema del dying ReLu, è stata proposta in letteratura l'introduzione di un termine aggiuntivo alla formulazione classica, associata alla relazione matematica mostrata in (\ref{eq:Relu}):
     
         \begin{equation}
             Y(z) = max(0, z) + \alpha * min(0, z)
             \label{eq:Leaky_Relu}
         \end{equation}
 
-    La presenza del coefficiente $\alpha$ consente, infatti, di ottenere un valore non nullo di $Y$ anche nei casi in cui l'input $z$ è negativo, senza perdere nessuno dei vantaggi associati alla funzione di attivazione tradizionale. Questo parametro, inoltre, può essere reso variabile, permettendo alla rete di selezionare il valore più adatto direttamente durante la fase di addestramento. 
+    La presenza del coefficiente $\alpha$ consente, infatti, di ottenere un valore non nullo di $Y$ anche nei casi in cui l'input $z$ è negativo, senza perdere nessuno dei vantaggi associati alla funzione di attivazione tradizionale. Questo parametro, inoltre, può essere reso variabile, permettendo alla rete di selezionarne il valore più adatto direttamente durante la fase di addestramento. 
     
     \item \textbf{Exponential Linear Unit}: al fine di migliorare ulteriormente il concetto della Parametric ReLu, nel lavoro di Clevert et al.\cite{ELU} è stato presentato un approccio che permette di trasformare i valori negativi di $z$ tramite l'utilizzo di una funzione esponenziale:
     
@@ -166,16 +170,16 @@ Durante gli anni sono state proposte numerose funzioni di attivazione, via via p
             \label{eq:ELU}
         \end{equation}
 
-    Una formulazione simile consente allo stesso tempo di ottenere un'estensione del codominio, con $Y$ che può assumere valori nell'intervallo [-1, $+\infty$] con una variazione più graduale rispetto al caso tradizionale, e una derivata non più nulla o costante nella parte negativa del dominio. Anche in questo caso, inoltre, il parametro $\alpha$ può essere reso apprendibile dalla rete. 
+    Una formulazione simile consente, allo stesso tempo, di ottenere un'estensione del codominio, con $Y$ che può assumere valori nell'intervallo $[-1, +\infty)$, una variazione più graduale della funzione rispetto al caso di riferimento, e una derivata non più nulla o costante nella parte negativa del dominio. Anche in questo caso, inoltre, il parametro $\alpha$ può essere soggetto ad un processo di regolazione autonoma da parte della rete neurale. 
 
-    \item \textbf{Swish}: questa funzione, sviluppata recentemente tramite l'utilizzo di reinforcement learning, si discosta significativamente da quelle presentate fino ad ora, essendo non monotona:
+    \item \textbf{Swish}: questa funzione, sviluppata recentemente tramite l'utilizzo di tecniche di reinforcement learning, si discosta significativamente da quelle presentate finora, essendo caratterizzata da un comportamento non monotono:
     
         \begin{equation}
             Y(z) = \displaystyle \frac{z}{1 + e^{-z}}
             \label{eq:Swish}
         \end{equation}
 
-    Seppur presenti un codominio molto simile a quello caratterizzante le ReLu, la particolare formulazione utilizzata porta la funzione ad avere un punto di minimo, che rappresenta il limite inferiore del codominio stesso, per un valore di $z$ leggermente negativo che, pertanto, non coincide con il limite inferiore del dominio.  
+    Seppur presenti un codominio molto simile a quello tipico di una ReLu, la particolare formulazione utilizzata porta la funzione ad avere un punto di minimo, rappresentante il limite inferiore del codominio stesso, in corrispondenza di un valore di $z$ leggermente negativo e che, pertanto, non coincide con il limite inferiore del dominio.  
     
 \end{itemize}
 
