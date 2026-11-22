@@ -1,10 +1,37 @@
 
-\chapter{Conclusioni}
+\chapter{Presentazione risultati}
 
-% Discutere di possibili miglioramenti futuri --> test su drone reale --> inserimento di altri algoritmi presentati come quelli per correggere DVL o calibrazione iniziale sensori
+% Parte per sezione del Capitolo 3
+%Tenendo conto di quanto descritto nei precedenti capitoli, è ora possibile procedere con l'effettiva implementazione della rete neurale NavNet. Almeno in un primo momento si è scelto di mantere inalterata l'architettura originaria, con la sola aggiunta di uno \emph{scheduler}, una struttura che consente di ridurre il learning rate di uno specifico fattore $k$ in assenza di un miglioramento dell'errore per più epoche di addestramento consecutive. Come indicato 
+
+Nel corso dei precedenti capitoli, sono state fornite le informazioni necessarie a comprendere le ragioni dietro la scelta dell'architettura neurale NavNet ed è stata descritta l'effettiva struttura implementata in questo lavoro di tesi, è stato discusso il procedimento seguito per la generazione e l'elaborazione del dataset e sono state individuate le misurazioni che, non essendo correlate in maniera significativa alle componenti di spostamento in assi body, possono essere eliminate a monte dell'esecuzione del modello. Terminato, quindi, il lungo e articolato processo di preparazione della rete neurale, non resta che valutarne effettivamente le prestazioni. 
+
+% Qui mancherebbe una descrizione del processo di aggiornamento della posizione seguito e un'introduzione alla variabilità delle configurazioni
+Questa analisi si apre, nel dettaglio, con la discussione dei risultati prodotti dall'addestramento e dalla conseguente fase di feedforward del modello, nella sua versione originiaria, descritta nel Capitolo 3. Successivamente, sulla base dei concetti teorici discussi, è stato svolto uno studio di sensibilità, al fine di individuare possibili miglioramenti rispetto alla prima versione. Nel dettaglio, in questa trattazione si è scelto di prendere in considerazione prevalentemente variazioni della dimensionalità della rete neurale, dal punto di vista della hidden size di ogni LSTM, del numero di rami capaci di lavorare in parallelo per giungere alla stima finale e del numero di fully connected layers impiegati per sintetizzare le relazioni individuate fino a quel momento. Inoltre, diverse loss function sono state valutate. Naturalmente, questa analisi non può ritenersi esaustiva di ogni possibile variante del modello originario, che potenzialmente sono infinite.
+
+Nello specifico, in analogia con quanto tipicamente avviene nelle pubblicazioni relative a questo settore, almeno in fase di valutazione preliminare, si è scelto di presentare i risultati in termini di \emph{Root Mean Squared Error (RMSE)} sulla posizione espressa in assi NED locali. Per garantire una maggiore chiarezza espositiva, dato l'elevato numero di missioni considerate per la validazione e il test, si è deciso, inoltre, di considerare unicamente una media globale dell'RMSE. Naturalmente, per le configurazioni della rete neurale giudicate più interessanti, verranno presentati anche gli RMSE caratteristici di ogni missione e una rappresentazione grafica delle traiettorie effettivamente seguite dal drone.  
+
+\section{Valutazione architettura di base}
+
+Nel concreto, il primo passo consiste nella definizione dei due iperparametri ancora non definiti: la dimensione del batch in cui suddividere i dati e il numero di epoche di addestramento. 
+
+% Specificare se viene fatto con il dataset completo o meno --> valutare se cambia qualcosa nei risultati
+In merito al primo parametro, in particolare, nel Capitolo 2 sono già state identificate delle possibili limitazioni per valori numerici eccessivamente alti o bassi; sulla base di queste indicazioni, quindi, si prendono in considerazione solamente 3 valori: 16, 32, 64. Per ognuno di questi, è stato effettuato un addestramento della rete neurale, utilizzando la struttura base e un numero di epoche pari a 100, valore puramente indicativo non avendo ancora selezionato quello definitivo. I risultati, presentati in \emph{Figura} xx, evidenziano la chiara superiorità della versione più bilanciata, associata ad una batch size di 32 elementi. 
+
+% Inserire figura del box plot e presentare se serve tabella riassuntiva (se si sceglie di non mettere i valori numerici in figura)
+
+Per quanto riguarda il secondo parametro, invece, sulla base delle informazioni indirettamente ricavate dalla precedente analisi, si è identificato in $N_{\text{epoche}} = 60$ un compromesso ottimale, capace di garantire i migliori risultati possibili senza necessitare di un tempo di addestramento eccessivo. Quanto appena affermato, è corroborato proprio dalle curve di variazione della loss function per ogni epoca, mostrate all'interno della \emph{Figura} xx. In corrispondenza proprio del valore prescelto, infatti, si osserva un appiattimento delle curve, specialmente di quella associata alla validazione, responsabile proprio dell'aggiornamento dei parametri.   
+
+% Inserire grafico loss con almeno 90 epoche
+
+La valutazione delle prestazioni della rete neurale con l'utilizzo di 60 epoche di addestramento fornisce, poi, un'ulteriore conferma a supporto della scelta fatta; si osservano, infatti, valori di RMSE medio del tutto identici a quelli mostrati in \emph{Figura} xx. 
+
+Fissati tutti i parametri della rete neurale, occorre procedere con una verifica sperimentale della correttezza delle conclusioni a cui si è giunti a valle dell'analisi di correlazione. 
 
 
-Per quanto riguarda le traiettorie del paper, in particolare, sono forniti i seguenti errori medi sulla posizione: 
+
+% QUesto è da indicare indirettamente mettendo i risultati a fianco di una tabella dettagliata riassuntiva della struttura base
+%Per quanto riguarda le traiettorie del paper, in particolare, sono forniti i seguenti errori medi sulla posizione: 
 
 \small
 \renewcommand{\arraystretch}{1.10}       % Riduce l'altezza delle righe 
