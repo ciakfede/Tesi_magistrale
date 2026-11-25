@@ -19,7 +19,7 @@ from Analisi_statistica import StatisticalAnalysis              # Raccolta funzi
     Per cambiare i metodi usati per il processing dei DataFrame o per l'analisi statistica occorre cambiare le liste presenti nella fase di inizializzazione delle variabili'''
 
 # Funzione per la creazione della tabella riassuntiva con tutti i coefficienti medi per la tesi --> li salva successivamente in un file di testo
-def tabella_tesi(storico_coppie_medie, ROOT_DIR):
+def tabella_tesi_old(storico_coppie_medie, ROOT_DIR):
 
     print(f'\nGenerazione e salvataggio della tabella per Latex in corso:')
 
@@ -92,6 +92,96 @@ def tabella_tesi(storico_coppie_medie, ROOT_DIR):
             f.write(linea_dati)
 
         f.write(r"\end{tabularx}" + "\n")
+        f.write(r"\endgroup")
+
+    print(f'Generazione e salvataggio tabella completato.')
+
+    return data_frame_finale
+
+
+def tabella_tesi(storico_coppie_medie, ROOT_DIR):
+
+    print(f'\nGenerazione e salvataggio della tabella per Latex in corso:')
+
+    percorso_file = os.path.join(ROOT_DIR, 'Risultati_analisi_statistica', 'Tabella_riassuntiva_Latex.txt')
+
+    # Protezione caratteri speciali LaTeX (applicata a ciascuna variabile separatamente)
+    def escape_latex(testo):
+        testo = testo.replace('%', r'\%')
+        testo = testo.replace('_', r'\_')
+        testo = testo.replace('ω', r'$\omega$')
+        return testo.strip()
+
+    with open(percorso_file, "a", encoding="utf-8") as f:
+        f.write("\n" + "=" * 60 + "\n")
+        f.write(f"CODICE LATEX COMPLETO PER LA GENERAZIONE DI UNA TABELLA RIASSUNTIVA\n")
+        f.write("=" * 60 + "\n\n")
+
+        righe_tabella = []
+
+        # 1. Identificazione coppie uniche
+        tutte_le_coppie = set()
+        for gestione in storico_coppie_medie.values():
+            for statistica in gestione.values():
+                tutte_le_coppie.update(statistica.keys())
+
+        tutte_le_coppie = sorted(list(tutte_le_coppie))
+
+        # 2. Costruzione righe (la relazione viene separata nelle due variabili)
+        for coppia in tutte_le_coppie:
+            if '<->' in coppia:
+                var_sx, var_dx = coppia.split('<->', 1)
+            else:
+                var_sx, var_dx = coppia, ''
+
+            riga = {
+                'Relazione': coppia,
+                'Var_1': escape_latex(var_sx),
+                'Var_2': escape_latex(var_dx),
+                'P_Res': storico_coppie_medie.get('resampling', {}).get('pearson', {}).get(coppia, 0),
+                'S_Res': storico_coppie_medie.get('resampling', {}).get('spearman', {}).get(coppia, 0),
+                'P_Int': storico_coppie_medie.get('interpolazione', {}).get('pearson', {}).get(coppia, 0),
+                'S_Int': storico_coppie_medie.get('interpolazione', {}).get('spearman', {}).get(coppia, 0)
+            }
+            righe_tabella.append(riga)
+
+        data_frame_finale = pd.DataFrame(righe_tabella)
+
+        # 3. COSTRUZIONE MANUALE DEL CODICE LATEX
+        # Colonne: [var sx (r)] [freccia (c)] [var dx (l)] | Pearson Spearman | Pearson Spearman
+        specifica_colonne = r"|r@{\ }c@{\ }l|cc|cc|"
+
+        f.write(r"\begingroup" + "\n")
+        f.write(r"\footnotesize" + "\n")
+        f.write(r"\begin{longtable}{" + specifica_colonne + "}\n")
+        f.write(r"\caption{Analisi comparativa dei risultati medi}" + "\n")
+        f.write(r"\label{tab:analisi_correlazione} \\" + "\n")
+        f.write(r"\hline" + "\n")
+        f.write(r"\multicolumn{3}{|c|}{\textbf{Relazione}} & \multicolumn{2}{c|}{\textbf{Resampling}} & \multicolumn{2}{c|}{\textbf{Interpolazione}} \\" + "\n")
+        f.write(r"\cline{4-7}" + "\n")
+        f.write(r"\multicolumn{3}{|c|}{} & \textbf{Pearson} & \textbf{Spearman} & \textbf{Pearson} & \textbf{Spearman} \\" + "\n")
+        f.write(r"\hline" + "\n")
+        f.write(r"\endfirsthead" + "\n")
+
+        # Gestione pagine successive
+        f.write(r"\multicolumn{7}{|c|}{{Continua dalla pagina precedente}} \\" + "\n")
+        f.write(r"\hline" + "\n")
+        f.write(r"\multicolumn{3}{|c|}{\textbf{Relazione}} & \textbf{Pearson} & \textbf{Spearman} & \textbf{Pearson} & \textbf{Spearman} \\" + "\n")
+        f.write(r"\hline" + "\n")
+        f.write(r"\endhead" + "\n")
+
+        f.write(r"\hline \multicolumn{7}{|r|}{{Continua nella pagina successiva}} \\ \hline" + "\n")
+        f.write(r"\endfoot" + "\n")
+        f.write(r"\hline \endlastfoot" + "\n")
+
+        # Aggiunta dei dati
+        for _, row in data_frame_finale.iterrows():
+            linea_dati = (fr"{row['Var_1']} & $\longleftrightarrow$ & {row['Var_2']} & "
+                          fr"{row['P_Res']:.3f} & {row['S_Res']:.3f} & "
+                          fr"{row['P_Int']:.3f} & {row['S_Int']:.3f} \\" + "\n")
+            f.write(linea_dati)
+
+        f.write(r"\end{longtable}" + "\n")
         f.write(r"\endgroup")
 
     print(f'Generazione e salvataggio tabella completato.')

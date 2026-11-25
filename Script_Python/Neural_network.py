@@ -146,7 +146,7 @@ class Dataset(torch.utils.data.Dataset):
                                     sensor_name = 'REF'
                                     if sensor_name not in network_config:
                                         continue
-                                elif network_config['IMU'] == 8 or network_config['IMU'] == 9 or network_config['IMU'] == 10:
+                                elif network_config['IMU'] == 8 or network_config['IMU'] == 9 or network_config['IMU'] == 10 or network_config['IMU'] == 15:
                                     sensor_name = 'IMU'
                                     temp_tensor_slice = single_second_batches_list[sensor_name]
                                     first_ref_encounter = False

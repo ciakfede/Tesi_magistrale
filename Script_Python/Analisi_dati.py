@@ -1178,6 +1178,27 @@ class PostProcessing:
 
         self.mean_values_dict = {}          # Dizionario che permette di immagazzinare i valori medi di ogni componente di errore (RMSE e Delta finale) per ogni missione e per ogni versione della rete --> nella forma {'v3.0.1': {('0', '1'): {'RMSE_E': val, 'RMSE_N': val, ... }}, 'v3.0.2': {}, ...}
 
+        self.percentile_levels = (10, 90)  # Percentili (inferiore, superiore) calcolati insieme a media e mediana --> modificabili da qui (es. (5, 95))
+
+        self.stats_values_dict = {}  # Dizionario che affianca mean_values_dict con mediana e percentili di ogni componente di errore --> nella forma {'v3.0.1': {('0', '1'): {'RMSE_E': {'mean': val, 'median': val, 'p10': val, 'p90': val}, ...}}, ...}
+
+        self.metrics_dict = {"RMSE": {"RMSE_E": "RMSE East", "RMSE_N": "RMSE North", "RMSE_tot": "RMSE complessivo"},
+                             "Delta": {"Delta_E": "Delta East finale", "Delta_N": "Delta North finale", "Delta_tot": "Delta tot finale"}}
+
+        self.aggregate_keys = ('training_missions', 'test_missions', 'total_missions')  # Chiavi delle missioni aggregate --> sono le sole per cui hanno senso ECDF, strip plot e bootstrap
+
+        self.sort_versions = True  # Se True le versioni sono ordinate in modo numerico (v1.1.0, v1.1.1, ...) nei grafici di confronto, altrimenti si usa l'ordine di lettura dal file di testo
+
+        # Colori associati alle versioni (slot della palette categorica) --> assegnati in ordine fisso, quindi una versione ha sempre lo stesso colore in tutti i grafici
+        self.version_colors = ['#257de0', '#f47230', '#00b894', '#f2a600', '#ee7fac', '#008a17', '#6a4ce2', '#ec4647']
+
+        #self.bootstrap_n = 10000  # Numero di ricampionamenti del bootstrap
+        #self.bootstrap_ci = 95  # Livello di confidenza degli intervalli [%]
+        #self.bootstrap_seed = 0  # Seed per la riproducibilità dei risultati
+
+        self.bootstrap_values_dict = {}  # Dizionario con gli intervalli di confidenza calcolati --> nella forma {chiave missione: {metrica: {versione: {'Mediana': (stima, low, high), ...}}}}
+
+
     # ======================================================
     #       DEFINIZIONE WAYPOINTS E TRAIETTORIE IDEALI
     # ======================================================
@@ -1888,7 +1909,7 @@ class PostProcessing:
         plt.close()
 
     # Funzione che genera un grafico dell'evoluzione dell'errore in ogni istante dati i valori di posizione del GPS e quelli prodotti dalla rete --> occorre prevedere un meccanismo che la attivi unicamente
-    def error_evolution_plot(self, GPS_coordinates_list, NN_coordinates_list, mission, path_name, title, ROOT_DIR):
+    def error_evolution_plot_old(self, GPS_coordinates_list, NN_coordinates_list, mission, path_name, title, ROOT_DIR):
 
         # Si inizializza il percorso del file di output che verrà generato
         OUTPUT_FOLDER_PATH = os.path.join(ROOT_DIR, f'Risultati_NN/Evoluzione_errore')
@@ -1919,6 +1940,58 @@ class PostProcessing:
         plt.savefig(output_file_path, bbox_inches='tight')
         plt.close()
 
+    # Seconda versione della funzione error_evolution_plot --> linea continua dell'errore di posizione con un triangolino in corrispondenza di ogni istante di aggiornamento della rete
+    # Di default la rete produce una stima ogni secondo (batch_size_test = 1, coincidente con il GPS a 1 Hz) --> update_period = 1 mette un triangolino su ogni campione
+    #   update_period: si marca un campione ogni update_period (es. update_period = 5 --> un triangolino ogni 5 secondi)
+    #   update_times: lista opzionale di istanti [s] (relativi all'inizio del percorso) in cui marcare gli aggiornamenti --> se fornita ha la precedenza su update_period
+    #   dt: passo temporale [s] tra due campioni consecutivi (batch_size_test * 1 s)
+    def error_evolution_plot(self, GPS_coordinates_list, NN_coordinates_list, mission, path_name, title, ROOT_DIR, update_period=1, update_times=None, dt=1.0):
+
+        # Si inizializza il percorso del file di output che verrà generato --> nome diverso dalla prima versione per non sovrascrivere i file
+        OUTPUT_FOLDER_PATH = os.path.join(ROOT_DIR, f'Risultati_NN/Evoluzione_errore')
+        os.makedirs(OUTPUT_FOLDER_PATH, exist_ok=True)
+        output_file_path = os.path.join(OUTPUT_FOLDER_PATH,
+                                        f'Evoluzione_errore_aggiornamenti_M{mission}_{path_name}.pdf')
+
+        # Si trasformano le liste di tensori in array numpy --> in modo da poter effettuare operazioni matematiche vettoriali
+        GPS_coordinates_array = torch.cat(GPS_coordinates_list, dim=0).cpu().numpy()
+        NN_coordinates_array = torch.cat(NN_coordinates_list, dim=0).cpu().numpy()
+
+        # Si calcola l'errore di posizione assoluto in ogni istante e il relativo vettore dei tempi [s]
+        err = np.linalg.norm(GPS_coordinates_array - NN_coordinates_array, axis=1)
+        if err.size == 0:
+            print(
+                f"  [WARNING] Nessun campione disponibile per {mission} - {path_name}: grafico di evoluzione dell'errore non generato.")
+            return self
+        time = np.arange(len(err)) * dt
+
+        # Si individuano gli indici dei campioni corrispondenti agli istanti di aggiornamento
+        if update_times is None:
+            update_idx = np.arange(0, len(err), max(int(update_period), 1))
+        else:
+            update_idx = np.unique(
+                np.clip(np.rint(np.asarray(update_times, dtype=float) / dt).astype(int), 0, len(err) - 1))
+
+        fig, ax = plt.subplots(figsize=(10, 6))
+
+        # Linea continua dell'errore + triangolini (marker pieni con bordo scuro) negli istanti di aggiornamento
+        ax.plot(time, err, color='blue', linewidth=1.5, linestyle='-', label='Position error')
+        ax.plot(time[update_idx], err[update_idx], linestyle='none', marker='^', markersize=6,
+                markerfacecolor='blue',
+                markeredgecolor='black', markeredgewidth=0.6, zorder=3, label='NavNet update')
+
+        # Definizione parametri grafico
+        ax.set_title(title, fontdict=self.title_font, loc="center", pad=10)
+        ax.set_xlabel('Time [s]', fontdict=self.axis_font)
+        ax.set_ylabel('Position Error [m]', fontdict=self.axis_font)
+        ax.legend()
+        ax.minorticks_on()
+        ax.grid(True, linestyle=':', alpha=0.5)
+
+        fig.savefig(output_file_path, bbox_inches='tight')
+        plt.close(fig)
+
+        return self
 
     # Funzione che permette di stampare il grafico relativo alla loss function durante il training
     def plot_loss_function(self, loss_train, loss_val, epoche, ROOT_DIR, titolo='Evoluzione della Loss function'):
@@ -2040,7 +2113,7 @@ class PostProcessing:
         return self
 
     # Funzione interna per la creazione dei box plot, utili per confrontare la distribuzione dei valori di errore (e non solo il valore medio) tra le varie versioni della rete
-    def box_plot_old(self, ROOT_DIR, metric_groups=("RMSE",)):
+    def box_plot_old_old(self, ROOT_DIR, metric_groups=("RMSE",)):
 
         highlight_best = False
 
@@ -2164,7 +2237,7 @@ class PostProcessing:
 
         return self
 
-    def box_plot(self, ROOT_DIR, metric_groups=("RMSE",)):
+    def box_plot_old(self, ROOT_DIR, metric_groups=("RMSE",)):
 
         highlight_best = False
 
@@ -2334,8 +2407,204 @@ class PostProcessing:
 
         return self
 
+
+    @staticmethod
+    def _distribution_stats1(values, percentile_levels=(10, 90)):
+
+        values = np.asarray(values, dtype=float)
+        values = values[np.isfinite(values)]
+
+        # Se non ci sono valori validi si restituiscono tutti NaN --> le chiavi dei percentili sono nella forma 'p10', 'p90'
+        if values.size == 0:
+            return {'mean': np.nan, 'median': np.nan, **{f"p{int(p)}": np.nan for p in percentile_levels}}
+
+        stats = {'mean': float(np.mean(values)), 'median': float(np.median(values))}
+        for p, value in zip(percentile_levels, np.percentile(values, percentile_levels)):
+            stats[f"p{int(p)}"] = float(value)
+
+        return stats
+
+    # Funzione interna che produce la riga di testo con mediana e percentili di una metrica (da scrivere sotto la riga della media in NN_mean_metrics_evaluation.txt)
+    def _stats_line1(self, iteration_key, group_key, data_key, indent="        "):
+
+        stats = self.stats_values_dict[iteration_key][group_key][data_key]
+        p_low, p_high = self.percentile_levels
+
+        return f"{indent}(mediana: {stats['median']}  |  P{int(p_low)}: {stats[f'p{int(p_low)}']}  |  P{int(p_high)}: {stats[f'p{int(p_high)}']})\n"
+
+    def box_plot1(self, ROOT_DIR, metric_groups=("RMSE",)):
+
+        highlight_best = False
+
+        # Dimensione (in pt) del font dei valori di mediana e media scritti sopra ogni grafico --> aumentarla per le presentazioni
+        stats_fontsize = 14
+
+        # Si scelgono le metriche da rappresentare --> stessa struttura usata per i grafici a barre (per aggiungere i Delta basta passare metric_groups=("RMSE", "Delta"))
+        metrics_dict = {"RMSE": {"RMSE_E": "RMSE East", "RMSE_N": "RMSE North", "RMSE_tot": "RMSE complessivo"},
+                        "Delta": {"Delta_E": "Delta East finale", "Delta_N": "Delta North finale",
+                                  "Delta_tot": "Delta tot finale"}}
+
+        # Colori degli outlier --> pallini pieni sul tono del blu (riempimento coerente con le scatole, bordo piu' scuro per renderli leggibili)
+        outlier_face_color = 'tab:blue'
+        outlier_edge_color = 'navy'
+
+        # Si genera un nuovo dizionario avente come chiave le missioni --> a ognuna si associa, per ogni metrica, una lista di tuple (chiave iterazione, lista dei valori grezzi)
+        values_dict = {}
+        for iteration_key, version_dict in self.raw_values_dict.items():
+
+            for mission_key, mission_dict in version_dict.items():
+
+                if mission_key not in values_dict:
+                    values_dict[mission_key] = {}
+
+                for metric_key, raw_values in mission_dict.items():
+
+                    if metric_key not in values_dict[mission_key]:
+                        values_dict[mission_key][metric_key] = []
+                    values_dict[mission_key][metric_key].append((iteration_key, raw_values))
+
+        for plot_key in metric_groups:
+
+            metrics = metrics_dict[plot_key]
+
+            # Si crea una sottocartella per ogni metrica --> separata da quella dei grafici a barre per non sovrascrivere i file
+            PLOT_FOLDER_PATH = os.path.join(ROOT_DIR, 'Risultati_NN', 'Evaluation_metrics_analysis', 'Box_plot',
+                                            plot_key)
+            os.makedirs(PLOT_FOLDER_PATH, exist_ok=True)
+
+            # Per ogni chiave di missione si definisce un grafico differente
+            for mission_key, mission_dict in values_dict.items():
+
+                # Si inizializza l'ambiente grafico con la stessa impaginazione dei grafici a barre
+                fig = plt.figure(figsize=(20, 12), layout='constrained')
+                gs = fig.add_gridspec(2, 4)
+                axis = [fig.add_subplot(gs[0, 0:2]), fig.add_subplot(gs[0, 2:4]), fig.add_subplot(gs[1, 1:3])]
+
+                # Si definisce il titolo del grafico complessivo
+                if mission_key == 'test_missions':
+                    fig_name, fig_title = f"{plot_key}_boxplot_test_missions.pdf", f"Distribuzione {plot_key.upper()} sulle missioni di test"
+                elif mission_key == 'training_missions':
+                    fig_name, fig_title = f"{plot_key}_boxplot_training_missions.pdf", f"Distribuzione {plot_key.upper()} sulle missioni di training"
+                elif mission_key == 'total_missions':
+                    fig_name, fig_title = f"{plot_key}_boxplot_total_missions.pdf", f"Distribuzione {plot_key.upper()} su tutte le missioni"
+                elif isinstance(mission_key, tuple):
+                    fig_name, fig_title = f"{plot_key}_boxplot_{mission_key[0]}_{mission_key[1]}.pdf", f"Distribuzione {plot_key.upper()} sulla missione {mission_key[0]} - {mission_key[1]}"
+                else:
+                    fig_name, fig_title = f"{plot_key}_boxplot_{mission_key}.pdf", f"Distribuzione {plot_key.upper()} sulla missione {mission_key}"
+
+                fig.suptitle(fig_title, **self.title_font)
+
+                fliers_shown = False  # Diventa True se almeno un subplot mostra gli outlier --> serve a decidere se inserirli in legenda
+
+                for ax, (metric, axis_title) in zip(axis, metrics.items()):
+
+                    # Si estraggono le versioni con almeno un valore valido --> si scartano eventuali NaN/inf (es. versioni con training divergente)
+                    versions, samples = [], []
+                    for version, raw_values in mission_dict.get(metric, []):
+                        valid_values = np.asarray(raw_values, dtype=float)
+                        valid_values = valid_values[np.isfinite(valid_values)]
+                        if valid_values.size > 0:
+                            versions.append(version)
+                            samples.append(valid_values)
+
+                    if not samples:
+                        print(
+                            f"  [WARNING] Nessun valore valido per la missione {mission_key} e la metrica {metric}: grafico non generato.")
+                        ax.set_axis_off()
+                        continue
+
+                    # Per le singole missioni ci sono solo 4 valori per versione --> si mostrano i punti reali al posto degli outlier
+                    few_samples = max(len(s) for s in samples) <= 10
+                    fliers_shown = fliers_shown or not few_samples
+
+                    # Si inizializza il box plot --> ogni scatola e' una versione, con baffi a 1.5 IQR, mediana (linea nera) e media (rombo bianco)
+                    # Gli outlier sono pallini pieni (riempimento blu, bordo blu scuro)
+                    box_plot = ax.boxplot(samples, positions=range(len(samples)), widths=0.6, patch_artist=True,
+                                          showmeans=True, showfliers=not few_samples,
+                                          medianprops=dict(color='black', linewidth=1.5),
+                                          meanprops=dict(marker='D', markerfacecolor='white', markeredgecolor='black',
+                                                         markersize=4),
+                                          flierprops=dict(marker='o', markersize=4, markerfacecolor=outlier_face_color,
+                                                          markeredgecolor=outlier_edge_color, markeredgewidth=0.5,
+                                                          linestyle='none', alpha=0.8))
+
+                    # Ogni scatola ha il colore blu --> si evidenzia in verde la versione con la mediana minore
+                    for box in box_plot['boxes']:
+                        box.set_facecolor('tab:blue')
+                        box.set_edgecolor('black')
+
+                    if highlight_best:
+                        box_plot['boxes'][int(np.argmin([np.median(s) for s in samples]))].set_facecolor('tab:green')
+
+                    # Se i campioni sono pochi si sovrappongono i singoli valori con una piccola dispersione orizzontale (seed fisso per riproducibilita')
+                    if few_samples:
+                        rng = np.random.default_rng(0)
+                        for i, s in enumerate(samples):
+                            ax.scatter(i + rng.uniform(-0.12, 0.12, size=len(s)), s, s=14, color='black', alpha=0.7,
+                                       zorder=3)
+
+                    # Si calcolano media, mediana e percentili (10° e 90°) di ogni versione (sugli stessi campioni usati dal box plot) e li si scrivono in quattro righe sopra il grafico,
+                    # allineate in orizzontale alla scatola corrispondente --> fuori dall'area dei dati, quindi senza sovrapposizioni con baffi e outlier
+                    stats = [self._distribution_stats(s, self.percentile_levels) for s in samples]
+                    stats_font = {**self.axis_font, 'size': stats_fontsize}
+
+                    # Trasformazione mista: x in coordinate dati (posizione della scatola), y in coordinate relative all'asse (1 = bordo superiore del grafico)
+                    # Le due righe sono distanziate dal bordo in punti (non in frazione dell'asse) --> restano ben separate anche cambiando stats_fontsize
+                    x_data_y_axes = ax.get_xaxis_transform()
+                    # Quattro righe (dal basso verso l'alto): percentile inferiore, media, mediana, percentile superiore --> (intestazione, chiave del dizionario delle statistiche, peso del font dei valori)
+                    p_low, p_high = int(self.percentile_levels[0]), int(self.percentile_levels[1])
+                    stats_rows = [(f"P{p_low}", f"p{p_low}", 'normal'), ('Media', 'mean', 'bold'),
+                                  ('Mediana', 'median', 'bold'), (f"P{p_high}", f"p{p_high}", 'normal')]
+                    row_offset = {label: (1.0 + 1.4 * k) * stats_fontsize for k, (label, _, _) in enumerate(stats_rows)}
+
+                    for i, sample_stats in enumerate(stats):
+                        for label, stat_key, weight in stats_rows:
+                            ax.annotate(f"{sample_stats[stat_key]:.2f}", xy=(i, 1.0), xycoords=x_data_y_axes,
+                                        xytext=(0, row_offset[label]),
+                                        textcoords='offset points', ha='center', va='center', annotation_clip=False,
+                                        **{**stats_font, 'weight': weight})
+
+                    # Intestazioni delle righe, a sinistra del bordo del grafico
+                    for label, offset in row_offset.items():
+                        ax.annotate(label, xy=(0, 1.0), xycoords='axes fraction', xytext=(-8, offset),
+                                    textcoords='offset points', ha='right', va='center', annotation_clip=False,
+                                    **{**stats_font, 'weight': 'bold' if label == 'Mediana' else 'normal'})
+
+                    # Si definiscono i parametri associati agli assi di ogni subplot --> etichette delle versioni ruotate a 45 gradi come nella versione originale
+                    ax.set_xticks(range(len(versions)))
+                    ax.set_xticklabels([f"v{version}" for version in versions], rotation=45, fontdict=self.axis_font)
+                    ax.set_ylabel(f"{metric} [m]", fontdict=self.axis_font)
+                    ax.set_title(f"Distribution {axis_title}", fontdict=self.axis_font,
+                                 pad=(2.0 + 1.4 * (len(stats_rows) - 1)) * stats_fontsize)
+
+                    log_grid = False
+                    if log_grid:
+                        ax.set_yscale('log')
+                        ax.grid(axis='y', which='both', alpha=0.3)
+                    else:
+                        ax.grid(axis="y", alpha=0.3)
+
+                # Si usa lo spazio libero in basso a destra della griglia per la legenda --> la voce "Mediana minore" compare solo se l'evidenziazione e' attiva
+                legend_handles = [Line2D([0], [0], color='black', linewidth=1.5, label='Mediana'),
+                                  Line2D([0], [0], marker='D', color='w', markerfacecolor='white',
+                                         markeredgecolor='black', markersize=6, label='Media')]
+                if fliers_shown:
+                    legend_handles.append(Line2D([0], [0], marker='o', color='w', markerfacecolor=outlier_face_color, markeredgecolor=outlier_edge_color, markersize=6, label='Outlier'))
+                if highlight_best:
+                    legend_handles.append(Line2D([0], [0], marker='s', color='w', markerfacecolor='tab:green', markersize=9, label='Mediana minore'))
+
+                legend_ax = fig.add_subplot(gs[1, 3])
+                legend_ax.set_axis_off()
+                legend_ax.legend(handles=legend_handles, loc='center', frameon=False)
+
+                # Si salva il grafico e si chiude la figura per liberare memoria
+                fig.savefig(os.path.join(PLOT_FOLDER_PATH, fig_name), dpi=150)
+                plt.close(fig)
+
+        return self
+
     # Funzione che permette di valutare per ogni missione la media dell'errore RMSE e in generale la media complessiva
-    def eval_metrics_analysis(self, ROOT_DIR):
+    def eval_metrics_analysis1(self, ROOT_DIR):
 
         # Si definisce il percorso di input del file
         INPUT_FOLDER_PATH = os.path.join(ROOT_DIR, 'Risultati_NN')
@@ -2502,6 +2771,766 @@ class PostProcessing:
 
         # Si genera il grafico a violino
 
+
+
+        return self
+
+
+
+    @staticmethod
+    def _distribution_stats(values, percentile_levels=(10, 90)):
+
+        values = np.asarray(values, dtype=float)
+        values = values[np.isfinite(values)]
+
+        # Se non ci sono valori validi si restituiscono tutti NaN --> le chiavi dei percentili sono nella forma 'p10', 'p90'
+        if values.size == 0:
+            return {'mean': np.nan, 'median': np.nan, **{f"p{int(p)}": np.nan for p in percentile_levels}}
+
+        stats = {'mean': float(np.mean(values)), 'median': float(np.median(values))}
+        for p, value in zip(percentile_levels, np.percentile(values, percentile_levels)):
+            stats[f"p{int(p)}"] = float(value)
+
+        return stats
+
+    # Funzione interna che produce la riga di testo con mediana e percentili di una metrica (da scrivere sotto la riga della media in NN_mean_metrics_evaluation.txt)
+    def _stats_line(self, iteration_key, group_key, data_key, indent="        "):
+
+        stats = self.stats_values_dict[iteration_key][group_key][data_key]
+        p_low, p_high = self.percentile_levels
+
+        return f"{indent}(mediana: {stats['median']}  |  P{int(p_low)}: {stats[f'p{int(p_low)}']}  |  P{int(p_high)}: {stats[f'p{int(p_high)}']})\n"
+
+    # ======================================================
+    #      FUNZIONI DI SUPPORTO PER I GRAFICI DI CONFRONTO
+    # ======================================================
+
+    # Funzione che permette di ordinare le versioni in modo numerico (v1.1.2 prima di v1.1.10) --> le chiavi che non sono nel formato x.y.z vengono messe in fondo
+    @staticmethod
+    def _version_sort_key(version):
+
+        try:
+            return 0, tuple(int(part) for part in str(version).split('.'))
+        except ValueError:
+            return 1, (str(version),)
+
+    # Funzione che riorganizza raw_values_dict --> si ottiene un dizionario nella forma {chiave_missione: {metrica: [(versione, lista valori), ...]}} con le versioni ordinate (se self.sort_versions è True)
+    def _group_raw_values(self):
+
+        values_dict = {}
+        for iteration_key, version_dict in self.raw_values_dict.items():
+
+            for mission_key, mission_dict in version_dict.items():
+
+                for metric_key, raw_values in mission_dict.items():
+                    values_dict.setdefault(mission_key, {}).setdefault(metric_key, []).append((iteration_key, raw_values))
+
+        if self.sort_versions:
+            for mission_dict in values_dict.values():
+                for entries in mission_dict.values():
+                    entries.sort(key=lambda entry: self._version_sort_key(entry[0]))
+
+        return values_dict
+
+    # Funzione che estrae da una lista di tuple (versione, valori) le sole versioni con almeno un valore valido --> si scartano eventuali NaN/inf (es. versioni con training divergente)
+    @staticmethod
+    def _clean_samples(entries):
+
+        versions, samples = [], []
+        for version, raw_values in entries:
+            valid_values = np.asarray(raw_values, dtype=float)
+            valid_values = valid_values[np.isfinite(valid_values)]
+            if valid_values.size > 0:
+                versions.append(version)
+                samples.append(valid_values)
+
+        return versions, samples
+
+    # Funzione che associa a ogni versione un colore fisso (slot della palette categorica) --> il colore dipende solo dalla versione, quindi è lo stesso in ECDF, strip plot e bootstrap
+    def _version_colors_map(self):
+
+        versions = list(self.raw_values_dict.keys())
+        if self.sort_versions:
+            versions.sort(key=self._version_sort_key)
+
+        if len(versions) > len(self.version_colors):
+            print(f"  [WARNING] Ci sono {len(versions)} versioni ma solo {len(self.version_colors)} colori distinti: i colori verranno riutilizzati.")
+
+        return {version: self.version_colors[i % len(self.version_colors)] for i, version in enumerate(versions)}
+
+    # Funzione che restituisce (suffisso del nome file, descrizione per il titolo) in base alla chiave della missione --> stessa convenzione dei grafici a barre e dei box plot originali
+    @staticmethod
+    def _mission_labels(mission_key):
+
+        if mission_key == 'test_missions':
+            return 'test_missions', 'sulle missioni di test'
+        elif mission_key == 'training_missions':
+            return 'training_missions', 'sulle missioni di training'
+        elif mission_key == 'total_missions':
+            return 'total_missions', 'su tutte le missioni'
+        elif isinstance(mission_key, tuple):
+            return f"{mission_key[0]}_{mission_key[1]}", f"sulla missione {mission_key[0]} - {mission_key[1]}"
+        else:
+            return f"{mission_key}", f"sulla missione {mission_key}"
+
+    # Funzione che verifica se tutti i campioni sono strettamente positivi --> necessario per usare la scala logaritmica
+    @staticmethod
+    def _all_positive(samples):
+
+        return all(np.all(s > 0) for s in samples)
+
+    # ======================================================
+    #            BOX PLOT (UN GRAFICO PER METRICA)
+    # ======================================================
+
+    # Funzione interna per la creazione dei box plot, utili per confrontare la distribuzione dei valori di errore (e non solo il valore medio) tra le varie versioni della rete
+    # Per ogni metrica (RMSE_E, RMSE_N, RMSE_tot) e per ogni chiave di missione si genera un grafico separato --> salvato nella sottocartella Box_plot/<metrica>
+    # mission_keys permette di limitare i grafici a certe chiavi (es. self.aggregate_keys per i soli grafici aggregati) --> se None si realizzano per tutte le missioni, come in precedenza
+    def box_plot(self, ROOT_DIR, metric_groups=("RMSE",), mission_keys=None):
+
+        highlight_best = False
+
+        # Dimensione (in pt) del font dei valori di media, mediana e percentili scritti sopra ogni grafico --> aumentarla per le presentazioni
+        stats_fontsize = 14
+
+        # Colori degli outlier --> pallini pieni sul tono del blu (riempimento coerente con le scatole, bordo piu' scuro per renderli leggibili)
+        outlier_face_color = 'tab:blue'
+        outlier_edge_color = 'navy'
+
+        # Dizionario avente come chiave le missioni --> a ognuna si associa, per ogni metrica, una lista di tuple (chiave iterazione, lista dei valori grezzi)
+        values_dict = self._group_raw_values()
+
+        for plot_key in metric_groups:
+
+            metrics = self.metrics_dict[plot_key]
+
+            # Si itera su ogni metrica --> ognuna ha la propria sottocartella (es. Box_plot/RMSE_E) in cui sono contenuti i grafici di ogni chiave missione
+            for metric, axis_title in metrics.items():
+
+                PLOT_FOLDER_PATH = os.path.join(ROOT_DIR, 'Risultati_NN', 'Evaluation_metrics_analysis', 'Box_plot', metric)
+                os.makedirs(PLOT_FOLDER_PATH, exist_ok=True)
+
+                for mission_key, mission_dict in values_dict.items():
+
+                    if mission_keys is not None and mission_key not in mission_keys:
+                        continue
+
+                    # Si definiscono nome del file e titolo del grafico
+                    file_suffix, title_suffix = self._mission_labels(mission_key)
+                    fig_name = f"{metric}_boxplot_{file_suffix}.pdf"
+                    fig_title = f"Distribuzione {axis_title} {title_suffix}"
+
+                    # Si estraggono le versioni con almeno un valore valido
+                    versions, samples = self._clean_samples(mission_dict.get(metric, []))
+
+                    if not samples:
+                        print(f"  [WARNING] Nessun valore valido per la missione {mission_key} e la metrica {metric}: grafico non generato.")
+                        continue
+
+                    # Per le singole missioni ci sono solo 4 valori per versione --> si mostrano i punti reali al posto degli outlier
+                    few_samples = max(len(s) for s in samples) <= 10
+
+                    fig, ax = plt.subplots(figsize=(10, 7.5), layout='constrained')
+
+                    # Si inizializza il box plot --> ogni scatola e' una versione, con baffi a 1.5 IQR, mediana (linea nera) e media (rombo bianco)
+                    # Gli outlier sono pallini pieni (riempimento blu, bordo blu scuro)
+                    box_plot = ax.boxplot(samples, positions=range(len(samples)), widths=0.6, patch_artist=True,
+                                          showmeans=True, showfliers=not few_samples,
+                                          medianprops=dict(color='black', linewidth=1.5),
+                                          meanprops=dict(marker='D', markerfacecolor='white', markeredgecolor='black', markersize=4),
+                                          flierprops=dict(marker='o', markersize=4, markerfacecolor=outlier_face_color,
+                                                          markeredgecolor=outlier_edge_color, markeredgewidth=0.5,
+                                                          linestyle='none', alpha=0.8))
+
+                    # Ogni scatola ha il colore blu --> si evidenzia in verde la versione con la mediana minore
+                    for box in box_plot['boxes']:
+                        box.set_facecolor('tab:blue')
+                        box.set_edgecolor('black')
+
+                    if highlight_best:
+                        box_plot['boxes'][int(np.argmin([np.median(s) for s in samples]))].set_facecolor('tab:green')
+
+                    # Se i campioni sono pochi si sovrappongono i singoli valori con una piccola dispersione orizzontale (seed fisso per riproducibilita')
+                    if few_samples:
+                        rng = np.random.default_rng(0)
+                        for i, s in enumerate(samples):
+                            ax.scatter(i + rng.uniform(-0.12, 0.12, size=len(s)), s, s=14, color='black', alpha=0.7, zorder=3)
+
+                    # Si calcolano media, mediana e percentili (10° e 90°) di ogni versione (sugli stessi campioni usati dal box plot) e li si scrivono in quattro righe sopra il grafico,
+                    # allineate in orizzontale alla scatola corrispondente --> fuori dall'area dei dati, quindi senza sovrapposizioni con baffi e outlier
+                    stats = [self._distribution_stats(s, self.percentile_levels) for s in samples]
+                    stats_font = {**self.axis_font, 'size': stats_fontsize}
+
+                    # Trasformazione mista: x in coordinate dati (posizione della scatola), y in coordinate relative all'asse (1 = bordo superiore del grafico)
+                    # Le righe sono distanziate dal bordo in punti (non in frazione dell'asse) --> restano ben separate anche cambiando stats_fontsize
+                    x_data_y_axes = ax.get_xaxis_transform()
+
+                    # Quattro righe (dal basso verso l'alto): percentile inferiore, media, mediana, percentile superiore --> (intestazione, chiave del dizionario delle statistiche, peso del font dei valori)
+                    p_low, p_high = int(self.percentile_levels[0]), int(self.percentile_levels[1])
+                    stats_rows = [(f"P{p_low}", f"p{p_low}", 'normal'), ('Media', 'mean', 'bold'),
+                                  ('Mediana', 'median', 'bold'), (f"P{p_high}", f"p{p_high}", 'normal')]
+                    row_offset = {label: (1.0 + 1.4 * k) * stats_fontsize for k, (label, _, _) in enumerate(stats_rows)}
+
+                    for i, sample_stats in enumerate(stats):
+                        for label, stat_key, weight in stats_rows:
+                            ax.annotate(f"{sample_stats[stat_key]:.2f}", xy=(i, 1.0), xycoords=x_data_y_axes,
+                                        xytext=(0, row_offset[label]),
+                                        textcoords='offset points', ha='center', va='center', annotation_clip=False,
+                                        **{**stats_font, 'weight': weight})
+
+                    # Intestazioni delle righe, a sinistra del bordo del grafico
+                    for label, offset in row_offset.items():
+                        ax.annotate(label, xy=(0, 1.0), xycoords='axes fraction', xytext=(-8, offset),
+                                    textcoords='offset points', ha='right', va='center', annotation_clip=False,
+                                    **{**stats_font, 'weight': 'bold' if label == 'Mediana' else 'normal'})
+
+                    # Si definiscono i parametri associati all'asse --> il titolo sta sopra le righe di statistiche
+                    ax.set_xticks(range(len(versions)))
+                    ax.set_xticklabels([f"v{version}" for version in versions], rotation=45, fontdict=self.axis_font)
+                    ax.set_ylabel(f"{metric} [m]", fontdict=self.axis_font)
+                    ax.set_title(fig_title, fontdict=self.title_font, pad=(2.0 + 1.4 * (len(stats_rows) - 1)) * stats_fontsize)
+
+                    log_grid = False
+                    if log_grid:
+                        ax.set_yscale('log')
+                        ax.grid(axis='y', which='both', alpha=0.3)
+                    else:
+                        ax.grid(axis="y", alpha=0.3)
+
+                    # Legenda fuori dall'area del grafico, a destra --> la voce "Outlier" compare solo se gli outlier sono mostrati e "Mediana minore" solo se l'evidenziazione e' attiva
+                    legend_handles = [Line2D([0], [0], color='black', linewidth=1.5, label='Mediana'),
+                                      Line2D([0], [0], marker='D', color='w', markerfacecolor='white',
+                                             markeredgecolor='black', markersize=6, label='Media')]
+                    if not few_samples:
+                        legend_handles.append(Line2D([0], [0], marker='o', color='w', markerfacecolor=outlier_face_color,
+                                                     markeredgecolor=outlier_edge_color, markersize=6, label='Outlier'))
+                    if highlight_best:
+                        legend_handles.append(Line2D([0], [0], marker='s', color='w', markerfacecolor='tab:green',
+                                                     markersize=9, label='Mediana minore'))
+                    ax.legend(handles=legend_handles, loc='center left', bbox_to_anchor=(1.02, 0.5), frameon=False)
+
+                    # Si salva il grafico e si chiude la figura per liberare memoria
+                    fig.savefig(os.path.join(PLOT_FOLDER_PATH, fig_name), dpi=150)
+                    plt.close(fig)
+
+        return self
+
+    # ======================================================
+    #                    ECDF (UNA CURVA PER VERSIONE)
+    # ======================================================
+
+    # Funzione che realizza la funzione di distribuzione cumulativa empirica (ECDF) dei valori di errore --> una curva per versione, si legge direttamente la frazione di missioni con errore minore di una soglia
+    # Di default si realizzano i soli grafici aggregati (training, test, totale) --> per le singole missioni ci sono solo 4 valori e la curva non avrebbe significato
+    # I grafici sono salvati in Evaluation_metrics_analysis/ECDF/<metrica>
+    def ecdf_plot(self, ROOT_DIR, metric_groups=("RMSE",), mission_keys=None, log_x=True):
+
+        values_dict = self._group_raw_values()
+        version_colors = self._version_colors_map()
+        line_styles = ['-', '--', '-.', ':']                # Secondo canale di codifica oltre al colore --> le curve restano distinguibili anche per chi non distingue i colori o in stampa in bianco e nero
+
+        if mission_keys is None:
+            mission_keys = self.aggregate_keys
+
+        for plot_key in metric_groups:
+
+            for metric, axis_title in self.metrics_dict[plot_key].items():
+
+                PLOT_FOLDER_PATH = os.path.join(ROOT_DIR, 'Risultati_NN', 'Evaluation_metrics_analysis', 'ECDF', metric)
+                os.makedirs(PLOT_FOLDER_PATH, exist_ok=True)
+
+                for mission_key in mission_keys:
+
+                    versions, samples = self._clean_samples(values_dict.get(mission_key, {}).get(metric, []))
+
+                    if not samples:
+                        print(f"  [WARNING] Nessun valore valido per la missione {mission_key} e la metrica {metric}: ECDF non generata.")
+                        continue
+
+                    file_suffix, title_suffix = self._mission_labels(mission_key)
+                    use_log = log_x and self._all_positive(samples)
+
+                    fig, ax = plt.subplots(figsize=(8, 6), layout='constrained')
+
+                    for i, (version, sample) in enumerate(zip(versions, samples)):
+
+                        # Si ordinano i valori --> la frazione cumulata del k-esimo valore è k/n --> si aggiunge un punto iniziale a quota 0 per far partire la curva dal basso
+                        x = np.sort(sample)
+                        y = np.arange(1, len(x) + 1) / len(x)
+                        ax.step(np.r_[x[0], x], np.r_[0.0, y], where='post', color=version_colors[version], linewidth=2.0,
+                                linestyle=line_styles[i % len(line_styles)], label=f"v{version} (n={len(sample)})")
+
+                    # Linee di riferimento sulla mediana (50%) e sul 90° percentile --> la loro intersezione con le curve permette di leggere direttamente i due valori
+                    for quantile, text in ((0.5, 'Mediana'), (0.9, 'P90')):
+                        ax.axhline(quantile, color='gray', linestyle=':', linewidth=1.0, alpha=0.8, zorder=1)
+                        ax.text(0.01, quantile, text, transform=ax.get_yaxis_transform(), ha='left', va='bottom', fontsize=9, color='dimgray')
+
+                    if use_log:
+                        ax.set_xscale('log')
+                    elif log_x:
+                        print(f"  [WARNING] Valori non positivi per {metric} ({mission_key}): ECDF realizzata con scala lineare.")
+
+                    ax.set_ylim(0, 1.02)
+                    ax.set_xlabel(f"{metric} [m]" + (" (scala logaritmica)" if use_log else ""), fontdict=self.axis_font)
+                    ax.set_ylabel("Frazione di missioni con errore ≤ x", fontdict=self.axis_font)
+                    ax.set_title(f"ECDF {axis_title} {title_suffix}", fontdict=self.title_font, pad=10)
+                    ax.grid(True, which='both', linestyle=':', alpha=0.4)
+                    ax.legend(loc='lower right', frameon=False)
+
+                    fig.savefig(os.path.join(PLOT_FOLDER_PATH, f"{metric}_ecdf_{file_suffix}.pdf"), dpi=150)
+                    plt.close(fig)
+
+        return self
+
+    # ======================================================
+    #               STRIP PLOT (UN PUNTO PER MISSIONE)
+    # ======================================================
+
+    # Funzione che realizza uno strip plot: ogni missione è un punto (con piccola dispersione orizzontale), con mediana (linea nera) e media (rombo bianco) sovrapposte --> permette di vedere
+    # quali e quante missioni sono responsabili degli outlier e quanti campioni sono effettivamente presenti per ogni versione (n riportato sotto l'etichetta)
+    # Di default scala logaritmica --> altrimenti pochi valori molto grandi schiacciano tutti gli altri
+    # I grafici sono salvati in Evaluation_metrics_analysis/Strip_plot/<metrica>
+    def strip_plot(self, ROOT_DIR, metric_groups=("RMSE",), mission_keys=None, log_scale=True):
+
+        values_dict = self._group_raw_values()
+        version_colors = self._version_colors_map()
+
+        if mission_keys is None:
+            mission_keys = self.aggregate_keys
+
+        for plot_key in metric_groups:
+
+            for metric, axis_title in self.metrics_dict[plot_key].items():
+
+                PLOT_FOLDER_PATH = os.path.join(ROOT_DIR, 'Risultati_NN', 'Evaluation_metrics_analysis', 'Strip_plot', metric)
+                os.makedirs(PLOT_FOLDER_PATH, exist_ok=True)
+
+                for mission_key in mission_keys:
+
+                    versions, samples = self._clean_samples(values_dict.get(mission_key, {}).get(metric, []))
+
+                    if not samples:
+                        print(f"  [WARNING] Nessun valore valido per la missione {mission_key} e la metrica {metric}: strip plot non generato.")
+                        continue
+
+                    file_suffix, title_suffix = self._mission_labels(mission_key)
+                    use_log = log_scale and self._all_positive(samples)
+
+                    fig, ax = plt.subplots(figsize=(8, 6), layout='constrained')
+
+                    rng = np.random.default_rng(0)                  # Seed fisso per riproducibilità della dispersione orizzontale
+                    for i, (version, sample) in enumerate(zip(versions, samples)):
+
+                        # Punti singoli (bordo bianco per distinguerli quando si sovrappongono), poi mediana e media sopra di essi
+                        ax.scatter(i + rng.uniform(-0.18, 0.18, size=len(sample)), sample, s=36, color=version_colors[version],
+                                   edgecolors='white', linewidths=0.6, alpha=0.9, zorder=3)
+                        ax.hlines(np.median(sample), i - 0.32, i + 0.32, color='black', linewidth=2.0, zorder=4)
+                        ax.scatter(i, np.mean(sample), marker='D', s=40, color='white', edgecolors='black', linewidths=1.0, zorder=5)
+
+                    if use_log:
+                        ax.set_yscale('log')
+                    elif log_scale:
+                        print(f"  [WARNING] Valori non positivi per {metric} ({mission_key}): strip plot realizzato con scala lineare.")
+
+                    ax.set_xlim(-0.6, len(samples) - 0.4)
+                    ax.set_xticks(range(len(versions)))
+                    ax.set_xticklabels([f"v{version}\n(n={len(sample)})" for version, sample in zip(versions, samples)], fontdict=self.axis_font)
+                    ax.set_ylabel(f"{metric} [m]" + (" (scala logaritmica)" if use_log else ""), fontdict=self.axis_font)
+                    ax.set_title(f"{axis_title} per singola missione {title_suffix}", fontdict=self.title_font, pad=10)
+                    ax.grid(axis='y', which='major', alpha=0.3)
+                    ax.grid(axis='y', which='minor', alpha=0.12)
+
+                    legend_handles = [Line2D([0], [0], marker='o', color='w', markerfacecolor='gray', markeredgecolor='white', markersize=7, label='Singola missione'),
+                                      Line2D([0], [0], color='black', linewidth=2.0, label='Mediana'),
+                                      Line2D([0], [0], marker='D', color='w', markerfacecolor='white', markeredgecolor='black', markersize=6, label='Media')]
+                    ax.legend(handles=legend_handles, loc='center left', bbox_to_anchor=(1.02, 0.5), frameon=False)
+
+                    fig.savefig(os.path.join(PLOT_FOLDER_PATH, f"{metric}_stripplot_{file_suffix}.pdf"), dpi=150)
+                    plt.close(fig)
+
+        return self
+
+    # ======================================================
+    #            BOOTSTRAP (INTERVALLI DI CONFIDENZA)
+    # ======================================================
+
+    # Funzione che stima gli intervalli di confidenza (metodo del percentile) di mediana, media e percentile superiore tramite bootstrap --> si ricampionano con reinserimento le missioni della versione
+    # Restituisce un dizionario nella forma {'Mediana': (stima, limite inferiore, limite superiore), 'Media': (...), 'P90': (...)}
+    def _bootstrap_ci(self, values, rng):
+
+        values = np.asarray(values, dtype=float)
+        p_high = int(self.percentile_levels[1])
+
+        point_estimates = {'Mediana': np.median(values), 'Media': np.mean(values), f"P{p_high}": np.percentile(values, p_high)}
+
+        # Con una sola missione non ha senso parlare di intervallo di confidenza --> si restituiscono i soli valori puntuali
+        if values.size < 2:
+            return {name: (float(value), np.nan, np.nan) for name, value in point_estimates.items()}
+
+        # Matrice [n_boot, n] di ricampionamenti --> ogni riga è un campione bootstrap della stessa dimensione dell'originale
+        resampled = values[rng.integers(0, values.size, size=(self.bootstrap_n, values.size))]
+        bootstrap_distributions = {'Mediana': np.median(resampled, axis=1), 'Media': np.mean(resampled, axis=1),
+                                   f"P{p_high}": np.percentile(resampled, p_high, axis=1)}
+
+        alpha = (100 - self.bootstrap_ci) / 2
+        result = {}
+        for name, distribution in bootstrap_distributions.items():
+            low, high = np.percentile(distribution, [alpha, 100 - alpha])
+            result[name] = (float(point_estimates[name]), float(low), float(high))
+
+        return result
+
+    # Funzione che calcola gli intervalli di confidenza bootstrap di ogni versione e li rappresenta (stima puntuale + intervallo) in tre pannelli: mediana, media e P90
+    # Gli intervalli sono calcolati su ogni versione separatamente (non appaiati) --> se si sovrappongono molto non si può dire che una versione sia migliore dell'altra
+    # I grafici sono salvati in Evaluation_metrics_analysis/Bootstrap/<metrica> e i valori numerici in Evaluation_metrics_analysis/Bootstrap/NN_bootstrap_CI.txt
+    def bootstrap_plot(self, ROOT_DIR, metric_groups=("RMSE",), mission_keys=None):
+
+        values_dict = self._group_raw_values()
+        version_colors = self._version_colors_map()
+
+        if mission_keys is None:
+            mission_keys = self.aggregate_keys
+
+        BOOTSTRAP_FOLDER_PATH = os.path.join(ROOT_DIR, 'Risultati_NN', 'Evaluation_metrics_analysis', 'Bootstrap')
+        os.makedirs(BOOTSTRAP_FOLDER_PATH, exist_ok=True)
+
+        self.bootstrap_values_dict = {}                 # Nella forma {chiave missione: {metrica: {versione: {'Mediana': (stima, low, high), ...}}}}
+        text_lines = []
+
+        for plot_key in metric_groups:
+
+            for metric, axis_title in self.metrics_dict[plot_key].items():
+
+                PLOT_FOLDER_PATH = os.path.join(BOOTSTRAP_FOLDER_PATH, metric)
+                os.makedirs(PLOT_FOLDER_PATH, exist_ok=True)
+
+                for mission_key in mission_keys:
+
+                    versions, samples = self._clean_samples(values_dict.get(mission_key, {}).get(metric, []))
+
+                    if not samples:
+                        print(f"  [WARNING] Nessun valore valido per la missione {mission_key} e la metrica {metric}: bootstrap non eseguito.")
+                        continue
+
+                    file_suffix, title_suffix = self._mission_labels(mission_key)
+
+                    # Si calcolano gli intervalli di ogni versione --> seed fisso per avere risultati riproducibili
+                    rng = np.random.default_rng(self.bootstrap_seed)
+                    results = {version: self._bootstrap_ci(sample, rng) for version, sample in zip(versions, samples)}
+                    self.bootstrap_values_dict.setdefault(mission_key, {}).setdefault(metric, {}).update(results)
+
+                    stat_names = list(next(iter(results.values())).keys())
+
+                    # Si trascrivono i valori sul file di testo
+                    text_lines.append(f"\n  {axis_title} {title_suffix}\n")
+                    for version, sample in zip(versions, samples):
+                        text_lines.append(f"    v{version} (n={len(sample)}):  " + "  |  ".join(
+                            f"{name}: {est:.2f} [{low:.2f}, {high:.2f}]" for name, (est, low, high) in results[version].items()) + "\n")
+
+                    # Un pannello per statistica --> scala verticale indipendente perché mediana, media e P90 hanno ordini di grandezza diversi
+                    fig, axis = plt.subplots(1, len(stat_names), figsize=(4.6 * len(stat_names), 6), layout='constrained')
+                    axis = np.atleast_1d(axis)
+                    fig.suptitle(f"Intervalli di confidenza bootstrap al {self.bootstrap_ci}% - {axis_title} {title_suffix}", **self.title_font)
+
+                    for ax, name in zip(axis, stat_names):
+
+                        for i, version in enumerate(versions):
+
+                            estimate, low, high = results[version][name]
+                            color = version_colors[version]
+
+                            if np.isfinite(low) and np.isfinite(high):
+                                ax.errorbar(i, estimate, yerr=[[estimate - low], [high - estimate]], fmt='o', color=color, ecolor=color,
+                                            elinewidth=2.2, capsize=6, capthick=2.2, markersize=9, markeredgecolor='white', markeredgewidth=1.0, zorder=3)
+                            else:
+                                ax.plot(i, estimate, 'o', color=color, markersize=9, markeredgecolor='white', markeredgewidth=1.0, zorder=3)
+
+                            ax.annotate(f"{estimate:.2f}", xy=(i, estimate), xytext=(10, 0), textcoords='offset points', ha='left', va='center', fontsize=9, color='dimgray')
+
+                        ax.set_xlim(-0.6, len(versions) - 0.4)
+                        ax.set_xticks(range(len(versions)))
+                        ax.set_xticklabels([f"v{version}" for version in versions], rotation=45, fontdict=self.axis_font)
+                        ax.set_ylabel(f"{metric} [m]", fontdict=self.axis_font)
+                        ax.set_title(name, fontdict=self.axis_font)
+                        ax.grid(axis='y', alpha=0.3)
+
+                    fig.savefig(os.path.join(PLOT_FOLDER_PATH, f"{metric}_bootstrap_{file_suffix}.pdf"), dpi=150)
+                    plt.close(fig)
+
+        # Si scrivono su file di testo i valori numerici degli intervalli (utili per tabelle in relazione)
+        output_file_path = os.path.join(BOOTSTRAP_FOLDER_PATH, 'NN_bootstrap_CI.txt')
+        with open(output_file_path, 'w', encoding='utf-8') as f:
+            f.write("\n             INTERVALLI DI CONFIDENZA BOOTSTRAP\n\n")
+            f.write(f"  Metodo del percentile, livello {self.bootstrap_ci}%, {self.bootstrap_n} ricampionamenti (seed {self.bootstrap_seed}).\n")
+            f.write("  Formato: stima [limite inferiore, limite superiore] --> gli intervalli sono calcolati separatamente per ogni versione (non appaiati).\n")
+            f.write("".join(text_lines))
+
+        return self
+
+
+    # Funzione che rappresenta, per ogni versione, il campo di variazione dei valori registrati tra le singole missioni --> puramente descrittiva, non fa alcuna ipotesi sui dati
+    #   - baffo sottile con due tacche: valore minimo e valore massimo registrati
+    #   - barra spessa: intervallo tra i percentili inferiore e superiore (di default P10-P90)
+    #   - linea nera: mediana  |  rombo bianco: media
+    # La stessa funzione serve sia per l'RMSE (metric_groups=("RMSE",)) sia per l'errore di posizione al punto finale, cioè il Delta (metric_groups=("Delta",))
+    # I grafici sono salvati in Evaluation_metrics_analysis/Range_plot/<metrica>
+    def range_plot(self, ROOT_DIR, metric_groups=("RMSE",), mission_keys=None, log_scale=True):
+
+        values_dict = self._group_raw_values()
+        version_colors = self._version_colors_map()
+        p_low, p_high = int(self.percentile_levels[0]), int(self.percentile_levels[1])
+
+        if mission_keys is None:
+            mission_keys = self.aggregate_keys
+
+        for plot_key in metric_groups:
+
+            for metric, axis_title in self.metrics_dict[plot_key].items():
+
+                PLOT_FOLDER_PATH = os.path.join(ROOT_DIR, 'Risultati_NN', 'Evaluation_metrics_analysis',
+                                                'Range_plot', metric)
+                os.makedirs(PLOT_FOLDER_PATH, exist_ok=True)
+
+                for mission_key in mission_keys:
+
+                    versions, samples = self._clean_samples(values_dict.get(mission_key, {}).get(metric, []))
+
+                    if not samples:
+                        print(
+                            f"  [WARNING] Nessun valore valido per la missione {mission_key} e la metrica {metric}: range plot non generato.")
+                        continue
+
+                    file_suffix, title_suffix = self._mission_labels(mission_key)
+                    use_log = log_scale and self._all_positive(samples)
+
+                    fig, ax = plt.subplots(figsize=(8, 6), layout='constrained')
+
+                    for i, (version, sample) in enumerate(zip(versions, samples)):
+                        color = version_colors[version]
+                        minimum, maximum = np.min(sample), np.max(sample)
+                        low, high = np.percentile(sample, [p_low, p_high])
+                        median, mean = np.median(sample), np.mean(sample)
+
+                        # Baffo minimo-massimo con una tacca a ogni estremo
+                        ax.vlines(i, minimum, maximum, color=color, linewidth=2.0, zorder=2)
+                        ax.hlines([minimum, maximum], i - 0.12, i + 0.12, color=color, linewidth=2.0, zorder=2)
+
+                        # Barra spessa tra i percentili e valori centrali (mediana e media) sopra di essa
+                        ax.vlines(i, low, high, color=color, linewidth=14, zorder=3)
+                        ax.hlines(median, i - 0.16, i + 0.16, color='black', linewidth=2.2, zorder=4)
+                        ax.scatter(i, mean, marker='D', s=40, color='white', edgecolors='black', linewidths=1.0,
+                                   zorder=5)
+
+                        # Valori numerici di massimo, minimo (sopra e sotto le tacche) e mediana (a destra della barra)
+                        ax.annotate(f"{maximum:.2f}", xy=(i, maximum), xytext=(0, 5), textcoords='offset points',
+                                    ha='center', va='bottom', fontsize=9, color='dimgray')
+                        ax.annotate(f"{minimum:.2f}", xy=(i, minimum), xytext=(0, -5), textcoords='offset points',
+                                    ha='center', va='top', fontsize=9, color='dimgray')
+                        ax.annotate(f"{median:.2f}", xy=(i + 0.16, median), xytext=(4, 0),
+                                    textcoords='offset points', ha='left', va='center', fontsize=9, color='black')
+
+                    if use_log:
+                        ax.set_yscale('log')
+                    elif log_scale:
+                        print(
+                            f"  [WARNING] Valori non positivi per {metric} ({mission_key}): range plot realizzato con scala lineare.")
+
+                    ax.set_xlim(-0.6, len(samples) - 0.4)
+                    ax.margins(y=0.12)
+                    ax.set_xticks(range(len(versions)))
+                    ax.set_xticklabels(
+                        [f"v{version}\n(n={len(sample)})" for version, sample in zip(versions, samples)],
+                        fontdict=self.axis_font)
+                    ax.set_ylabel(f"{metric} [m]" + (" (scala logaritmica)" if use_log else ""),
+                                  fontdict=self.axis_font)
+                    ax.set_title(f"Range di {axis_title} {title_suffix}", fontdict=self.title_font, pad=10)
+                    ax.grid(axis='y', which='major', alpha=0.3)
+                    ax.grid(axis='y', which='minor', alpha=0.12)
+
+                    legend_handles = [Line2D([0], [0], color='gray', linewidth=2.0, label='Minimo - massimo'),
+                                      Line2D([0], [0], color='gray', linewidth=9, label=f"P{p_low} - P{p_high}"),
+                                      Line2D([0], [0], color='black', linewidth=2.2, label='Mediana'),
+                                      Line2D([0], [0], marker='D', color='w', markerfacecolor='white',
+                                             markeredgecolor='black', markersize=6, label='Media')]
+                    ax.legend(handles=legend_handles, loc='center left', bbox_to_anchor=(1.02, 0.5), frameon=False)
+
+                    fig.savefig(os.path.join(PLOT_FOLDER_PATH, f"{metric}_rangeplot_{file_suffix}.pdf"), dpi=150)
+                    plt.close(fig)
+
+        return self
+
+    # Funzione che permette di valutare per ogni missione la media dell'errore RMSE e in generale la media complessiva
+    def eval_metrics_analysis(self, ROOT_DIR):
+
+        # Si definisce il percorso di input del file
+        INPUT_FOLDER_PATH = os.path.join(ROOT_DIR, 'Risultati_NN')
+        os.makedirs(INPUT_FOLDER_PATH, exist_ok=True)
+        input_file_path = os.path.join(INPUT_FOLDER_PATH, f"NN_evaluations_info.txt")
+
+        # Si definisce il percorso di output del file
+        OUTPUT_FOLDER_PATH = os.path.join(ROOT_DIR, 'Risultati_NN')
+        os.makedirs(OUTPUT_FOLDER_PATH, exist_ok=True)
+        output_file_path = os.path.join(OUTPUT_FOLDER_PATH, f"NN_mean_metrics_evaluation.txt")
+
+        # Si inizializzano i parametri per la raccolta dati --> la chiave è la combinazione presente nel testo mentre la stringa associata diventa la chiave del dizionario successivo
+        metrics = {"RMSE in direzione East": "RMSE_E",
+                   "RMSE in direzione North": "RMSE_N",
+                   "RMSE complessivo": "RMSE_tot",
+                   "Delta_East finale": "Delta_E",
+                   "Delta_North finale": "Delta_N",
+                   "Delta_tot finale": "Delta_tot"}
+        number = r"[-+]?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?"
+
+        # -----------------------------------------------------
+        #         ESTRAZIONE DATI DAL FILE DI TESTO
+        # -----------------------------------------------------
+
+        with open(input_file_path, 'r') as f:
+
+            # Si impostano i pattern tipici per l'inizio di una differente versione e all'interno di questa per ogni traiettoria
+            new_iter_pattern = re.compile(r"\s*RIASSUNTO\s+VALORI\s+DI\s+RMSE\s+\(TEST\s+v(\d+\.\d+\.\d+)\)", re.IGNORECASE)
+            new_path_pattern = re.compile(r"\s*PARAMETRI\s+DI\s+PERFORMANCE\s+PER\s+\((.*?)\)\s+-\s+(Percorso_\d+):", re.IGNORECASE)
+            data_pattern = re.compile(rf"^\s*({'|'.join(map(re.escape, metrics))}):\s*({number})\s*m\s*$", re.IGNORECASE)
+
+            # Si legge riga per riga il file --> se si incontra un blocco di 3 righe in cui 2 iniziano con "=" si è all'inizio di una nuova iterazione --> ogni volta che si incontra un "-" si ha un nuovo percorso/traiettoria (ogni 4 percorsi)
+            test_missions = ['T1', 'T2', 'T3', 'T4']
+            iteration_key = None
+            for line in f.readlines():
+
+                # Si cerca il pattern di inizio missione --> si inizializza la chiave all'interno del dizionario
+                new_iteration = new_iter_pattern.search(line)
+                if new_iteration:
+                    iteration_key = new_iteration.group(1)
+                    if iteration_key not in self.raw_values_dict:
+                        self.raw_values_dict[iteration_key] = {}
+                    continue
+
+                # Si cerca il pattern di inizio percorso --> si estraggono la tupla che indica la missione e il tag del percorso effettuato
+                new_path = new_path_pattern.search(line)
+                if new_path:
+
+                    # Si salva la tupla associata alla missione per iterazioni future e si aggiorna il contatore del percorso
+                    mission_id = tuple(re.findall(r"'([^']+)'", new_path.group(1)))
+
+                    # Se sono nelle missioni di test voglio avere come indice solamente l'indice di traiettoria --> altrimenti nascerebbero 4 chiavi diverse per ognuno, avendo un solo percorso a simulazione
+                    mission_key = mission_id[0] if mission_id[0] in test_missions else mission_id
+
+                    # Si inizializza il dizionari che conterrà i dati estratti
+                    if mission_key not in self.raw_values_dict[iteration_key]:
+                        self.raw_values_dict[iteration_key][mission_key] = {}
+                    if 'total_missions' not in self.raw_values_dict[iteration_key]:
+                        self.raw_values_dict[iteration_key]['total_missions'] = {}
+                    if 'training_missions' not in self.raw_values_dict[iteration_key]:
+                        self.raw_values_dict[iteration_key]['training_missions'] = {}
+                    if 'test_missions' not in self.raw_values_dict[iteration_key]:
+                        self.raw_values_dict[iteration_key]['test_missions'] = {}
+
+                # Se la linea coincide con un possibile pattern dei dati si entra nella condizione --> si salvano
+                data = data_pattern.match(line)
+                if data and iteration_key is not None:
+                    data_key = metrics[data.group(1)]
+
+                    # Si aggiunge il dato alla lista della missione opportuna
+                    if data_key not in self.raw_values_dict[iteration_key][mission_key]:
+                        self.raw_values_dict[iteration_key][mission_key][data_key] = []
+                    self.raw_values_dict[iteration_key][mission_key][data_key].append(float(data.group(2)))
+
+                    # Si aggiunge il dato alla lista unica contenente i dati di tutte le missioni --> utile per avere una panoramica completa
+                    if data_key not in self.raw_values_dict[iteration_key]['total_missions']:
+                        self.raw_values_dict[iteration_key]['total_missions'][data_key] = []
+                    self.raw_values_dict[iteration_key]['total_missions'][data_key].append(float(data.group(2)))
+
+                    # Si aggiunge alla lista contenente tutte le missioni a eccezione di quelle di test --> in modo da avere un indice sulle sole missioni di addestramento
+                    if mission_key not in test_missions:
+                        if data_key not in self.raw_values_dict[iteration_key]['training_missions']:
+                            self.raw_values_dict[iteration_key]['training_missions'][data_key] = []
+                        self.raw_values_dict[iteration_key]['training_missions'][data_key].append(float(data.group(2)))
+
+                    # Si aggiunge alla lista contenente le sole missioni di test
+                    if mission_key in test_missions:
+                        if data_key not in self.raw_values_dict[iteration_key]['test_missions']:
+                            self.raw_values_dict[iteration_key]['test_missions'][data_key] = []
+                        self.raw_values_dict[iteration_key]['test_missions'][data_key].append(float(data.group(2)))
+
+
+        # -----------------------------------------------------
+        #         CALCOLO VALORI MEDI DEI PARAMETRI
+        # -----------------------------------------------------
+
+        for iteration_key, iteration_dict in self.raw_values_dict.items():
+
+            if iteration_key not in self.mean_values_dict:
+                self.mean_values_dict[iteration_key] = {}
+
+            for mission_key, mission_dict in iteration_dict.items():
+
+                if mission_key not in self.mean_values_dict[iteration_key]:
+                    self.mean_values_dict[iteration_key][mission_key] = {}
+
+                for data_key, data_list in mission_dict.items():
+
+                    # Si effettua la media dei 4 valori presenti per ogni missione e per ogni metrica considerata
+                    mean_value = np.mean(data_list)
+
+                    # Si aggiorna il dizionario associato
+                    self.mean_values_dict[iteration_key][mission_key][data_key] = mean_value
+
+
+        # -----------------------------------------------------
+        #         SCRITTURA PARAMETRI SUL FILE DI TESTO
+        # -----------------------------------------------------
+
+        with open(output_file_path, 'w', encoding='utf-8') as f:
+
+            f.write("\n             VALUTAZIONE MEDIE METRICHE DI VALUTAZIONE\n\n")
+
+            for iteration_key, iteration_dict in self.mean_values_dict.items():
+
+                f.write(f"\n" + "-" * 80)
+                f.write(f"\n  Parametri per iterazione {iteration_key}\n")
+                f.write(f"-" * 80 + "\n")
+
+                for mission_key, mission_dict in iteration_dict.items():
+
+                    if mission_key == 'total_missions' or mission_key == 'training_missions' or mission_key == 'test_missions':
+                        continue
+
+                    f.write(f"\n    Missione: {mission_key}\n")
+
+                    for data_key, mean_value in mission_dict.items():
+
+                        f.write(f"      {data_key}: {mean_value}\n")
+
+                # Prima di passare alla iterazione successiva si stampano i valori di media complessiva per ogni parametro
+                f.write(f"\n    Medie complessive sul totalità delle missioni di addestramento:\n")
+                for data_key, mean_value in self.mean_values_dict[iteration_key]['training_missions'].items():
+                    f.write(f"      {data_key}: {mean_value}\n")
+
+                f.write(f"\n    Medie complessive sulla totalità delle missioni di test:\n")
+                for data_key, mean_value in self.mean_values_dict[iteration_key]['test_missions'].items():
+                    f.write(f"      {data_key}: {mean_value}\n")
+
+                f.write(f"\n    Medie complessive sulla totalità delle missioni:\n")
+                for data_key, mean_value in self.mean_values_dict[iteration_key]['total_missions'].items():
+                    f.write(f"      {data_key}: {mean_value}\n")
+
+
+        # -----------------------------------------------------
+        #           RAPPRESENTAZIONE GRAFICA MEDIE
+        # -----------------------------------------------------
+
+        # Si genera il grafico a barre
+        self.bar_graph_plot(ROOT_DIR)
+
+        # Si genera il box plot
+        self.box_plot(ROOT_DIR)
+
+        # Si generano le ECDF, gli strip plot e gli intervalli di confidenza bootstrap
+        self.ecdf_plot(ROOT_DIR)
+        self.strip_plot(ROOT_DIR)
+        #self.bootstrap_plot(ROOT_DIR)
+
+        # Si genera il range plot (minimo, P10-P90, massimo, mediana e media) per l'RMSE e per l'errore di posizione al punto finale (Delta)
+        self.range_plot(ROOT_DIR, metric_groups=("RMSE", "Delta"))
 
 
         return self

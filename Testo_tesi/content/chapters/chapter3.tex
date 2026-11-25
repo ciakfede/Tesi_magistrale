@@ -164,11 +164,11 @@ Una fase critica per la corretta riuscita del processo è, naturalmente, l'addes
 
 \section{Selezione architettura neurale}
 
-Tenendo conto delle prestazioni dimostrate dalle varie architetture valutate nel precedente paragrafo e della relativa struttura, emerge una rete potenzialmente superiore alle altre, ovvero la NavNet. Infatti, sebbene dal punto di vista del puro miglioramento percentuale dell'RMSE siano tutte molto vicine, con una massima variazione pari a circa 3\%, la relativa semplicità e l'elevata robustezza evidenziata si rivelano essere fattori determinanti. Nel prosieguo di questa tesi, pertanto, solamente questa rete neurale verrà trattata dettagliatamente e concretamente implementata in ambiente Python. 
+Tenendo conto delle prestazioni dimostrate dalle varie architetture valutate nel precedente paragrafo e della relativa struttura, è possibile individuare nella NavNet la migliore soluzione per un problema di regressione della posizione. Infatti, sebbene dal punto di vista del puro miglioramento percentuale dell'RMSE siano tutte molto vicine, con una massima variazione pari a circa il 3\%, la relativa semplicità e l'elevata robustezza evidenziata si rivelano essere fattori determinanti. Nel prosieguo di questa tesi, pertanto, solamente questa rete neurale verrà trattata dettagliatamente e concretamente implementata in ambiente Python. 
 
-Nonostante la struttura di base sia già stata analizzata e rappresentata in \emph{Figura} \ref{fig:NavNet}, per poterla rendere effettivamente funzionante mancano ancora alcuni elementi. Nulla è stato detto, infatti, sul meccanismo di backpropagation, fondamentale per poter effettuare l'addestramento della rete neurale. Nello specifico, come evidenziato nello stesso paper di riferimento, vengono utilizzate una L2 Loss function e un Adam optimizer, a cui sono assegnati dei valori degli iperparametri standard; nel dettaglio, il learning rate risulta essere pari a 0.001, mentre i pesi relativi al primo e secondo momento, $\beta_{1}$ e $\beta_{2}$, sono pari rispettivamente a 0.9 e 0.999. La scelta di queste due specifiche funzioni è legata proprio alla facilità e rapidità di implementazione e dalla stabilità che garantiscono al processo di apprendimento, sebbeno non è detto che permettano di ottenere le migliori prestazioni possibili. 
+Nonostante la struttura di base sia già stata analizzata e rappresentata in \emph{Figura} \ref{fig:NavNet}, per poterla rendere effettivamente funzionante mancano ancora alcuni elementi. Nulla è stato detto, infatti, sul meccanismo di backpropagation, fondamentale per poter effettuare l'addestramento della rete neurale. Nello specifico, come evidenziato nello stesso paper di riferimento, vengono utilizzate una L2 Loss function e un Adam optimizer, a cui sono assegnati dei valori degli iperparametri standard; nel dettaglio, il learning rate risulta essere pari a 0.001, mentre i pesi relativi al primo e secondo momento, $\beta_{1}$ e $\beta_{2}$, sono pari rispettivamente a 0.9 e 0.999. La scelta di queste due specifiche funzioni è legata proprio alla facilità e rapidità di implementazione e dalla stabilità che garantiscono al processo di apprendimento, sebbene non è garantito che consentano di ottenere le migliori prestazioni possibili. 
 
-Un ulteriore aspetto ancora non analizzato nel dettaglio è la formulazione del Simplified Attention Mechanism, un elemento fondamentale all'interno della rete neurale. Esso, infatti, consente di assegnare un differente livello di importanza ad ogni vettore di stato prodotto dall'LSTM nei vari istanti temporali, garantendo, di conseguenza, un'ottimizzazione dell'utilizzo di informazioni passate. Nel dettaglio questo layer, una cui rappresentazione schematica è presentata in \emph{Figura} xx, si basa fondamentalmente su tre passaggi matematici, che consentono di condensare i 5 o 10, a seconda del ramo, hidden state $a^{<t>}$ prodotti dall'LSTM in ogni secondo. La prima operazione consiste nel calcolo di un valore scalare $e_{t}$ per ogni istante temporale, rappresentativo delle informazioni contenute all'interno dell'hidden state associato a quello specifico istante temporale. I 5 o 10 valori così ottenuti sono, quindi, utilizzati per determinare i corrispondenti pesi $\alpha_{t}$, necessari per stabilire l'effettivo livello di importanza di ogni istante rispetto ai restanti. Infine, tramite una semplice somma pesata dei vettori $a^{<t>}$ si ottiene il vettore di contesto $c$ cercato. L'intero processo può essere rappresentato matematicamente dalle seguenti equazioni: 
+Un ulteriore aspetto da analizzare dettagliatamente riguarda la formulazione del Simplified Attention Mechanism, un elemento fondamentale all'interno della rete neurale. Esso, infatti, consente di assegnare un differente livello di importanza ad ogni vettore di stato prodotto dall'LSTM nei vari istanti temporali, garantendo, di conseguenza, un'ottimizzazione dell'utilizzo delle informazioni passate. Inoltre, rende più uniforme e gestibile la successiva elaborazione svolta mediante i fully connected layers posti a valle; a causa della differente frequenza dei sensori, infatti, l'LSTM di ogni ramo restituisce un diverso numero di vettori di stato per ogni secondo di iterazione, nello specifico 10 per il ramo legato al DVL e 5 per il ramo associato alle restanti misurazioni. Nel dettaglio un SAM, una cui rappresentazione schematica è presentata in \emph{Figura} \ref{fig:SAM}, si basa fondamentalmente su tre passaggi matematici, che consentono di condensare gli hidden state $a^{<t>}$ prodotti dall'LSTM in ogni secondo di iterazione in un vettore di contesto. La prima operazione consiste nel calcolo di un valore scalare $e_{t}$ per ogni istante temporale, rappresentativo delle informazioni contenute all'interno dell'hidden state associato a quello specifico istante. I valori così ottenuti sono, quindi, utilizzati per determinare i corrispondenti pesi $\alpha_{t}$, necessari per stabilire l'effettivo livello di importanza di ogni istante rispetto ai restanti. Infine, tramite una semplice somma pesata degli hidden state $a^{<t>}$ si ottiene il vettore di contesto $c$ cercato. L'intero processo può essere rappresentato matematicamente dalle seguenti equazioni: 
 
     \begin{equation}
         \begin{cases}
@@ -178,10 +178,21 @@ Un ulteriore aspetto ancora non analizzato nel dettaglio è la formulazione del 
         \label{eq:SAM}
     \end{equation}
 
+    \begin{figure}[!htb]
+        \centering
+        \includegraphics[width=0.8\linewidth]{./images/Literature_review/SAM_NavNet.pdf}
+        \caption{Rappresentazione schematica del SAM per un singolo ramo}
+        \label{fig:SAM}
+    \end{figure}
 
+Inoltre, dal momento che l'ottimizzatore usato tipicamente appartiente alla classe dei metodi di discesa del gradiente basati su mini-batch, resta da definire l'effettivo numero di batch in cui suddividere il dataset, così come anche il numero di epoche di addestramento. L'ottimizzazione di questi due iperparametri, tuttavia, verrà fatta nel capitolo 6, sulla base delle prestazioni ottenute a seguito dell'esecuzione della rete neurale. Infine, è stato aggiunto uno \emph{scheduler}, ovvero una funzione che consente di ridurre il learning rate di uno specifico fattore $k$, qui impostato a 0.5, in assenza di una riduzione della loss di validazione per più epoche consecutive. Questo risulta fondamentale per garantire l'ottenimento di prestazioni ottimali nel minor tempo possibile. 
 
+Quanto detto finora, si può, poi, riassumere all'interno del diagramma presentato in \emph{Figura} \ref{fig:flowchart}, in cui è possibile visualizzare in maniera più intuitiva il percorso seguito dai dati durante l'esecuzione della rete:
 
-
-
-% Inserire immagine SAM
+\begin{figure}[!htb]
+    \centering
+    \includegraphics[width=1\linewidth]{./images/NN/Flowchart_NavNet.pdf}
+    \caption{Flowchart codice Python}
+    \label{fig:flowchart}
+\end{figure}
 
