@@ -1198,6 +1198,61 @@ class PostProcessing:
 
         self.bootstrap_values_dict = {}  # Dizionario con gli intervalli di confidenza calcolati --> nella forma {chiave missione: {metrica: {versione: {'Mediana': (stima, low, high), ...}}}}
 
+    # ======================================================
+    #            FUNZIONI DI STILE DEI GRAFICI
+    # ======================================================
+
+    # Funzione che rende in grassetto le etichette dei tick di un asse --> sugli assi logaritmici i valori sono scritti come numeri semplici (la notazione 10^x non supporta il grassetto)
+    def _style_ticks(self, ax):
+
+        for axis, scale, limits in ((ax.xaxis, ax.get_xscale(), ax.get_xlim()),
+                                    (ax.yaxis, ax.get_yscale(), ax.get_ylim())):
+
+            if scale == 'log':
+
+                # La densità dei tick si sceglie in base all'ampiezza dell'intervallo rappresentato
+                ratio = limits[1] / limits[0]
+                if ratio > 300:
+                    locator = LogLocator(base=10, subs=(1.0,))
+                elif ratio > 30:
+                    locator = LogLocator(base=10, subs=(1.0, 2.0, 5.0))
+                elif ratio > 4:
+                    locator = LogLocator(base=10, subs=(1.0, 2.0, 3.0, 5.0, 7.0))
+                else:
+                    locator = MaxNLocator(nbins=7)
+
+                axis.set_major_locator(locator)
+                axis.set_major_formatter(FuncFormatter(lambda value, _: f"{value:g}"))
+                axis.set_minor_formatter(NullFormatter())
+
+        # Si disegna la figura prima di modificare le etichette --> così i tick sono quelli definitivi
+        ax.tick_params(axis='both', which='major', labelsize=self.tick_size)
+        ax.figure.canvas.draw()
+        for label in ax.get_xticklabels() + ax.get_yticklabels():
+            label.set_fontweight('bold')
+            label.set_fontfamily('serif')
+
+    # Funzione che posiziona la legenda su una riga all'interno della griglia, in alto --> il limite superiore dell'asse y viene alzato quanto basta perché la legenda non si sovrapponga ai dati
+    #   data_top: valore massimo rappresentato  |  clearance: spazio [pt] da lasciare tra il massimo e la legenda (per l'eventuale valore scritto sopra di esso)
+    def _legend_inside_top(self, fig, ax, handles, data_top, clearance):
+
+        legend = ax.legend(handles=handles, loc='upper center', ncol=len(handles), prop=self.legend_font,
+                           frameon=True,
+                           framealpha=1.0, edgecolor='gray', handlelength=1.6, handletextpad=0.5, columnspacing=1.4)
+        legend.set_zorder(10)
+
+        # Si disegna la figura per conoscere le dimensioni effettive di asse e legenda
+        fig.canvas.draw()
+        legend_bottom = legend.get_window_extent().transformed(ax.transAxes.inverted()).y0
+        axis_height = ax.get_window_extent().height * 72 / fig.dpi  # Altezza dell'asse in punti
+        usable_fraction = legend_bottom - clearance / axis_height  # Frazione dell'asse (dal basso) disponibile per i dati
+
+        # Il calcolo è svolto nello spazio trasformato dell'asse --> vale sia per scala lineare sia logaritmica
+        transform = ax.yaxis.get_transform()
+        low, high, top = transform.transform(np.array([*ax.get_ylim(), data_top], dtype=float))
+        new_high = low + (top - low) / usable_fraction
+        if new_high > high:
+            ax.set_ylim(top=float(transform.inverted().transform(np.array([new_high]))[0]))
 
     # ======================================================
     #       DEFINIZIONE WAYPOINTS E TRAIETTORIE IDEALI
