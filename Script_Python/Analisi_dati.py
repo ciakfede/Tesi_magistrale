@@ -27,6 +27,7 @@ import re
 import seaborn as sns                           # Libreria per la gestione dei box plot e dei violin plot più curati
 from matplotlib.lines import Line2D
 
+from matplotlib.ticker import FuncFormatter, LogLocator, MaxNLocator, NullFormatter
 from matplotlib.markers import MarkerStyle
 from matplotlib.path import Path
 
@@ -1155,6 +1156,12 @@ class PostProcessing:
             'style': 'normal'
         }
 
+        self.legend_font = {'family': 'serif',
+                            'weight': 'bold',
+                            'size': 11}
+        self.tick_size = 11
+        self.value_size = 11
+
         # Dizionario per le Etichette degli Assi (X e Y)
         self.axis_font = {
             'family': 'serif',      # Simula il font serif di Latin Modern usato all'interno del template Latex per la tesi
@@ -1185,7 +1192,7 @@ class PostProcessing:
         self.metrics_dict = {"RMSE": {"RMSE_E": "RMSE East", "RMSE_N": "RMSE North", "RMSE_tot": "RMSE complessivo"},
                              "Delta": {"Delta_E": "Delta East finale", "Delta_N": "Delta North finale", "Delta_tot": "Delta tot finale"}}
 
-        self.aggregate_keys = ('training_missions', 'test_missions', 'total_missions')  # Chiavi delle missioni aggregate --> sono le sole per cui hanno senso ECDF, strip plot e bootstrap
+        self.aggregate_keys = ('validation_missions', 'test_missions', 'total_missions')  # Chiavi delle missioni aggregate --> sono le sole per cui hanno senso ECDF, strip plot e bootstrap
 
         self.sort_versions = True  # Se True le versioni sono ordinate in modo numerico (v1.1.0, v1.1.1, ...) nei grafici di confronto, altrimenti si usa l'ordine di lettura dal file di testo
 
@@ -2938,7 +2945,6 @@ class PostProcessing:
     #            BOX PLOT (UN GRAFICO PER METRICA)
     # ======================================================
 
-    # Funzione interna per la creazione dei box plot, utili per confrontare la distribuzione dei valori di errore (e non solo il valore medio) tra le varie versioni della rete
     # Per ogni metrica (RMSE_E, RMSE_N, RMSE_tot) e per ogni chiave di missione si genera un grafico separato --> salvato nella sottocartella Box_plot/<metrica>
     # mission_keys permette di limitare i grafici a certe chiavi (es. self.aggregate_keys per i soli grafici aggregati) --> se None si realizzano per tutte le missioni, come in precedenza
     def box_plot(self, ROOT_DIR, metric_groups=("RMSE",), mission_keys=None):
@@ -2991,9 +2997,11 @@ class PostProcessing:
                     box_plot = ax.boxplot(samples, positions=range(len(samples)), widths=0.6, patch_artist=True,
                                           showmeans=True, showfliers=not few_samples,
                                           medianprops=dict(color='black', linewidth=1.5),
-                                          meanprops=dict(marker='D', markerfacecolor='white', markeredgecolor='black',
+                                          meanprops=dict(marker='D', markerfacecolor='white',
+                                                         markeredgecolor='black',
                                                          markersize=4),
-                                          flierprops=dict(marker='o', markersize=4, markerfacecolor=outlier_face_color,
+                                          flierprops=dict(marker='o', markersize=4,
+                                                          markerfacecolor=outlier_face_color,
                                                           markeredgecolor=outlier_edge_color, markeredgewidth=0.5,
                                                           linestyle='none', alpha=0.8))
 
@@ -3003,7 +3011,8 @@ class PostProcessing:
                         box.set_edgecolor('black')
 
                     if highlight_best:
-                        box_plot['boxes'][int(np.argmin([np.median(s) for s in samples]))].set_facecolor('tab:green')
+                        box_plot['boxes'][int(np.argmin([np.median(s) for s in samples]))].set_facecolor(
+                            'tab:green')
 
                     # Se i campioni sono pochi si sovrappongono i singoli valori con una piccola dispersione orizzontale (seed fisso per riproducibilita')
                     if few_samples:
@@ -3014,7 +3023,8 @@ class PostProcessing:
 
                     # Si definiscono i parametri associati all'asse
                     ax.set_xticks(range(len(versions)))
-                    ax.set_xticklabels([f"v{version}" for version in versions], rotation=45, fontdict=self.axis_font)
+                    ax.set_xticklabels([f"v{version}" for version in versions], rotation=45,
+                                       fontdict=self.axis_font)
                     ax.set_ylabel(f"{metric} [m]", fontdict=self.axis_font)
                     ax.set_title(fig_title, fontdict=self.title_font, pad=10)
 
@@ -3067,7 +3077,8 @@ class PostProcessing:
 
             for metric, axis_title in self.metrics_dict[plot_key].items():
 
-                PLOT_FOLDER_PATH = os.path.join(ROOT_DIR, 'Risultati_NN', 'Evaluation_metrics_analysis', 'ECDF', metric)
+                PLOT_FOLDER_PATH = os.path.join(ROOT_DIR, 'Risultati_NN', 'Evaluation_metrics_analysis', 'ECDF',
+                                                metric)
                 os.makedirs(PLOT_FOLDER_PATH, exist_ok=True)
 
                 for mission_key in mission_keys:
@@ -3090,7 +3101,7 @@ class PostProcessing:
                         y = np.arange(1, len(x) + 1) / len(x)
                         ax.step(np.r_[x[0], x], np.r_[0.0, y], where='post', color=version_colors[version],
                                 linewidth=2.0,
-                                linestyle=line_styles[i % len(line_styles)], label=f"v{version} (n={len(sample)})")
+                                linestyle=line_styles[i % len(line_styles)], label=f"v{version}")
 
                     # Linee di riferimento sulla mediana (50%) e sul 90° percentile --> la loro intersezione con le curve permette di leggere direttamente i due valori
                     for quantile, text in ((0.5, 'Mediana'), (0.9, 'P90')):
@@ -3138,7 +3149,8 @@ class PostProcessing:
 
             for metric, axis_title in self.metrics_dict[plot_key].items():
 
-                PLOT_FOLDER_PATH = os.path.join(ROOT_DIR, 'Risultati_NN', 'Evaluation_metrics_analysis', 'Strip_plot',
+                PLOT_FOLDER_PATH = os.path.join(ROOT_DIR, 'Risultati_NN', 'Evaluation_metrics_analysis',
+                                                'Strip_plot',
                                                 metric)
                 os.makedirs(PLOT_FOLDER_PATH, exist_ok=True)
 
@@ -3174,11 +3186,12 @@ class PostProcessing:
 
                     ax.set_xlim(-0.6, len(samples) - 0.4)
                     ax.set_xticks(range(len(versions)))
-                    ax.set_xticklabels([f"v{version}\n(n={len(sample)})" for version, sample in zip(versions, samples)],
+                    ax.set_xticklabels([f"v{version}" for version in versions],
                                        fontdict=self.axis_font)
                     ax.set_ylabel(f"{metric} [m]" + (" (scala logaritmica)" if use_log else ""),
                                   fontdict=self.axis_font)
-                    ax.set_title(f"{axis_title} per singola missione {title_suffix}", fontdict=self.title_font, pad=10)
+                    ax.set_title(f"{axis_title} per singola missione {title_suffix}", fontdict=self.title_font,
+                                 pad=10)
                     ax.grid(axis='y', which='major', alpha=0.3)
                     ax.grid(axis='y', which='minor', alpha=0.12)
 
@@ -3188,7 +3201,8 @@ class PostProcessing:
                         Line2D([0], [0], color='black', linewidth=2.0, label='Mediana'),
                         Line2D([0], [0], marker='D', color='w', markerfacecolor='white', markeredgecolor='black',
                                markersize=6, label='Media')]
-                    self._legend_inside_top(fig, ax, legend_handles, data_top=max(np.max(sample) for sample in samples),
+                    self._legend_inside_top(fig, ax, legend_handles,
+                                            data_top=max(np.max(sample) for sample in samples),
                                             clearance=10)
                     self._style_ticks(ax)
 
@@ -3265,7 +3279,8 @@ class PostProcessing:
 
                     # Si calcolano gli intervalli di ogni versione --> seed fisso per avere risultati riproducibili
                     rng = np.random.default_rng(self.bootstrap_seed)
-                    results = {version: self._bootstrap_ci(sample, rng) for version, sample in zip(versions, samples)}
+                    results = {version: self._bootstrap_ci(sample, rng) for version, sample in
+                               zip(versions, samples)}
                     self.bootstrap_values_dict.setdefault(mission_key, {}).setdefault(metric, {}).update(results)
 
                     stat_names = list(next(iter(results.values())).keys())
@@ -3301,7 +3316,8 @@ class PostProcessing:
                                 ax.plot(i, estimate, 'o', color=color, markersize=9, markeredgecolor='white',
                                         markeredgewidth=1.0, zorder=3)
 
-                            ax.annotate(f"{estimate:.2f}", xy=(i, estimate), xytext=(10, 0), textcoords='offset points',
+                            ax.annotate(f"{estimate:.2f}", xy=(i, estimate), xytext=(10, 0),
+                                        textcoords='offset points',
                                         ha='left', va='center', fontsize=9, color='dimgray')
 
                         ax.set_xlim(-0.6, len(versions) - 0.4)
@@ -3385,7 +3401,8 @@ class PostProcessing:
                                     ha='center', va='bottom', fontsize=self.value_size, fontweight='bold',
                                     color='black')
                         ax.annotate(f"{minimum:.2f}", xy=(i, minimum), xytext=(0, -5), textcoords='offset points',
-                                    ha='center', va='top', fontsize=self.value_size, fontweight='bold', color='black')
+                                    ha='center', va='top', fontsize=self.value_size, fontweight='bold',
+                                    color='black')
                         ax.annotate(f"{median:.2f}", xy=(i + 0.16, median), xytext=(4, 0),
                                     textcoords='offset points', ha='left', va='center', fontsize=self.value_size,
                                     fontweight='bold', color='black')
@@ -3401,7 +3418,7 @@ class PostProcessing:
                     ax.margins(y=0.12)
                     ax.set_xticks(range(len(versions)))
                     ax.set_xticklabels(
-                        [f"v{version}\n(n={len(sample)})" for version, sample in zip(versions, samples)],
+                        [f"v{version}" for version in versions],
                         fontdict=self.axis_font)
                     ax.set_ylabel(f"{metric} [m]" + (" (scala logaritmica)" if use_log else ""),
                                   fontdict=self.axis_font)
@@ -3415,7 +3432,8 @@ class PostProcessing:
                                       Line2D([0], [0], marker='D', color='w', markerfacecolor='white',
                                              markeredgecolor='black', markersize=6, label='Media')]
                     # La distanza richiesta dalla legenda tiene conto del valore del massimo scritto sopra la tacca
-                    self._legend_inside_top(fig, ax, legend_handles, data_top=max(np.max(sample) for sample in samples),
+                    self._legend_inside_top(fig, ax, legend_handles,
+                                            data_top=max(np.max(sample) for sample in samples),
                                             clearance=self.value_size + 14)
                     self._style_ticks(ax)
 
@@ -3455,8 +3473,9 @@ class PostProcessing:
             # Si impostano i pattern tipici per l'inizio di una differente versione e all'interno di questa per ogni traiettoria
             new_iter_pattern = re.compile(r"\s*RIASSUNTO\s+VALORI\s+DI\s+RMSE\s+\(TEST\s+v(\d+\.\d+\.\d+)\)",
                                           re.IGNORECASE)
-            new_path_pattern = re.compile(r"\s*PARAMETRI\s+DI\s+PERFORMANCE\s+PER\s+\((.*?)\)\s+-\s+(Percorso_\d+):",
-                                          re.IGNORECASE)
+            new_path_pattern = re.compile(
+                r"\s*PARAMETRI\s+DI\s+PERFORMANCE\s+PER\s+\((.*?)\)\s+-\s+(Percorso_\d+):",
+                re.IGNORECASE)
             data_pattern = re.compile(rf"^\s*({'|'.join(map(re.escape, metrics))}):\s*({number})\s*m\s*$",
                                       re.IGNORECASE)
 
@@ -3598,4 +3617,3 @@ class PostProcessing:
         self.range_plot(ROOT_DIR, metric_groups=("RMSE", "Delta"))
 
         return self
-

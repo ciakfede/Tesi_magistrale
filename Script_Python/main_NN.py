@@ -51,7 +51,7 @@ loss_function = nn.MSELoss                                  # Loss function pres
 #loss_function = MixedLpNavLoss
 #loss_function = LogCoshLoss
 k = 0.5                                                     # Fattore di riduzione dello scheduler
-do_eval = False                                             # Variabile booleana per la valutazione dei risultati
+do_eval = True                                             # Variabile booleana per la valutazione dei risultati
 do_error_graph = False                                      # Variabile booleana per la realizzazione del grafico relativo all'evoluzione dell'errore nel tempo
 
 # Si definisce il dizionario di configurazione per stabilire quali dati non devono essere utilizzati e con quale target (NED/body) --> di IMU si usano sempre tutti quindi si sfrutta questo dizionario per selezionare la modalità (deg o sin/cos)
