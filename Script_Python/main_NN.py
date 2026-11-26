@@ -40,18 +40,18 @@ import json                                 # libreria per la gestione del forma
 # ======================================================
 
 # Variabili legate alla configurazione della rete neurale
-window_size = 16                                             # Numero di secondi di missione consecutivi accorpati in una singola finestra
-batch_size = 4                                             # Numero di finestre forniti contemporaneamente alla rete --> la dimensione della mini-batch è pari a window_size * batch_size
+window_size = 1                                             # Numero di secondi di missione consecutivi accorpati in una singola finestra
+batch_size = 32                                             # Numero di finestre forniti contemporaneamente alla rete --> la dimensione della mini-batch è pari a window_size * batch_size
 batch_size_test = 1                                         # Per il test si usa una batch size di 1s --> si ottiene la stima della posizione per ogni secondo di navigazione (coincidenza perfetta con batch GPS)
-num_epoch = 80                                              # Numero di epoche di iterazione per l'addestramento
-network_config = {'IMU': 9, 'DVL': 3, 'GPS': 2}             # Dizionario di configurazione della rete neurale --> utile per impostare ordine, numero e nome dei rami associati a LSTM e SAM
-hidden_size = 100                                           # Numero di neuroni appartenenti al layer nascosto del LSTM
+num_epoch = 60                                              # Numero di epoche di iterazione per l'addestramento
+network_config = {'IMU': 3, 'DVL': 3, 'REF': 6, 'GPS': 2}             # Dizionario di configurazione della rete neurale --> utile per impostare ordine, numero e nome dei rami associati a LSTM e SAM
+hidden_size = 50                                           # Numero di neuroni appartenenti al layer nascosto del LSTM
 FC_layers = 2                                              # Numero di FC Layers della rete
-#loss_function = nn.MSELoss                                  # Loss function prescelta per la rete --> per LogCosh e MixedLpNorm non serve usare il modulo nn --> in tutti i casi non servono le parentesi tonde
-loss_function = MixedLpNavLoss
+loss_function = nn.MSELoss                                  # Loss function prescelta per la rete --> per LogCosh e MixedLpNorm non serve usare il modulo nn --> in tutti i casi non servono le parentesi tonde
+#loss_function = MixedLpNavLoss
 #loss_function = LogCoshLoss
-k = 0.7                                                     # Fattore di riduzione dello scheduler
-do_eval = True                                             # Variabile booleana per la valutazione dei risultati
+k = 0.5                                                     # Fattore di riduzione dello scheduler
+do_eval = False                                             # Variabile booleana per la valutazione dei risultati
 do_error_graph = False                                      # Variabile booleana per la realizzazione del grafico relativo all'evoluzione dell'errore nel tempo
 
 # Si definisce il dizionario di configurazione per stabilire quali dati non devono essere utilizzati e con quale target (NED/body) --> di IMU si usano sempre tutti quindi si sfrutta questo dizionario per selezionare la modalità (deg o sin/cos)
