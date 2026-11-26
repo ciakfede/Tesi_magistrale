@@ -2775,8 +2775,6 @@ class PostProcessing:
 
         return self
 
-
-
     @staticmethod
     def _distribution_stats(values, percentile_levels=(10, 90)):
 
@@ -2823,7 +2821,8 @@ class PostProcessing:
             for mission_key, mission_dict in version_dict.items():
 
                 for metric_key, raw_values in mission_dict.items():
-                    values_dict.setdefault(mission_key, {}).setdefault(metric_key, []).append((iteration_key, raw_values))
+                    values_dict.setdefault(mission_key, {}).setdefault(metric_key, []).append(
+                        (iteration_key, raw_values))
 
         if self.sort_versions:
             for mission_dict in values_dict.values():
@@ -2854,7 +2853,8 @@ class PostProcessing:
             versions.sort(key=self._version_sort_key)
 
         if len(versions) > len(self.version_colors):
-            print(f"  [WARNING] Ci sono {len(versions)} versioni ma solo {len(self.version_colors)} colori distinti: i colori verranno riutilizzati.")
+            print(
+                f"  [WARNING] Ci sono {len(versions)} versioni ma solo {len(self.version_colors)} colori distinti: i colori verranno riutilizzati.")
 
         return {version: self.version_colors[i % len(self.version_colors)] for i, version in enumerate(versions)}
 
@@ -2864,8 +2864,8 @@ class PostProcessing:
 
         if mission_key == 'test_missions':
             return 'test_missions', 'sulle missioni di test'
-        elif mission_key == 'training_missions':
-            return 'training_missions', 'sulle missioni di training'
+        elif mission_key == 'validation_missions':
+            return 'validation_missions', 'sulle missioni di validazione'
         elif mission_key == 'total_missions':
             return 'total_missions', 'su tutte le missioni'
         elif isinstance(mission_key, tuple):
@@ -2890,9 +2890,6 @@ class PostProcessing:
 
         highlight_best = False
 
-        # Dimensione (in pt) del font dei valori di media, mediana e percentili scritti sopra ogni grafico --> aumentarla per le presentazioni
-        stats_fontsize = 14
-
         # Colori degli outlier --> pallini pieni sul tono del blu (riempimento coerente con le scatole, bordo piu' scuro per renderli leggibili)
         outlier_face_color = 'tab:blue'
         outlier_edge_color = 'navy'
@@ -2907,7 +2904,8 @@ class PostProcessing:
             # Si itera su ogni metrica --> ognuna ha la propria sottocartella (es. Box_plot/RMSE_E) in cui sono contenuti i grafici di ogni chiave missione
             for metric, axis_title in metrics.items():
 
-                PLOT_FOLDER_PATH = os.path.join(ROOT_DIR, 'Risultati_NN', 'Evaluation_metrics_analysis', 'Box_plot', metric)
+                PLOT_FOLDER_PATH = os.path.join(ROOT_DIR, 'Risultati_NN', 'Evaluation_metrics_analysis', 'Box_plot',
+                                                metric)
                 os.makedirs(PLOT_FOLDER_PATH, exist_ok=True)
 
                 for mission_key, mission_dict in values_dict.items():
@@ -2924,20 +2922,22 @@ class PostProcessing:
                     versions, samples = self._clean_samples(mission_dict.get(metric, []))
 
                     if not samples:
-                        print(f"  [WARNING] Nessun valore valido per la missione {mission_key} e la metrica {metric}: grafico non generato.")
+                        print(
+                            f"  [WARNING] Nessun valore valido per la missione {mission_key} e la metrica {metric}: grafico non generato.")
                         continue
 
                     # Per le singole missioni ci sono solo 4 valori per versione --> si mostrano i punti reali al posto degli outlier
                     few_samples = max(len(s) for s in samples) <= 10
 
-                    fig, ax = plt.subplots(figsize=(10, 7.5), layout='constrained')
+                    fig, ax = plt.subplots(figsize=(10, 6.5), layout='constrained')
 
                     # Si inizializza il box plot --> ogni scatola e' una versione, con baffi a 1.5 IQR, mediana (linea nera) e media (rombo bianco)
                     # Gli outlier sono pallini pieni (riempimento blu, bordo blu scuro)
                     box_plot = ax.boxplot(samples, positions=range(len(samples)), widths=0.6, patch_artist=True,
                                           showmeans=True, showfliers=not few_samples,
                                           medianprops=dict(color='black', linewidth=1.5),
-                                          meanprops=dict(marker='D', markerfacecolor='white', markeredgecolor='black', markersize=4),
+                                          meanprops=dict(marker='D', markerfacecolor='white', markeredgecolor='black',
+                                                         markersize=4),
                                           flierprops=dict(marker='o', markersize=4, markerfacecolor=outlier_face_color,
                                                           markeredgecolor=outlier_edge_color, markeredgewidth=0.5,
                                                           linestyle='none', alpha=0.8))
@@ -2954,41 +2954,14 @@ class PostProcessing:
                     if few_samples:
                         rng = np.random.default_rng(0)
                         for i, s in enumerate(samples):
-                            ax.scatter(i + rng.uniform(-0.12, 0.12, size=len(s)), s, s=14, color='black', alpha=0.7, zorder=3)
+                            ax.scatter(i + rng.uniform(-0.12, 0.12, size=len(s)), s, s=14, color='black', alpha=0.7,
+                                       zorder=3)
 
-                    # Si calcolano media, mediana e percentili (10° e 90°) di ogni versione (sugli stessi campioni usati dal box plot) e li si scrivono in quattro righe sopra il grafico,
-                    # allineate in orizzontale alla scatola corrispondente --> fuori dall'area dei dati, quindi senza sovrapposizioni con baffi e outlier
-                    stats = [self._distribution_stats(s, self.percentile_levels) for s in samples]
-                    stats_font = {**self.axis_font, 'size': stats_fontsize}
-
-                    # Trasformazione mista: x in coordinate dati (posizione della scatola), y in coordinate relative all'asse (1 = bordo superiore del grafico)
-                    # Le righe sono distanziate dal bordo in punti (non in frazione dell'asse) --> restano ben separate anche cambiando stats_fontsize
-                    x_data_y_axes = ax.get_xaxis_transform()
-
-                    # Quattro righe (dal basso verso l'alto): percentile inferiore, media, mediana, percentile superiore --> (intestazione, chiave del dizionario delle statistiche, peso del font dei valori)
-                    p_low, p_high = int(self.percentile_levels[0]), int(self.percentile_levels[1])
-                    stats_rows = [(f"P{p_low}", f"p{p_low}", 'normal'), ('Media', 'mean', 'bold'),
-                                  ('Mediana', 'median', 'bold'), (f"P{p_high}", f"p{p_high}", 'normal')]
-                    row_offset = {label: (1.0 + 1.4 * k) * stats_fontsize for k, (label, _, _) in enumerate(stats_rows)}
-
-                    for i, sample_stats in enumerate(stats):
-                        for label, stat_key, weight in stats_rows:
-                            ax.annotate(f"{sample_stats[stat_key]:.2f}", xy=(i, 1.0), xycoords=x_data_y_axes,
-                                        xytext=(0, row_offset[label]),
-                                        textcoords='offset points', ha='center', va='center', annotation_clip=False,
-                                        **{**stats_font, 'weight': weight})
-
-                    # Intestazioni delle righe, a sinistra del bordo del grafico
-                    for label, offset in row_offset.items():
-                        ax.annotate(label, xy=(0, 1.0), xycoords='axes fraction', xytext=(-8, offset),
-                                    textcoords='offset points', ha='right', va='center', annotation_clip=False,
-                                    **{**stats_font, 'weight': 'bold' if label == 'Mediana' else 'normal'})
-
-                    # Si definiscono i parametri associati all'asse --> il titolo sta sopra le righe di statistiche
+                    # Si definiscono i parametri associati all'asse
                     ax.set_xticks(range(len(versions)))
                     ax.set_xticklabels([f"v{version}" for version in versions], rotation=45, fontdict=self.axis_font)
                     ax.set_ylabel(f"{metric} [m]", fontdict=self.axis_font)
-                    ax.set_title(fig_title, fontdict=self.title_font, pad=(2.0 + 1.4 * (len(stats_rows) - 1)) * stats_fontsize)
+                    ax.set_title(fig_title, fontdict=self.title_font, pad=10)
 
                     log_grid = False
                     if log_grid:
@@ -3002,12 +2975,15 @@ class PostProcessing:
                                       Line2D([0], [0], marker='D', color='w', markerfacecolor='white',
                                              markeredgecolor='black', markersize=6, label='Media')]
                     if not few_samples:
-                        legend_handles.append(Line2D([0], [0], marker='o', color='w', markerfacecolor=outlier_face_color,
-                                                     markeredgecolor=outlier_edge_color, markersize=6, label='Outlier'))
+                        legend_handles.append(
+                            Line2D([0], [0], marker='o', color='w', markerfacecolor=outlier_face_color,
+                                   markeredgecolor=outlier_edge_color, markersize=6, label='Outlier'))
                     if highlight_best:
                         legend_handles.append(Line2D([0], [0], marker='s', color='w', markerfacecolor='tab:green',
                                                      markersize=9, label='Mediana minore'))
-                    ax.legend(handles=legend_handles, loc='center left', bbox_to_anchor=(1.02, 0.5), frameon=False)
+                    ax.legend(handles=legend_handles, loc='center left', bbox_to_anchor=(1.02, 0.5), frameon=False,
+                              prop=self.legend_font)
+                    self._style_ticks(ax)
 
                     # Si salva il grafico e si chiude la figura per liberare memoria
                     fig.savefig(os.path.join(PLOT_FOLDER_PATH, fig_name), dpi=150)
@@ -3026,7 +3002,8 @@ class PostProcessing:
 
         values_dict = self._group_raw_values()
         version_colors = self._version_colors_map()
-        line_styles = ['-', '--', '-.', ':']                # Secondo canale di codifica oltre al colore --> le curve restano distinguibili anche per chi non distingue i colori o in stampa in bianco e nero
+        line_styles = ['-', '--', '-.',
+                       ':']  # Secondo canale di codifica oltre al colore --> le curve restano distinguibili anche per chi non distingue i colori o in stampa in bianco e nero
 
         if mission_keys is None:
             mission_keys = self.aggregate_keys
@@ -3043,7 +3020,8 @@ class PostProcessing:
                     versions, samples = self._clean_samples(values_dict.get(mission_key, {}).get(metric, []))
 
                     if not samples:
-                        print(f"  [WARNING] Nessun valore valido per la missione {mission_key} e la metrica {metric}: ECDF non generata.")
+                        print(
+                            f"  [WARNING] Nessun valore valido per la missione {mission_key} e la metrica {metric}: ECDF non generata.")
                         continue
 
                     file_suffix, title_suffix = self._mission_labels(mission_key)
@@ -3052,29 +3030,33 @@ class PostProcessing:
                     fig, ax = plt.subplots(figsize=(8, 6), layout='constrained')
 
                     for i, (version, sample) in enumerate(zip(versions, samples)):
-
                         # Si ordinano i valori --> la frazione cumulata del k-esimo valore è k/n --> si aggiunge un punto iniziale a quota 0 per far partire la curva dal basso
                         x = np.sort(sample)
                         y = np.arange(1, len(x) + 1) / len(x)
-                        ax.step(np.r_[x[0], x], np.r_[0.0, y], where='post', color=version_colors[version], linewidth=2.0,
+                        ax.step(np.r_[x[0], x], np.r_[0.0, y], where='post', color=version_colors[version],
+                                linewidth=2.0,
                                 linestyle=line_styles[i % len(line_styles)], label=f"v{version} (n={len(sample)})")
 
                     # Linee di riferimento sulla mediana (50%) e sul 90° percentile --> la loro intersezione con le curve permette di leggere direttamente i due valori
                     for quantile, text in ((0.5, 'Mediana'), (0.9, 'P90')):
                         ax.axhline(quantile, color='gray', linestyle=':', linewidth=1.0, alpha=0.8, zorder=1)
-                        ax.text(0.01, quantile, text, transform=ax.get_yaxis_transform(), ha='left', va='bottom', fontsize=9, color='dimgray')
+                        ax.text(0.01, quantile, text, transform=ax.get_yaxis_transform(), ha='left', va='bottom',
+                                fontsize=self.value_size, fontweight='bold', color='black')
 
                     if use_log:
                         ax.set_xscale('log')
                     elif log_x:
-                        print(f"  [WARNING] Valori non positivi per {metric} ({mission_key}): ECDF realizzata con scala lineare.")
+                        print(
+                            f"  [WARNING] Valori non positivi per {metric} ({mission_key}): ECDF realizzata con scala lineare.")
 
                     ax.set_ylim(0, 1.02)
-                    ax.set_xlabel(f"{metric} [m]" + (" (scala logaritmica)" if use_log else ""), fontdict=self.axis_font)
+                    ax.set_xlabel(f"{metric} [m]" + (" (scala logaritmica)" if use_log else ""),
+                                  fontdict=self.axis_font)
                     ax.set_ylabel("Frazione di missioni con errore ≤ x", fontdict=self.axis_font)
                     ax.set_title(f"ECDF {axis_title} {title_suffix}", fontdict=self.title_font, pad=10)
                     ax.grid(True, which='both', linestyle=':', alpha=0.4)
-                    ax.legend(loc='lower right', frameon=False)
+                    ax.legend(loc='lower right', frameon=False, prop=self.legend_font)
+                    self._style_ticks(ax)
 
                     fig.savefig(os.path.join(PLOT_FOLDER_PATH, f"{metric}_ecdf_{file_suffix}.pdf"), dpi=150)
                     plt.close(fig)
@@ -3101,7 +3083,8 @@ class PostProcessing:
 
             for metric, axis_title in self.metrics_dict[plot_key].items():
 
-                PLOT_FOLDER_PATH = os.path.join(ROOT_DIR, 'Risultati_NN', 'Evaluation_metrics_analysis', 'Strip_plot', metric)
+                PLOT_FOLDER_PATH = os.path.join(ROOT_DIR, 'Risultati_NN', 'Evaluation_metrics_analysis', 'Strip_plot',
+                                                metric)
                 os.makedirs(PLOT_FOLDER_PATH, exist_ok=True)
 
                 for mission_key in mission_keys:
@@ -3109,40 +3092,50 @@ class PostProcessing:
                     versions, samples = self._clean_samples(values_dict.get(mission_key, {}).get(metric, []))
 
                     if not samples:
-                        print(f"  [WARNING] Nessun valore valido per la missione {mission_key} e la metrica {metric}: strip plot non generato.")
+                        print(
+                            f"  [WARNING] Nessun valore valido per la missione {mission_key} e la metrica {metric}: strip plot non generato.")
                         continue
 
                     file_suffix, title_suffix = self._mission_labels(mission_key)
                     use_log = log_scale and self._all_positive(samples)
 
-                    fig, ax = plt.subplots(figsize=(8, 6), layout='constrained')
+                    fig, ax = plt.subplots(figsize=(max(10.0, 1.2 * len(versions)), 7.2), layout='constrained')
 
-                    rng = np.random.default_rng(0)                  # Seed fisso per riproducibilità della dispersione orizzontale
+                    rng = np.random.default_rng(0)  # Seed fisso per riproducibilità della dispersione orizzontale
                     for i, (version, sample) in enumerate(zip(versions, samples)):
-
                         # Punti singoli (bordo bianco per distinguerli quando si sovrappongono), poi mediana e media sopra di essi
-                        ax.scatter(i + rng.uniform(-0.18, 0.18, size=len(sample)), sample, s=36, color=version_colors[version],
+                        ax.scatter(i + rng.uniform(-0.18, 0.18, size=len(sample)), sample, s=36,
+                                   color=version_colors[version],
                                    edgecolors='white', linewidths=0.6, alpha=0.9, zorder=3)
                         ax.hlines(np.median(sample), i - 0.32, i + 0.32, color='black', linewidth=2.0, zorder=4)
-                        ax.scatter(i, np.mean(sample), marker='D', s=40, color='white', edgecolors='black', linewidths=1.0, zorder=5)
+                        ax.scatter(i, np.mean(sample), marker='D', s=40, color='white', edgecolors='black',
+                                   linewidths=1.0, zorder=5)
 
                     if use_log:
                         ax.set_yscale('log')
                     elif log_scale:
-                        print(f"  [WARNING] Valori non positivi per {metric} ({mission_key}): strip plot realizzato con scala lineare.")
+                        print(
+                            f"  [WARNING] Valori non positivi per {metric} ({mission_key}): strip plot realizzato con scala lineare.")
 
                     ax.set_xlim(-0.6, len(samples) - 0.4)
                     ax.set_xticks(range(len(versions)))
-                    ax.set_xticklabels([f"v{version}\n(n={len(sample)})" for version, sample in zip(versions, samples)], fontdict=self.axis_font)
-                    ax.set_ylabel(f"{metric} [m]" + (" (scala logaritmica)" if use_log else ""), fontdict=self.axis_font)
+                    ax.set_xticklabels([f"v{version}\n(n={len(sample)})" for version, sample in zip(versions, samples)],
+                                       fontdict=self.axis_font)
+                    ax.set_ylabel(f"{metric} [m]" + (" (scala logaritmica)" if use_log else ""),
+                                  fontdict=self.axis_font)
                     ax.set_title(f"{axis_title} per singola missione {title_suffix}", fontdict=self.title_font, pad=10)
                     ax.grid(axis='y', which='major', alpha=0.3)
                     ax.grid(axis='y', which='minor', alpha=0.12)
 
-                    legend_handles = [Line2D([0], [0], marker='o', color='w', markerfacecolor='gray', markeredgecolor='white', markersize=7, label='Singola missione'),
-                                      Line2D([0], [0], color='black', linewidth=2.0, label='Mediana'),
-                                      Line2D([0], [0], marker='D', color='w', markerfacecolor='white', markeredgecolor='black', markersize=6, label='Media')]
-                    ax.legend(handles=legend_handles, loc='center left', bbox_to_anchor=(1.02, 0.5), frameon=False)
+                    legend_handles = [
+                        Line2D([0], [0], marker='o', color='w', markerfacecolor='gray', markeredgecolor='white',
+                               markersize=7, label='Singola missione'),
+                        Line2D([0], [0], color='black', linewidth=2.0, label='Mediana'),
+                        Line2D([0], [0], marker='D', color='w', markerfacecolor='white', markeredgecolor='black',
+                               markersize=6, label='Media')]
+                    self._legend_inside_top(fig, ax, legend_handles, data_top=max(np.max(sample) for sample in samples),
+                                            clearance=10)
+                    self._style_ticks(ax)
 
                     fig.savefig(os.path.join(PLOT_FOLDER_PATH, f"{metric}_stripplot_{file_suffix}.pdf"), dpi=150)
                     plt.close(fig)
@@ -3160,7 +3153,8 @@ class PostProcessing:
         values = np.asarray(values, dtype=float)
         p_high = int(self.percentile_levels[1])
 
-        point_estimates = {'Mediana': np.median(values), 'Media': np.mean(values), f"P{p_high}": np.percentile(values, p_high)}
+        point_estimates = {'Mediana': np.median(values), 'Media': np.mean(values),
+                           f"P{p_high}": np.percentile(values, p_high)}
 
         # Con una sola missione non ha senso parlare di intervallo di confidenza --> si restituiscono i soli valori puntuali
         if values.size < 2:
@@ -3193,7 +3187,7 @@ class PostProcessing:
         BOOTSTRAP_FOLDER_PATH = os.path.join(ROOT_DIR, 'Risultati_NN', 'Evaluation_metrics_analysis', 'Bootstrap')
         os.makedirs(BOOTSTRAP_FOLDER_PATH, exist_ok=True)
 
-        self.bootstrap_values_dict = {}                 # Nella forma {chiave missione: {metrica: {versione: {'Mediana': (stima, low, high), ...}}}}
+        self.bootstrap_values_dict = {}  # Nella forma {chiave missione: {metrica: {versione: {'Mediana': (stima, low, high), ...}}}}
         text_lines = []
 
         for plot_key in metric_groups:
@@ -3208,7 +3202,8 @@ class PostProcessing:
                     versions, samples = self._clean_samples(values_dict.get(mission_key, {}).get(metric, []))
 
                     if not samples:
-                        print(f"  [WARNING] Nessun valore valido per la missione {mission_key} e la metrica {metric}: bootstrap non eseguito.")
+                        print(
+                            f"  [WARNING] Nessun valore valido per la missione {mission_key} e la metrica {metric}: bootstrap non eseguito.")
                         continue
 
                     file_suffix, title_suffix = self._mission_labels(mission_key)
@@ -3224,12 +3219,16 @@ class PostProcessing:
                     text_lines.append(f"\n  {axis_title} {title_suffix}\n")
                     for version, sample in zip(versions, samples):
                         text_lines.append(f"    v{version} (n={len(sample)}):  " + "  |  ".join(
-                            f"{name}: {est:.2f} [{low:.2f}, {high:.2f}]" for name, (est, low, high) in results[version].items()) + "\n")
+                            f"{name}: {est:.2f} [{low:.2f}, {high:.2f}]" for name, (est, low, high) in
+                            results[version].items()) + "\n")
 
                     # Un pannello per statistica --> scala verticale indipendente perché mediana, media e P90 hanno ordini di grandezza diversi
-                    fig, axis = plt.subplots(1, len(stat_names), figsize=(4.6 * len(stat_names), 6), layout='constrained')
+                    fig, axis = plt.subplots(1, len(stat_names), figsize=(4.6 * len(stat_names), 6),
+                                             layout='constrained')
                     axis = np.atleast_1d(axis)
-                    fig.suptitle(f"Intervalli di confidenza bootstrap al {self.bootstrap_ci}% - {axis_title} {title_suffix}", **self.title_font)
+                    fig.suptitle(
+                        f"Intervalli di confidenza bootstrap al {self.bootstrap_ci}% - {axis_title} {title_suffix}",
+                        **self.title_font)
 
                     for ax, name in zip(axis, stat_names):
 
@@ -3239,16 +3238,21 @@ class PostProcessing:
                             color = version_colors[version]
 
                             if np.isfinite(low) and np.isfinite(high):
-                                ax.errorbar(i, estimate, yerr=[[estimate - low], [high - estimate]], fmt='o', color=color, ecolor=color,
-                                            elinewidth=2.2, capsize=6, capthick=2.2, markersize=9, markeredgecolor='white', markeredgewidth=1.0, zorder=3)
+                                ax.errorbar(i, estimate, yerr=[[estimate - low], [high - estimate]], fmt='o',
+                                            color=color, ecolor=color,
+                                            elinewidth=2.2, capsize=6, capthick=2.2, markersize=9,
+                                            markeredgecolor='white', markeredgewidth=1.0, zorder=3)
                             else:
-                                ax.plot(i, estimate, 'o', color=color, markersize=9, markeredgecolor='white', markeredgewidth=1.0, zorder=3)
+                                ax.plot(i, estimate, 'o', color=color, markersize=9, markeredgecolor='white',
+                                        markeredgewidth=1.0, zorder=3)
 
-                            ax.annotate(f"{estimate:.2f}", xy=(i, estimate), xytext=(10, 0), textcoords='offset points', ha='left', va='center', fontsize=9, color='dimgray')
+                            ax.annotate(f"{estimate:.2f}", xy=(i, estimate), xytext=(10, 0), textcoords='offset points',
+                                        ha='left', va='center', fontsize=9, color='dimgray')
 
                         ax.set_xlim(-0.6, len(versions) - 0.4)
                         ax.set_xticks(range(len(versions)))
-                        ax.set_xticklabels([f"v{version}" for version in versions], rotation=45, fontdict=self.axis_font)
+                        ax.set_xticklabels([f"v{version}" for version in versions], rotation=45,
+                                           fontdict=self.axis_font)
                         ax.set_ylabel(f"{metric} [m]", fontdict=self.axis_font)
                         ax.set_title(name, fontdict=self.axis_font)
                         ax.grid(axis='y', alpha=0.3)
@@ -3260,12 +3264,13 @@ class PostProcessing:
         output_file_path = os.path.join(BOOTSTRAP_FOLDER_PATH, 'NN_bootstrap_CI.txt')
         with open(output_file_path, 'w', encoding='utf-8') as f:
             f.write("\n             INTERVALLI DI CONFIDENZA BOOTSTRAP\n\n")
-            f.write(f"  Metodo del percentile, livello {self.bootstrap_ci}%, {self.bootstrap_n} ricampionamenti (seed {self.bootstrap_seed}).\n")
-            f.write("  Formato: stima [limite inferiore, limite superiore] --> gli intervalli sono calcolati separatamente per ogni versione (non appaiati).\n")
+            f.write(
+                f"  Metodo del percentile, livello {self.bootstrap_ci}%, {self.bootstrap_n} ricampionamenti (seed {self.bootstrap_seed}).\n")
+            f.write(
+                "  Formato: stima [limite inferiore, limite superiore] --> gli intervalli sono calcolati separatamente per ogni versione (non appaiati).\n")
             f.write("".join(text_lines))
 
         return self
-
 
     # Funzione che rappresenta, per ogni versione, il campo di variazione dei valori registrati tra le singole missioni --> puramente descrittiva, non fa alcuna ipotesi sui dati
     #   - baffo sottile con due tacche: valore minimo e valore massimo registrati
@@ -3302,7 +3307,7 @@ class PostProcessing:
                     file_suffix, title_suffix = self._mission_labels(mission_key)
                     use_log = log_scale and self._all_positive(samples)
 
-                    fig, ax = plt.subplots(figsize=(8, 6), layout='constrained')
+                    fig, ax = plt.subplots(figsize=(max(10.0, 1.2 * len(versions)), 7.2), layout='constrained')
 
                     for i, (version, sample) in enumerate(zip(versions, samples)):
                         color = version_colors[version]
@@ -3322,11 +3327,13 @@ class PostProcessing:
 
                         # Valori numerici di massimo, minimo (sopra e sotto le tacche) e mediana (a destra della barra)
                         ax.annotate(f"{maximum:.2f}", xy=(i, maximum), xytext=(0, 5), textcoords='offset points',
-                                    ha='center', va='bottom', fontsize=9, color='dimgray')
+                                    ha='center', va='bottom', fontsize=self.value_size, fontweight='bold',
+                                    color='black')
                         ax.annotate(f"{minimum:.2f}", xy=(i, minimum), xytext=(0, -5), textcoords='offset points',
-                                    ha='center', va='top', fontsize=9, color='dimgray')
+                                    ha='center', va='top', fontsize=self.value_size, fontweight='bold', color='black')
                         ax.annotate(f"{median:.2f}", xy=(i + 0.16, median), xytext=(4, 0),
-                                    textcoords='offset points', ha='left', va='center', fontsize=9, color='black')
+                                    textcoords='offset points', ha='left', va='center', fontsize=self.value_size,
+                                    fontweight='bold', color='black')
 
                     if use_log:
                         ax.set_yscale('log')
@@ -3334,7 +3341,8 @@ class PostProcessing:
                         print(
                             f"  [WARNING] Valori non positivi per {metric} ({mission_key}): range plot realizzato con scala lineare.")
 
-                    ax.set_xlim(-0.6, len(samples) - 0.4)
+                    ax.set_xlim(-0.6,
+                                len(samples) - 0.3)  # Margine a destra per il valore della mediana dell'ultima versione
                     ax.margins(y=0.12)
                     ax.set_xticks(range(len(versions)))
                     ax.set_xticklabels(
@@ -3351,7 +3359,10 @@ class PostProcessing:
                                       Line2D([0], [0], color='black', linewidth=2.2, label='Mediana'),
                                       Line2D([0], [0], marker='D', color='w', markerfacecolor='white',
                                              markeredgecolor='black', markersize=6, label='Media')]
-                    ax.legend(handles=legend_handles, loc='center left', bbox_to_anchor=(1.02, 0.5), frameon=False)
+                    # La distanza richiesta dalla legenda tiene conto del valore del massimo scritto sopra la tacca
+                    self._legend_inside_top(fig, ax, legend_handles, data_top=max(np.max(sample) for sample in samples),
+                                            clearance=self.value_size + 14)
+                    self._style_ticks(ax)
 
                     fig.savefig(os.path.join(PLOT_FOLDER_PATH, f"{metric}_rangeplot_{file_suffix}.pdf"), dpi=150)
                     plt.close(fig)
@@ -3387,9 +3398,12 @@ class PostProcessing:
         with open(input_file_path, 'r') as f:
 
             # Si impostano i pattern tipici per l'inizio di una differente versione e all'interno di questa per ogni traiettoria
-            new_iter_pattern = re.compile(r"\s*RIASSUNTO\s+VALORI\s+DI\s+RMSE\s+\(TEST\s+v(\d+\.\d+\.\d+)\)", re.IGNORECASE)
-            new_path_pattern = re.compile(r"\s*PARAMETRI\s+DI\s+PERFORMANCE\s+PER\s+\((.*?)\)\s+-\s+(Percorso_\d+):", re.IGNORECASE)
-            data_pattern = re.compile(rf"^\s*({'|'.join(map(re.escape, metrics))}):\s*({number})\s*m\s*$", re.IGNORECASE)
+            new_iter_pattern = re.compile(r"\s*RIASSUNTO\s+VALORI\s+DI\s+RMSE\s+\(TEST\s+v(\d+\.\d+\.\d+)\)",
+                                          re.IGNORECASE)
+            new_path_pattern = re.compile(r"\s*PARAMETRI\s+DI\s+PERFORMANCE\s+PER\s+\((.*?)\)\s+-\s+(Percorso_\d+):",
+                                          re.IGNORECASE)
+            data_pattern = re.compile(rf"^\s*({'|'.join(map(re.escape, metrics))}):\s*({number})\s*m\s*$",
+                                      re.IGNORECASE)
 
             # Si legge riga per riga il file --> se si incontra un blocco di 3 righe in cui 2 iniziano con "=" si è all'inizio di una nuova iterazione --> ogni volta che si incontra un "-" si ha un nuovo percorso/traiettoria (ogni 4 percorsi)
             test_missions = ['T1', 'T2', 'T3', 'T4']
@@ -3419,8 +3433,8 @@ class PostProcessing:
                         self.raw_values_dict[iteration_key][mission_key] = {}
                     if 'total_missions' not in self.raw_values_dict[iteration_key]:
                         self.raw_values_dict[iteration_key]['total_missions'] = {}
-                    if 'training_missions' not in self.raw_values_dict[iteration_key]:
-                        self.raw_values_dict[iteration_key]['training_missions'] = {}
+                    if 'validation_missions' not in self.raw_values_dict[iteration_key]:
+                        self.raw_values_dict[iteration_key]['validation_missions'] = {}
                     if 'test_missions' not in self.raw_values_dict[iteration_key]:
                         self.raw_values_dict[iteration_key]['test_missions'] = {}
 
@@ -3439,18 +3453,18 @@ class PostProcessing:
                         self.raw_values_dict[iteration_key]['total_missions'][data_key] = []
                     self.raw_values_dict[iteration_key]['total_missions'][data_key].append(float(data.group(2)))
 
-                    # Si aggiunge alla lista contenente tutte le missioni a eccezione di quelle di test --> in modo da avere un indice sulle sole missioni di addestramento
+                    # Si aggiunge alla lista contenente tutte le missioni a eccezione di quelle di test --> in modo da avere un indice sulle sole missioni di validazione
                     if mission_key not in test_missions:
-                        if data_key not in self.raw_values_dict[iteration_key]['training_missions']:
-                            self.raw_values_dict[iteration_key]['training_missions'][data_key] = []
-                        self.raw_values_dict[iteration_key]['training_missions'][data_key].append(float(data.group(2)))
+                        if data_key not in self.raw_values_dict[iteration_key]['validation_missions']:
+                            self.raw_values_dict[iteration_key]['validation_missions'][data_key] = []
+                        self.raw_values_dict[iteration_key]['validation_missions'][data_key].append(
+                            float(data.group(2)))
 
                     # Si aggiunge alla lista contenente le sole missioni di test
                     if mission_key in test_missions:
                         if data_key not in self.raw_values_dict[iteration_key]['test_missions']:
                             self.raw_values_dict[iteration_key]['test_missions'][data_key] = []
                         self.raw_values_dict[iteration_key]['test_missions'][data_key].append(float(data.group(2)))
-
 
         # -----------------------------------------------------
         #         CALCOLO VALORI MEDI DEI PARAMETRI
@@ -3467,13 +3481,11 @@ class PostProcessing:
                     self.mean_values_dict[iteration_key][mission_key] = {}
 
                 for data_key, data_list in mission_dict.items():
-
                     # Si effettua la media dei 4 valori presenti per ogni missione e per ogni metrica considerata
                     mean_value = np.mean(data_list)
 
                     # Si aggiorna il dizionario associato
                     self.mean_values_dict[iteration_key][mission_key][data_key] = mean_value
-
 
         # -----------------------------------------------------
         #         SCRITTURA PARAMETRI SUL FILE DI TESTO
@@ -3491,18 +3503,17 @@ class PostProcessing:
 
                 for mission_key, mission_dict in iteration_dict.items():
 
-                    if mission_key == 'total_missions' or mission_key == 'training_missions' or mission_key == 'test_missions':
+                    if mission_key == 'total_missions' or mission_key == 'validation_missions' or mission_key == 'test_missions':
                         continue
 
                     f.write(f"\n    Missione: {mission_key}\n")
 
                     for data_key, mean_value in mission_dict.items():
-
                         f.write(f"      {data_key}: {mean_value}\n")
 
                 # Prima di passare alla iterazione successiva si stampano i valori di media complessiva per ogni parametro
-                f.write(f"\n    Medie complessive sul totalità delle missioni di addestramento:\n")
-                for data_key, mean_value in self.mean_values_dict[iteration_key]['training_missions'].items():
+                f.write(f"\n    Medie complessive sul totalità delle missioni di validazione:\n")
+                for data_key, mean_value in self.mean_values_dict[iteration_key]['validation_missions'].items():
                     f.write(f"      {data_key}: {mean_value}\n")
 
                 f.write(f"\n    Medie complessive sulla totalità delle missioni di test:\n")
@@ -3512,7 +3523,6 @@ class PostProcessing:
                 f.write(f"\n    Medie complessive sulla totalità delle missioni:\n")
                 for data_key, mean_value in self.mean_values_dict[iteration_key]['total_missions'].items():
                     f.write(f"      {data_key}: {mean_value}\n")
-
 
         # -----------------------------------------------------
         #           RAPPRESENTAZIONE GRAFICA MEDIE
@@ -3527,11 +3537,10 @@ class PostProcessing:
         # Si generano le ECDF, gli strip plot e gli intervalli di confidenza bootstrap
         self.ecdf_plot(ROOT_DIR)
         self.strip_plot(ROOT_DIR)
-        #self.bootstrap_plot(ROOT_DIR)
+        # self.bootstrap_plot(ROOT_DIR)
 
         # Si genera il range plot (minimo, P10-P90, massimo, mediana e media) per l'RMSE e per l'errore di posizione al punto finale (Delta)
         self.range_plot(ROOT_DIR, metric_groups=("RMSE", "Delta"))
-
 
         return self
 
