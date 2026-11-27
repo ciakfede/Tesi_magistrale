@@ -52,7 +52,7 @@ Come anticipato, il primo aspetto da valutare in questa fase risulta essere prop
 
     \begin{figure}[!htb]
         \centering
-        \includegraphics[width=0.6\linewidth]{./images/Risultati/variazioni_batch/Box_plot/RMSE_tot_boxplot_total_missions.pdf}
+        \includegraphics[width=0.8\linewidth]{./images/Risultati/variazioni_batch/Box_plot/RMSE_tot_boxplot_total_missions.pdf}
         \caption{Box plot globale al variare del batch size}
         \label{fig:bp_batch}
     \end{figure}
@@ -103,7 +103,7 @@ Fissati tutti i parametri della rete neurale, occorre svolgere una verifica sper
 
     \begin{figure}[!htb]
         \centering
-        \includegraphics[width=0.6\linewidth]{./images/Risultati/variazioni_dati/Box_plot/RMSE_tot_boxplot_total_missions.pdf}
+        \includegraphics[width=0.8\linewidth]{./images/Risultati/variazioni_dati/Box_plot/RMSE_tot_boxplot_total_missions.pdf}
         \caption{Box plot globale al variare delle features del dataset}
         \label{fig:bp_data}
     \end{figure}
@@ -247,7 +247,7 @@ Nello specifico, le varianti prese in considerazione sono 8, pensate per esamina
 
     \begin{figure}[!htb]
         \centering
-        \includegraphics[width=0.6\linewidth]{./images/Risultati/v4/variazioni_windows/Box_plot/RMSE_tot_boxplot_total_missions.pdf}
+        \includegraphics[width=0.8\linewidth]{./images/Risultati/v4/variazioni_windows/Box_plot/RMSE_tot_boxplot_total_missions.pdf}
         \caption{Box plot globale al variare di window e batch size}
         \label{fig:bp_v4_batch}
     \end{figure}
@@ -328,7 +328,7 @@ Valutato anche quest'ultimo aspetto è possibile procedere con la comparazione d
 
     \begin{figure}[!htb]
         \centering
-        \includegraphics[width=0.6\linewidth]{./images/Risultati/variazione_loss_function/Box_plot/RMSE_tot_boxplot_total_missions.pdf}
+        \includegraphics[width=0.8\linewidth]{./images/Risultati/variazione_loss_function/Box_plot/RMSE_tot_boxplot_total_missions.pdf}
         \caption{Box plot globale al variare della loss function}
         \label{fig:bp_loss}
     \end{figure}
@@ -394,7 +394,9 @@ Valutato anche quest'ultimo aspetto è possibile procedere con la comparazione d
 
 \section{Analisi al variare della dimensionalità}
 
-L'analisi finora svolta ha consentito di valutare le prestazioni della struttura base della rete neurale, passando per la definizione dei valori ottimali degli iperparametri e della migliore combinazione di grandezze su cui costruire il dataset. Esaminando i risultati prodotti, inoltre, sono stati evidenziati alcuni comportamenti peculiari, legati prevalentemente ad alcune missioni difficilmente elaborabili dal modello. Si vuole, ora, svolgere un diverso tipo di analisi, incentrato sulla valutazione della risposta della rete neurale a modifiche della sua dimensionalità. Nello specifico, per ogni loss function introdotta, si valutano 14 architetture, suddivise in due macrogruppi da sette configurazioni uniche.   
+
+
+L'analisi finora svolta ha consentito di valutare le prestazioni della struttura base della rete neurale, passando per la definizione dei valori ottimali degli iperparametri e della migliore combinazione di grandezze su cui costruire il dataset. Esaminando i risultati prodotti, inoltre, sono stati evidenziati alcuni comportamenti peculiari, legati prevalentemente ad alcune missioni difficilmente elaborabili dal modello. Si vuole, ora, svolgere un diverso tipo di analisi, incentrato sulla valutazione della risposta della rete neurale a modifiche della sua dimensionalità. Nello specifico, per ogni loss function introdotta, si valutano 14 architetture, suddivise in due macrogruppi da sette configurazioni uniche. Oltre ai valori della configurazione base, si considerano, infatti, tre possibili valori di hidden size, 50, 150 e 200, e due possibili espansioni della rete, aggiungendo uno o due fully connected layers ai due già presenti. N  
 
 \subsection{Variazioni della hidden size}
 
