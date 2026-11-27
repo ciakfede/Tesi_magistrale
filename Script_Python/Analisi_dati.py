@@ -1152,22 +1152,22 @@ class PostProcessing:
             'family': 'serif',      # Simula il font serif di Latin Modern usato all'interno del template Latex per la tesi
             'color': '#002E5F',     # Colore blupolito definito all'interno del template
             'weight': 'bold',       # Grassetto per far risaltare il titolo del grafico
-            'size': 13,             # Dimensione equilibrata per il titolo del grafico
+            'size': 20,             # Dimensione equilibrata per il titolo del grafico
             'style': 'normal'
         }
 
         self.legend_font = {'family': 'serif',
                             'weight': 'bold',
-                            'size': 11}
-        self.tick_size = 11
-        self.value_size = 11
+                            'size': 17}
+        self.tick_size = 18
+        self.value_size = 18
 
         # Dizionario per le Etichette degli Assi (X e Y)
         self.axis_font = {
             'family': 'serif',      # Simula il font serif di Latin Modern usato all'interno del template Latex per la tesi
             'color': 'black',       # Testo nero ad alto contrasto per la massima leggibilità
             'weight': 'bold',     # Peso normale per le etichette descrittive
-            'size': 11,             # Dimensione leggibile ma subordinata al titolo
+            'size': 18,             # Dimensione leggibile ma subordinata al titolo
             'style': 'normal'
         }
 
@@ -2996,7 +2996,7 @@ class PostProcessing:
                     # Gli outlier sono pallini pieni (riempimento blu, bordo blu scuro)
                     box_plot = ax.boxplot(samples, positions=range(len(samples)), widths=0.6, patch_artist=True,
                                           showmeans=True, showfliers=not few_samples,
-                                          medianprops=dict(color='black', linewidth=1.5),
+                                          medianprops=dict(color='#f47230', linewidth=1.5),
                                           meanprops=dict(marker='D', markerfacecolor='white',
                                                          markeredgecolor='black',
                                                          markersize=4),
@@ -3023,7 +3023,7 @@ class PostProcessing:
 
                     # Si definiscono i parametri associati all'asse
                     ax.set_xticks(range(len(versions)))
-                    ax.set_xticklabels([f"v{version}" for version in versions], rotation=45,
+                    ax.set_xticklabels([f"v{version}" for version in versions], rotation=0,
                                        fontdict=self.axis_font)
                     ax.set_ylabel(f"{metric} [m]", fontdict=self.axis_font)
                     ax.set_title(fig_title, fontdict=self.title_font, pad=10)
@@ -3035,8 +3035,8 @@ class PostProcessing:
                     else:
                         ax.grid(axis="y", alpha=0.3)
 
-                    # Legenda fuori dall'area del grafico, a destra --> la voce "Outlier" compare solo se gli outlier sono mostrati e "Mediana minore" solo se l'evidenziazione e' attiva
-                    legend_handles = [Line2D([0], [0], color='black', linewidth=1.5, label='Mediana'),
+                    # Legenda in alto, dentro la griglia, su una riga --> la voce "Outlier" compare solo se gli outlier sono mostrati e "Mediana minore" solo se l'evidenziazione e' attiva
+                    legend_handles = [Line2D([0], [0], color='#f47230', linewidth=1.5, label='Mediana'),
                                       Line2D([0], [0], marker='D', color='w', markerfacecolor='white',
                                              markeredgecolor='black', markersize=6, label='Media')]
                     if not few_samples:
@@ -3046,8 +3046,9 @@ class PostProcessing:
                     if highlight_best:
                         legend_handles.append(Line2D([0], [0], marker='s', color='w', markerfacecolor='tab:green',
                                                      markersize=9, label='Mediana minore'))
-                    ax.legend(handles=legend_handles, loc='center left', bbox_to_anchor=(1.02, 0.5), frameon=False,
-                              prop=self.legend_font)
+                    # Il limite superiore dell'asse y viene alzato quanto basta perche' la legenda non si sovrapponga a outlier/punti (data_top = valore massimo rappresentato)
+                    self._legend_inside_top(fig, ax, legend_handles, data_top=max(np.max(sample) for sample in samples),
+                                            clearance=10)
                     self._style_ticks(ax)
 
                     # Si salva il grafico e si chiude la figura per liberare memoria
