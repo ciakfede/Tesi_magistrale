@@ -588,7 +588,12 @@ Utilizzare un simile approccio può, dunque, migliorare notevolmente le prestazi
 
 In problemi che richiedono l'estrazione di una grande quantità di informazioni e pattern ricorrenti da un insieme di dati forniti in ingresso, come il riconoscimento di oggetti o caratteristiche da un'immagine o da un video o il processamento di dialoghi, la scelta più indicata spesso si rivela essere la cosiddetta rete convoluzionale. Come il nome stesso suggerisce, essa si basa su operazioni di convoluzione, solitamente concatenate su più layer contigui per aggiungere complessità al modello; ognuno di questi, infatti, può estrarre differenti caratteristiche e pattern spaziali o temporali dai dati. Inoltre, in ogni layer, una volta analizzata interamente l'immagine o la sequenza di dati proposta, mediante un'operazione di pooling, ne viene ridotta la dimensionalità, preservando comunque una parte delle informazioni giudicate fondamentali per i successivi strati della rete, ottimizzando di fatto l'intero processo. Solitamente, a valle del processo di convoluzione, uno o più fully connected layer elaborano il vettore contenente le caratteristiche identificate e sintetizzano le informazioni nella predizione richiesta al modello. In \emph{Figura} xx è riportata una rappresentazione grafica del funzionamento di una rete convoluzionale, coerentemente con quanto appena descritto.
 
-% Inserire immagine
+    \begin{figure}[!htb]
+        \centering
+        \includegraphics[width=0.9\linewidth]{./images/NN/CNN_base.pdf}
+        \caption{Rappresentazione concettuale di una CNN}
+        \label{fig:CNN}
+    \end{figure}
 
 Per poter capire nel dettaglio come opera una simile rete neurale, occorre definire cosa siano un'operazione di convoluzione e di pooling. Per quanto riguarda il primo processo, è possibile descrivere una convoluzione come un'operazione matematica capace di combinare due funzioni per delinearne la quantità di sovrapposizione. In sostanza, quello che viene fatto in un simile procedimento è far "scorrere" una funzione sull'altra per individuare i punti in cui si ha una sovrapposizione; tramite l'integrazione del prodotto tra le due funzioni così valutate si ottiene una nuova funzione rappresentativa delle caratteristiche della sequenza di dati di input: 
 

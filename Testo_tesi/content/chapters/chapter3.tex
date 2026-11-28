@@ -57,6 +57,8 @@ La valutazione delle prestazioni di questa architettura pone le sue basi sui dat
 
 In letteratura sono proposti numerosi approcci alternativi o complementari a quelli finora discussi, focalizzati su un differente aspetto del medesimo problema. In particolare, il quesito centrale trasla dalla calibrazione dei sensori alla ricerca di un metodo di ottimizzazione della regressione del vettore velocità. Come già discusso nel capitolo introduttivo, tradizionalmente questa operazione sfrutta le informazioni, ricavate tramite effetto Doppler, sulla velocità di quattro raggi acustici emessi e ricevuti dal sensore DVL. Queste misurazioni vengono, poi, elaborate mediante un approccio model-based. Ai fini della discussione delle più moderne pubblicazioni in questo settore, si introduce qui unicamente la tecnica basata sul \emph{Least Squares Estimator (LSE)}. Nel dettaglio, il vettore velocità del drone $\hat{v}_{\text{drone}}$, espresso nel sistema di riferimento del DVL, viene stimato tramite la seguente espressione matematica: 
 
+    \vspace{-8pt}
+
     \begin{equation}
         \begin{cases}
             y = H \cdot (v_{\text{drone}} \cdot (1 + s_{\text{DVL}}) + b_{DVL} + n) \\[0.30cm]
@@ -180,7 +182,7 @@ Un ulteriore aspetto da analizzare dettagliatamente riguarda la formulazione del
 
     \begin{figure}[!htb]
         \centering
-        \includegraphics[width=0.8\linewidth]{./images/Literature_review/SAM_NavNet.pdf}
+        \includegraphics[width=0.85\linewidth]{./images/Literature_review/SAM_NavNet.pdf}
         \caption{Rappresentazione schematica del SAM per un singolo ramo}
         \label{fig:SAM}
     \end{figure}
@@ -194,5 +196,20 @@ Quanto detto finora, si può, poi, riassumere all'interno del diagramma presenta
     \includegraphics[width=1\linewidth]{./images/NN/Flowchart_NavNet_panoramica.pdf}
     \caption{Flowchart codice Python}
     \label{fig:flowchart}
+\end{figure}
+
+All'interno di \emph{Figura} \ref{fig:flowchart_detail}, sono poi riportati i diagrammi di flusso relativi all'addestramento e all'esecuzione della rete neurale. 
+
+\begin{figure}[!htb]
+    \centering
+
+    \subfloat[Dettaglio del processo di addestramento]{%
+            \includegraphics[width=0.50\linewidth]{./images/NN/Flowchart_NavNet_addestramento.pdf}%
+            }\hfill
+    \subfloat[Dettaglio del processo di esecuzione]{%
+            \includegraphics[width=0.49\linewidth]{./images/NN/Flowchart_NavNet_esecuzione.pdf}%
+            }\\
+    \caption{Dettaglio del Flowchart Python associato alla rete neurale}
+    \label{fig:flowchart_detail}
 \end{figure}
 

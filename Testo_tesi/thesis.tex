@@ -15,7 +15,13 @@
     cucitura=7mm, % for printing, 7mm should be enough
 ]{toptesi}
 
-
+\renewenvironment{abstract}{%
+  \cleardoublepage
+  \thispagestyle{plain}%
+  \vspace*{-10pt}% <-- regola qui l'altezza
+  {\normalfont\Huge\bfseries Abstract\par}%
+  \vspace{30pt}% spazio tra titolo e testo
+}{\par}
 \input{common/packages}             % File contenente tutti i pacchetti usati nel file
 
 \input{common/package_config}       % File contenente alcune istruzioni e comandi personalizzati per i pacchetti

@@ -1,15 +1,15 @@
 
-\chapter{Presentazione risultati}
+\chapter{Discussione risultati}
 
-Nel corso dei precedenti capitoli, sono state fornite le ragioni alla base della scelta dell'architettura neurale NavNet ed è stata descritta l'effettiva struttura implementata in questo progetto, è stato discusso il procedimento seguito per la generazione e l'elaborazione del dataset e sono state individuate le misurazioni che, non essendo correlate in maniera significativa alle componenti di spostamento in assi body, possono essere eliminate a monte dell'esecuzione del modello. Terminato, quindi, il lungo e articolato processo di preparazione della rete neurale, non resta che valutarne effettivamente le prestazioni. 
+Nel corso dei precedenti capitoli, sono state fornite le ragioni alla base della scelta dell'architettura neurale NavNet, e ne è stata descritta l'effettiva implementazione all'interno del progetto, è stato discusso il procedimento seguito per la generazione e l'elaborazione del dataset e sono state individuate le grandezze che, non essendo correlate in maniera significativa alle componenti di spostamento in assi body, possono essere eliminate a monte dell'esecuzione del modello. Terminato, quindi, il lungo e articolato processo di preparazione della rete neurale, non resta che valutarne effettivamente le prestazioni. 
 
-Entrando nel merito dell'analisi, sono state innanzitutto esaminate le capacità predittive dimostrate dalla rete neurale nella sua configurazione originaria, già descritta nel Capitolo 3. Prima di poterne concretamente valutare il comportamento, eseguendo anche un confronto con i risultati riportati nella pubblicazione di riferimento, occorre, tuttavia, definire il valore dei due iperparametri ancora incogniti, ovvero il numero di campioni per mini-batch e il numero di epoche di addestramento. Successivamente, sulla base dei concetti teorici discussi, si è svolto uno studio di sensibilità, volto all'individuazione di possibili miglioramenti rispetto alla formulazione originaria. Ovviamente, data l'enorme mole di parametri potenzialmente modificabili, le varianti da valutare potrebbero essere pressoché infinite e, pertanto, in questa trattazione si è scelto di focalizzare l'analisi sulla dimensionalità del modello, dal punto di vista della hidden size di ogni LSTM, del numero di rami capaci di lavorare in parallelo e del numero di fully connected layers impiegati per sintetizzare i pattern temporali e spaziali precedentemente individuati. Inoltre, in virtù della loro influenza sul processo di backpropagation, è stato analizzato l'effetto dell'impiego di differenti loss function sulle varianti del modello prese in esame. 
+Entrando nel merito dell'analisi, sono state innanzitutto esaminate le capacità predittive della rete neurale nella sua configurazione originaria, già descritta nel Capitolo 3. Prima di poterne concretamente valutare il comportamento, eseguendo anche un confronto con i risultati riportati nella pubblicazione di riferimento, occorre, tuttavia, definire il valore dei due iperparametri ancora incogniti, ovvero il numero di campioni per mini-batch e il numero di epoche di addestramento. Successivamente, sulla base dei concetti teorici discussi, si è svolto uno studio di sensibilità, volto all'individuazione di possibili miglioramenti rispetto alla formulazione originaria. Ovviamente, data l'enorme mole di parametri potenzialmente modificabili, le varianti da valutare potrebbero essere pressoché infinite e, pertanto, in questa trattazione si è scelto di focalizzare l'analisi sulla dimensionalità del modello, dal punto di vista della hidden size di ogni LSTM, del numero di rami capaci di lavorare in parallelo e del numero di fully connected layers impiegati per sintetizzare i pattern temporali e spaziali precedentemente individuati. Inoltre, in virtù della loro influenza sul processo di backpropagation, è stato analizzato l'effetto dell'impiego di differenti loss function sulle varianti del modello prese in esame. 
 
 Per quanto concerne la metrica principale di valutazione, coerentemente con quanto tipicamente fatto nelle pubblicazioni analizzate nel Capitolo 3, si è scelto di considerare il \emph{Root Mean Square Error (RMSE)} della posizione, espressa in assi NED locali. A causa del metodo di suddivisione dei dati utilizzato in questa tesi, tuttavia, le singole traiettorie da valutare in fase di test risulterebbero troppe per poter garantire una buona chiarezza espositiva; pertanto, si è scelto, almeno in fase di confronto preliminare tra le versioni del modello, di considerare unicamente degli indici globali. Nello specifico, oltre alla media dell'RMSE, sono stati utilizzati anche i valori della mediana e del $90^\circ$ e $10^\circ$ percentile. Come sarà evidenziato successivamente, infatti, alcune missioni appaiono particolarmente critiche da un punto di vista prestazionale, impattando significativamente sulla media complessiva e rendendola inadatta come unico metro di valutazione. Da un punto di vista grafico, invece, si è scelto di realizzare per ogni confronto un \textit{box plot}, al fine di mostrare in maniera immediata la distribuzione dei valori di RMSE e mettere in evidenza gli outlier presenti, uno \textit{scatter plot}, necessario per rivelare la collocazione del valore di RMSE di ogni singola missione di validazione e test rispetto alla mediana e alla media globale, e un \textit{range plot}, che espande il concetto alla base del box plot evidenziando la distribuzione dell'errore in funzione del 10° e 90° percentile. Per garantire un'adeguata chiarezza visiva, in particolare, gli ultimi due grafici nominati si caratterizzano per l'uso di una scala logaritmica.
 
 \section{Valutazione architettura di base}
 
-Come anticipato, il primo aspetto da valutare in questa fase risulta essere proprio la batch\_size, corrispondente al numero di secondi di dati da aggregare per formare una cosiddetta mini-batch. Nel Capitolo 2, in particolare, erano già state identificate delle possibili limitazioni legate all'uso di valori eccessivamente alti o bassi del parametro; sulla base di queste indicazioni, quindi, si prendono in considerazione solamente 3 valori: 16 (\textbf{v1.0.01}), 32 (\textbf{v1.0.02}) e 64 (\textbf{v1.0.03}). A seguito di un addestramento specifico per ognuno di questi valori, svolto sfruttando la struttura base NavNet e un numero di epoche scelto arbitrariamente e pari a 100, si sono prodotti i risultati mostrati in \emph{Tabella} \ref{tab:v1_batch_results} e nelle \emph{Figure} \ref{fig:bp_batch} e \ref{fig:rp_sp_batch}.
+Come anticipato, il primo aspetto da valutare in questa fase risulta essere proprio la batch\_size, corrispondente al numero di secondi di dati da aggregare per formare una cosiddetta mini-batch. Nel Capitolo 2, in particolare, erano già state identificate delle possibili limitazioni legate all'uso di valori eccessivamente alti o bassi del parametro; sulla base di queste indicazioni, quindi, si prendono in considerazione solamente 3 valori: 16 (\textbf{v1.0.01}), 32 (\textbf{v1.0.02}) e 64 (\textbf{v1.0.03}). A seguito di un addestramento specifico per ognuno di essi, svolto sfruttando la struttura base NavNet e un numero di epoche scelto arbitrariamente e pari a 100, si sono prodotti i risultati mostrati in \emph{Tabella} \ref{tab:v1_batch_results} e in \emph{Figura} \ref{fig:bp_rp_sp_batch}.
 
     \begingroup
         \footnotesize
@@ -50,17 +50,13 @@ Come anticipato, il primo aspetto da valutare in questa fase risulta essere prop
         \end{xltabular}
     \endgroup
 
-    \begin{figure}[!htb]
-        \centering
-        \includegraphics[width=0.8\linewidth]{./images/Risultati/variazioni_batch/Box_plot/RMSE_tot_boxplot_total_missions.pdf}
-        \caption{Box plot globale al variare del batch size}
-        \label{fig:bp_batch}
-    \end{figure}
-
      \begin{figure}[!htb]
 
         \centering
 
+        \subfloat[Box plot]{%
+                \includegraphics[width=0.7\linewidth]{./images/Risultati/variazioni_batch/Box_plot/RMSE_tot_boxplot_total_missions.pdf}%
+                }\\
         \subfloat[Range plot]{%
                 \includegraphics[width=0.50\linewidth]{images/Risultati/variazioni_batch/Range_plot/RMSE_tot_rangeplot_total_missions.pdf}%
                 }\hfill
@@ -68,21 +64,21 @@ Come anticipato, il primo aspetto da valutare in questa fase risulta essere prop
                 \includegraphics[width=0.49\linewidth]{images/Risultati/variazioni_batch/Strip_plot/RMSE_tot_stripplot_total_missions.pdf}%
                 }\\
 
-        \caption{Range plot e scatter plot globali al variare della batch\_size}
-        \label{fig:rp_sp_batch}
+        \caption{Grafici delle metriche di valutazione al variare della batch\_size}
+        \label{fig:bp_rp_sp_batch}
                 
     \end{figure}
 
-Prima ancora di procedere concretamente al confronto tra le versioni proposte, dall'osservazione dei grafici prodotti risalta immediatamente una significativa discrepanza tra i valori di media e mediana dell'RMSE, tratto comune a tutte e tre le versioni. Come verrà discusso più approfonditamente in seguito, un simile comportamento, reiterato anche in tutti i confronti successivi, è dovuto prevalentemente alla presenza di alcune missioni di test particolarmente complesse e, di conseguenza, impegnative per il modello. All'interno dello scatter plot riportato in \emph{Figura} \ref{fig:rp_sp_batch} (b) è possibile osservare una conferma grafica di quanto detto, con circa 8 missioni che risultano caratterizzate da un errore notevolmente superiore alla media. Per comprendere appieno l'entità numerica di questa coda di missioni critiche è, tuttavia, necessario analizzare anche quanto mostrato all'interno del box plot riportato in \emph{Figura} \ref{fig:bp_batch}, dal momento che esso non fa uso di una scala logaritmica per la rappresentazione dei dati. Nel dettaglio, spiccano 3 missioni su tutte, associate ad un RMSE superiore ai 60 metri, con altre 5 caratterizzate da errori compresi tra i 20 e i 40 metri. Tutto ciò è, poi, ulteriormente avvalorato dai dati presentati all'interno della \emph{Tabella} \ref{tab:v1_batch_results}, da cui si evince una netta differenza prestazionale tra le missioni di validazione e quelle di test. Per le prime, infatti, sia la media che la mediana risultano essere molto vicine tra loro, con picchi di errore mai superiori ai 14 metri e, comunque, legati a poche missioni; più nello specifico, poi, si evidenzia un comportamento molto simile tra le prime due versioni, mentre la terza risulta significativamente meno prestazionale, sia dal punto di vista di media e mediana che di dispersione dei valori di errore. Per le sole missioni di test, invece, i valori associati alla media salgono sensibilmente rispetto alle controparti di validazione, a differenza di quelli della mediana che presentano incrementi molto ridotti, pari a circa 3 metri. Nel confronto relativo, in questo caso, emerge una netta superiorità prestazionale della versione basata su una batch\_size pari a 32; questo indica, tendenzialmente, una maggiore capacità di generalizzazione dei dati associata a tale configurazione. Pertanto, nel seguito si considererà questo come il valore di riferimento.    
-
-Per quanto riguarda il secondo parametro, invece, sulla base delle informazioni indirettamente ricavate dalla precedente analisi, si è identificato in $N_{\text{epoche}} = 60$ un compromesso ottimale, capace di garantire i migliori risultati possibili senza necessitare di un tempo di addestramento eccessivo. Quanto appena affermato è corroborato proprio dalle curve di variazione della loss function di training e validazione per ogni epoca, mostrate all'interno della \emph{Figura} \ref{fig:loss_evolution}. In corrispondenza del valore delineato, infatti, si osserva un appiattimento di entrambe le curve, indice di un'interruzione del processo di apprendimento per il raggiungimento di una zona di minimo locale o globale.   
+Prima di procedere concretamente al confronto tra le versioni proposte, è opportuno evidenziare la significativa discrepanza presente tra i valori di media e mediana dell'RMSE, comune a tutte e tre le configurazioni. Come verrà discusso più approfonditamente in seguito, un simile comportamento, reiterato anche in tutti i confronti successivi, è dovuto prevalentemente alla presenza di alcune missioni di test particolarmente complesse e, di conseguenza, impegnative per il modello. All'interno dello scatter plot rappresentato in \emph{Figura} \ref{fig:bp_rp_sp_batch} (c) è possibile osservare una conferma visiva di quanto detto, con circa 8 missioni che risultano caratterizzate da un errore notevolmente superiore alla media. Per comprendere appieno l'entità numerica di questa coda di missioni critiche è, poi, necessario analizzare anche quanto mostrato all'interno del box plot riportato in \emph{Figura} \ref{fig:bp_rp_sp_batch} (a), dal momento che esso non fa uso di una scala logaritmica per la rappresentazione dei dati. Nel dettaglio, spiccano 3 missioni su tutte, associate ad un RMSE superiore ai 60 metri, con altre 5 caratterizzate da errori compresi tra i 20 e i 40 metri. Tutto ciò è ulteriormente avvalorato dai dati riportati in \emph{Tabella} \ref{tab:v1_batch_results}, da cui si evince una netta differenza prestazionale tra le missioni di validazione e di test. Nelle prime, infatti, sia la media che la mediana presentano valori molto vicini tra loro, con picchi di errore mai superiori ai 14 metri e, comunque, legati a poche missioni. Nelle missioni di test lo scenario cambia drasticamente, con un ridotto aumento della mediana a fronte di un notevole incremento dei valori medi dell'RMSE. Nel confronto diretto, quindi, proprio quest'ultime pesano significativamente di più. In ogni caso, per entrambi i gruppi di missioni, la v1.0.02 presenta i valori più bassi per ambedue le metriche di valutazione, oltre a garantire una distribuzione degli errori molto compatta intorno alla mediana. Queste due caratteristiche suggeriscono una migliore capacità di generalizzazione delle relazioni esistenti tra i dati e, pertanto, nel seguito si considererà 32 come il valore di riferimento per la batch\_size.    
 
     \begin{figure}[!htb]
         \centering
-        \includegraphics[width=0.6\linewidth]{./images/Risultati/variazioni_batch/Loss_function.pdf}
+        \includegraphics[width=0.65\linewidth]{./images/Risultati/variazioni_batch/Loss_function.pdf}
         \caption{Evoluzione dei valori di loss di training e validazione per epoca}
         \label{fig:loss_evolution}
     \end{figure}
+
+Per quanto riguarda il secondo iperparametro, invece, sulla base delle informazioni indirettamente ricavate dalla precedente analisi, si è identificato in $N_{\text{epoche}} = 60$ un compromesso ottimale, capace di garantire i migliori risultati possibili senza necessitare di un tempo di addestramento eccessivo. Quanto appena affermato è corroborato proprio dalle curve di variazione della loss function di training e validazione per ogni epoca, mostrate all'interno della \emph{Figura} \ref{fig:loss_evolution}. In corrispondenza del valore delineato, infatti, si osserva un appiattimento di entrambe le curve, indice di un'interruzione del processo di apprendimento a causa del raggiungimento di una zona di minimo locale o globale.   
 
 % Si potrebbe aggiungere ma va fatto un nuovo addetramento con 60 epoche e la versione con dataset completo
 %La valutazione delle prestazioni della rete neurale con l'utilizzo di 60 epoche di addestramento fornisce, poi, un'ulteriore conferma a supporto della scelta fatta; si osservano, infatti, valori di RMSE medio del tutto identici a quelli mostrati in \emph{Figura} xx. 
@@ -91,27 +87,23 @@ Fissati tutti i parametri della rete neurale, occorre svolgere una verifica sper
 
     \begin{itemize}
 
-        \item \textbf{v1.0.04}: nella prima versione considerata sono state eliminate le sole misurazioni legate alla dinamica verticale dell'AUV, con specifico riferimento a $T_{FV}$, $T_{RV}$, $V_{z_{ref}}$ e $\omega_{y_{\text{ref}}}$. Inoltre, risultando misurazioni quasi mai soggette ad aggiornamento durante la navigazione, si scartano anche $V_{y_{\text{ref}}}$ e $\omega_{x_{\text{ref}}}$.
+        \item \textbf{v1.0.04}: nella prima versione considerata sono state eliminate le sole grandezze legate alla dinamica verticale dell'AUV, con specifico riferimento a $T_{FV}$, $T_{RV}$, $V_{z_{ref}}$ e $\omega_{y_{\text{ref}}}$. Inoltre, risultando misurazioni quasi mai soggette ad aggiornamento durante la navigazione, si scartano anche $V_{y_{\text{ref}}}$ e $\omega_{x_{\text{ref}}}$.
         
         \item \textbf{v1.0.05}: nella seconda versione, alle grandezze già rimosse si aggiunge il motore laterale posteriore $T_{RL}$. Sebbene esso sia legato allo spostamento lungo l'asse y, presenta una correlazione perfetta con il motore frontale e, pertanto, si può ipotizzare non fornisca effettivamente informazioni aggiuntive al modello. 
         
         \item \textbf{v1.0.06}: la terza versione rappresenta sostanzialmente la controparte della precedente, dal momento che viene scartato il motore laterale frontale $T_{FL}$ al posto di quello posteriore. 
         
-        \item \textbf{v1.0.07}: tutte le considerazioni fatte finora si basano sull'ipotesi di un completo disaccoppiamento della dinamica verticale dell'AUV dal moto sul piano longitudinale e laterale, che, tuttavia, non risulta verificabile con certezza. Si sceglie, quindi, di prendere in considerazione anche una versione in grado di includere l'influenza del motore verticale posteriore nel modello, scartando le informazioni legate al motore $T_{RL}$. Questa scelta, in particolare, è legata alle prestazioni osservate per le due precedenti versioni, caratterizzate da un netto peggioramento nel caso in cui ad essere escluso dal dataset è il motore $T_{FL}$.
+        \item \textbf{v1.0.07}: tutte le considerazioni fatte finora si basano sull'ipotesi di un completo disaccoppiamento della dinamica verticale dell'AUV dal moto sul piano longitudinale e laterale, che, tuttavia, non risulta verificabile con certezza. Si sceglie, quindi, di prendere in considerazione anche una versione in grado di includere l'influenza del motore verticale posteriore nel modello, scartando le informazioni associate al motore $T_{RL}$. Questa scelta, in particolare, è legata alle prestazioni osservate per le due precedenti versioni, caratterizzate da un netto peggioramento nel caso in cui ad essere escluso dal dataset sia il motore $T_{FL}$.
  
     \end{itemize}
 
     \begin{figure}[!htb]
-        \centering
-        \includegraphics[width=0.8\linewidth]{./images/Risultati/variazioni_dati/Box_plot/RMSE_tot_boxplot_total_missions.pdf}
-        \caption{Box plot globale al variare delle features del dataset}
-        \label{fig:bp_data}
-    \end{figure}
-
-    \begin{figure}[!htb]
 
         \centering
 
+        \subfloat[Box plot]{%
+                \includegraphics[width=0.7\linewidth]{./images/Risultati/variazioni_dati/Box_plot/RMSE_tot_boxplot_total_missions.pdf}%
+                }\\
         \subfloat[Range plot]{%
                 \includegraphics[width=0.50\linewidth]{images/Risultati/variazioni_dati/Range_plot/RMSE_tot_rangeplot_total_missions.pdf}%
                 }\hfill
@@ -119,8 +111,8 @@ Fissati tutti i parametri della rete neurale, occorre svolgere una verifica sper
                 \includegraphics[width=0.49\linewidth]{images/Risultati/variazioni_dati/Strip_plot/RMSE_tot_stripplot_total_missions.pdf}%
                 }\\
 
-        \caption{Range plot e scatter plot globali al variare delle features del dataset}
-        \label{fig:rp_sp_data}
+        \caption{Grafici delle metriche di valutazione al variare delle features del dataset}
+        \label{fig:bp_rp_sp_data}
                 
     \end{figure}
 
@@ -148,36 +140,104 @@ Fissati tutti i parametri della rete neurale, occorre svolgere una verifica sper
 
             \hline \endlastfoot
 
-            \multirow{5}{*}{validazione} & v1.0.02 & 0.63 & 2.42 & 1.68 & 3.91 \\* \cline{2-6}
-            & v1.0.04 & 1.35 & 2.87 & 2.31 & 3.97 \\* \cline{2-6}
-            & v1.0.05 & 0.71 & 2.16 & 1.64 & 4.54 \\* \cline{2-6}
-            & v1.0.06 & 1.12 & 3.09 & 2.27 & 6.22 \\* \cline{2-6}
+            \multirow{5}{*}{validazione} & v1.0.02 & 0.63 & 2.42 & 1.68 & 3.91 \\
+            & v1.0.04 & 1.35 & 2.87 & 2.31 & 3.97 \\
+            & v1.0.05 & 0.71 & 2.16 & 1.64 & 4.54 \\
+            & v1.0.06 & 1.12 & 3.09 & 2.27 & 6.22 \\
             & v1.0.07 & 1.03 & 2.14 & 1.57 & 3.91 \\ \hline
 
-            \multirow{5}{*}{test} & v1.0.02 & 2.07 & 17.22 & 4.97 & 57.59  \\* \cline{2-6}
-            & v1.0.04 & 2.39 & 19.86 & 5.26 & 66.31 \\* \cline{2-6}
-            & v1.0.05 & 1.27 & 15.81 & 4.78 & 51.04 \\* \cline{2-6}
-            & v1.0.06 & 2.01 & 19.46 & 6.07 & 55.54 \\* \cline{2-6}
+            \multirow{5}{*}{test} & v1.0.02 & 2.07 & 17.22 & 4.97 & 57.59  \\
+            & v1.0.04 & 2.39 & 19.86 & 5.26 & 66.31 \\
+            & v1.0.05 & 1.27 & 15.81 & 4.78 & 51.04 \\
+            & v1.0.06 & 2.01 & 19.46 & 6.07 & 55.54 \\
             & v1.0.07 & 1.94 & 16.96 & 5.53 & 51.97 \\ \hline
 
-            \multirow{5}{*}{globale} & v1.0.02 & 0.66 & 6.97 & 2.35 & 13.77 \\* \cline{2-6}
-            & v1.0.04 & 1.42 & 8.10 & 2.80 & 12.27 \\* \cline{2-6}
-            & v1.0.05 & 0.95 & 6.36 & 1.94 & 11.21 \\* \cline{2-6}
-            & v1.0.06 & 1.19 & 8.13 & 2.78 & 12.04 \\* \cline{2-6}
+            \multirow{5}{*}{globale} & v1.0.02 & 0.66 & 6.97 & 2.35 & 13.77 \\
+            & v1.0.04 & 1.42 & 8.10 & 2.80 & 12.27 \\
+            & v1.0.05 & 0.95 & 6.36 & 1.94 & 11.21 \\
+            & v1.0.06 & 1.19 & 8.13 & 2.78 & 12.04 \\
             & v1.0.07 & 1.08 & 6.70 & 1.83 & 14.48 \\ \hline
 
         \end{xltabular}
     \endgroup
 
-I grafici presentati nelle \emph{Figure} \ref{fig:bp_data} e \ref{fig:rp_sp_data} confermano solo parzialmente le tendenze emerse dall'analisi di correlazione. Sebbene, in generale, la riduzione di dimensionalità del dataset sembri essere associata ad un miglioramento prestazionale, la configurazione ottenuta tramite la rimozione delle sole componenti verticali si rivela la peggiore in termini di valore medio e mediano dell'RMSE, pur essendo quella che presenta la minore dispersione dell'errore, suggerendo, quindi, una maggiore robustezza e affidabilità delle previsioni. Come anticipato nella descrizione delle versioni, anche la v1.0.06 risulta essere inadeguata, con prestazioni paragonabili alla v1.0.04 appena citata. Il confronto tra le restanti è, invece, più complesso; la v1.0.05, infatti, presenta il minimo valor medio di RMSE, con una mediana solo leggermente più alta rispetto a quella registrata per la v1.0.07. Tuttavia, quest'ultima è caratterizzata da una distribuzione dell'errore notevolmente più contenuta intorno alla mediana stessa. Considerando, poi, l'impatto delle poche missioni critiche su tutti i valori registrati, si sceglie di procedere con la configurazione v1.0.07 che, nonostante sembri apparentemente meno robusta garantisce una maggiore accuratezza della stima nel caso tipico. Nel seguito, per coerenza di forma con i codici definiti nelle varie analisi svolte, ci si riferirà a questa con la denominazione \textbf{v1.1.0}.
+I grafici presentati in \emph{Figura} \ref{fig:bp_rp_sp_data} confermano solo parzialmente le tendenze emerse dall'analisi di correlazione. Sebbene, in generale, la riduzione di dimensionalità del dataset sembri essere associata ad un miglioramento prestazionale, la configurazione ottenuta tramite la rimozione delle sole componenti verticali si rivela la peggiore in termini di valore medio e mediano dell'RMSE, pur essendo quella che presenta la minore dispersione dell'errore, suggerendo, quindi, una maggiore robustezza e affidabilità delle previsioni. Come anticipato nella descrizione delle versioni, anche la v1.0.06 risulta essere inadeguata, con prestazioni paragonabili alla v1.0.04 appena citata. Il confronto tra le restanti si rivela essere, invece, notevolmente più complesso; globalmente, la v1.0.05, infatti, presenta il minimo valor medio di RMSE, con una mediana solo leggermente più alta rispetto a quella registrata per la v1.0.07, a cui, tuttavia, si associa una distribuzione dell'errore significativamente più contenuta attorno alla mediana stessa. Entrando più nel dettaglio, dai dati riportati in \emph{Tabella} \ref{tab:v1_data_results}, si evidenzia un divario prestazionale non trascurabile tra le due versioni, a favore proprio della v1.0.05. Tuttavia, la differenza osservata risulta essere associata ad un maggiore errore associato alle poche missioni critiche per entrambe le versioni, nello specifico legate alle traiettorie T2 e T4. Come evidente anche dalla \emph{Figura} \ref{fig:sp_data} (b), infatti, nelle restanti missioni la v1.0.07 si dimostra lievemente superiore, garantendo un RMSE mediamente più basso. Pertanto, queste considerazioni, ulteriormente avvalorate dalle tendenze relative alle missioni di validazione, portano a concludere che la v1.0.07, pur presentando picchi anomali in alcuni casi, sia in grado di garantire una maggiore probabilità di ottenere prestazioni ottimali. Nel seguito, di conseguenza, tutte le varianti di questa rete neurale prese in esame saranno addestrate sul dataset così costruito. Inoltre, occorre evidenziare che la v1.0.07 corrisponde anche alla migliore versione tra quelle finora esaminate e che, per coerenza di forma con la successiva analisi di sensibilità, da questo momento verrà identificata con il codice \textbf{v1.1.0}. 
 
-% Valutare se mettere qui il confronto con il paper o farlo solo nel confronto finale
-%Selezionata, quindi, la versione di riferimento per il prosieguo dell'analisi, occorre valutare come 
+    \begin{figure}[!htb]
+
+        \centering
+
+        \subfloat[Missioni di validazione]{%
+                \includegraphics[width=0.50\linewidth]{images/Risultati/variazioni_dati/Strip_plot/RMSE_tot_stripplot_validation_missions.pdf}%
+                }\hfill
+        \subfloat[Missioni di test]{%
+                \includegraphics[width=0.49\linewidth]{images/Risultati/variazioni_dati/Strip_plot/RMSE_tot_stripplot_test_missions.pdf}%
+                }\\
+
+        \caption{Scatter plot relativi alle missioni di test e validazione valutate separatamente}
+        \label{fig:sp_data}
+                
+    \end{figure}
+
+Mediante questa analisi di ottimizazzione sono stati, quindi, calibrati i parametri ancora incogniti, al fine di individuare la migliore configurazione possibile della rete neurale, nel rispetto della sua struttura originaria. Per determinare l'effettiva bontà del lavoro svolto si rende, tuttavia, necessario un confronto diretto con i risultati riportati dagli autori della NavNet. Nello specifico, l'analisi comparativa si basa esclusivamente sulle traiettorie derivate dalla pubblicazione di riferimento, sebbene per completezza si siano riportati i valori delle metriche di valutazione per tutte le missioni considerate. Prima di procedere con la disamina dei risultati, è opportuno precisare che, coerentemente con il processo simulativo illustrato nel Capitolo 4, i valori riportati sono rappresentativi di una media delle quattro ripetizioni effettuate nell'ambito di una singola missione. 
+
+I risultati presentati in \emph{Tabella} \ref{tab:v1.1.0_results}, evidenziano prestazioni persino migliori, seppur di pochi decimi di metro, rispetto alla versione originaria, a parità di traiettoria. Nonostante questo sia un risultato indubbiamente positivo, è necessario tenere conto anche del contesto di valutazione. I dati utilizzati per l'addestramento del modello, infatti, provengono da un ambiente simulato, circostanza che potrebbe condurre a delle prestazioni sovrastimate rispetto a quelle conseguibili in condizioni operative reali. L'analisi comparativa svolta ha, quindi, carattere puramente indicativo e non rispecchia necessariamente la reale differenza tra le due versioni. 
+
+
+    \begingroup
+        \footnotesize
+        \keepXColumns
+        \renewcommand{\arraystretch}{1.5}
+        %\begin{xltabular}{\textwidth}{|*{5}{>{\centering\arraybackslash}X|}}
+        \begin{xltabular}{\textwidth}{|>{\centering\arraybackslash}X|*{2}{>{\centering\arraybackslash}X>{\centering\arraybackslash}X|}}
+
+            \caption{Analisi comparativa delle prestazioni tra il modello ottenuto (v1.1.0) e la sua versione originaria}
+            \label{tab:v1.1.0_results} \\
+            \hline
+            \multirow{2}{*}{\textbf{ID traiettoria}} & \multicolumn{2}{c|}{\textbf{v1.1.0}} & \multicolumn{2}{c|}{\textbf{Modello originario}} \\* \cline{2-5}
+            & \textbf{RMSE [m]} & $\mathbf{\Delta_{\text{pos}}}$ \textbf{[m]} & \textbf{RMSE [m]} & $\mathbf{\Delta_{\text{pos}}}$ \textbf{[m]} \\
+            \hline
+            \endfirsthead
+
+            \multicolumn{5}{|c|}{{Continua dalla pagina precedente}} \\
+            \hline
+            \multirow{2}{*}{\textbf{ID traiettoria}} & \multicolumn{2}{c|}{\textbf{v1.1.0}} & \multicolumn{2}{c|}{\textbf{Modello originario}} \\* \cline{2-5}
+            & \textbf{RMSE [m]} & $\mathbf{\Delta_{\text{pos}}}$ \textbf{[m]} & \textbf{RMSE [m]} & $\mathbf{\Delta_{\text{pos}}}$ \textbf{[m]} \\
+            \hline
+            \endhead
+
+            \hline \multicolumn{5}{|r|}{{Continua nella pagina successiva}} \\ \hline
+            \endfoot
+
+            \hline \endlastfoot
+
+            0 & 1.5103 & 2.6774 & / & / \\
+            1 & 1.5800 & 2.6677 & 1.7984 & 2.7435 \\
+            2 & 1.4904 & 1.3725 & 1.9538 & 0.9324 \\
+            3 & 1.6129 & 2.7352 & 2.1145 & 3.2894 \\
+            4 & 2.0162 & 2.6654 & 2.5404 & 3.5220 \\
+            5 & 2.8858 & 5.9245 & / & / \\
+            T1 & 2.7136 & 5.0176 & / & / \\
+            T2 & 11.0538 & 18.1514 & / & / \\
+            T3 & 4.0554 & 7.7084 & / & / \\
+            T4 & 50.0106 & 56.8694 & / & / \\
+
+        \end{xltabular}
+    \endgroup
+
+Dall'analisi dei valori numerici riportati risulta possibile, inoltre, estrapolare alcuni interessanti comportamenti. Osservando le traiettorie di test, infatti, si notano grandi differenze prestazionali. Nello specifico, specialmente la traiettoria T1 ma anche la T3, presentano valori di errore del tutto in linea con le traiettoria di validazione, a differenza di quanto avviene per T2 e T4. Questa discrepanza prestazionale, considerando che le prime sono composte da forme più vicine a quelle impiegate per il processo di addestramento della rete neurale, potrebbe rappresentare una potenziale criticità per quanto riguarda le capacità di generalizzazione della rete. Tuttavia, occorre anche tenere presente che le traiettorie T2 e T4 sono indubbiamente le più complesse e articolate e, pertanto, delle difficoltà nel mantenimento di un errore ridotto sono del tutto prevedibili.
+
+% Si potrebbe presentare già qui un grafico per 
 
 
 \section{Analisi al variare della loss function}
 
-Nonostante la rete neurale nella sua prima versione mostri prestazioni già sufficientemente valide, sono ancora presenti possibili margini di miglioramento. Per esplorare meglio queste potenzialità, il primo elemento su cui ci si focalizza è la loss function, responsabile di una buona parte del processo di apprendimento e, di conseguenza, della capacità di generalizzazione e predizione del modello. Nello specifico, come già discusso nel Capitolo 2, la L2 Loss (\textbf{v1}) presenta alcune criticità, la più significativa delle quali è legata alla gestione degli outlier nei dati. Una prima variazione può, dunque, comportare proprio la sostituzione di tale funzione con una L1 Loss (\textbf{v2}) che, in presenza di effettivi outlier non correttamente gestiti dalla rete neurale, dovrebbe portare ad un miglioramento delle prestazioni del modello. Una soluzione alternativa, decisamente più sofisticata, coinvolge, invece, l'utilizzo di una Log-Cosh Loss (\textbf{v3}); come già evidenziato, infatti, una simile funzione consente di ottenere un comportamento più bilanciato, sfruttando i pregi di entrambe le precedenti funzioni. 
+Nonostante la rete neurale nella sua prima versione mostri prestazioni già sufficientemente valide, la presenza delle criticità evidenziate suggerisce l'esistenza di possibili margini di miglioramento. Per esplorare queste potenzialità, il primo elemento su cui ci si focalizza è la loss function, responsabile di una buona parte del processo di apprendimento e, di conseguenza, della capacità di generalizzazione e predizione del modello. Nello specifico, come già discusso nel Capitolo 2, la L2 Loss (\textbf{v1}) presenta alcune criticità, la più significativa delle quali è legata alla gestione degli outlier nei dati. Una prima variazione può, dunque, comportare proprio la sostituzione di tale funzione con una L1 Loss (\textbf{v2}) che, in presenza di effettivi outlier non correttamente gestiti dalla rete neurale, dovrebbe portare ad un miglioramento delle prestazioni del modello. Una soluzione alternativa, decisamente più sofisticata, coinvolge, invece, l'utilizzo di una Log-Cosh Loss (\textbf{v3}); come già evidenziato, infatti, una simile funzione consente di ottenere un comportamento più bilanciato, sfruttando i pregi di entrambe le precedenti funzioni.
+
+% Possibile introduzione al problema se la descrizione teorica della funzione va messa nel Capitolo 2
+%Infine, volendo valutare gli effetti di un differente approccio al problema si è considerato l'utilizzo della funzione originale Lp Norm Loss (\textbf{v4}), che, grazie alle sue caratteristiche, consente di prendere in esame anche l'errore accumulato nel tempo e la distanza tra la predizione del modello e quella ottenuta dall'integrazione della misurazione DVL. 
+%L'utilizzo di quest'ultima tecnica, una cui descrizione dettagliata si può trovare nel Capitolo 2, in particolare, introduce nel modello diversi iperparametri aggiuntivi. 
+
 
 In tutti questi casi, tuttavia, vengono sfruttate unicamente le informazioni legate alla differenza tra la posizione target e quella stimata dal modello per ogni secondo di iterazione. Teoricamente, introdurre nel processo anche indicazioni sulla stima della posizione ottenuta tramite tecniche di dead-reckoning, e una maggiore conoscenza dell'evoluzione temporale dell'errore, potrebbe portare degli effettivi benefici prestazionali. Prendendo ispirazione dal lavoro svolto da Wei e Sun\cite{Lp_Wei}, si è, quindi, definita una funzione di perdita originale, basata sull'utilizzo di una \textit{Mixed $L_p$ Norm Regularization}, introdotta per la prima volta da Fournier e Oldenburg\cite{Lp_norm_reg}; pertanto, la funzione sarà identificata proprio con il nome di \textbf{$L_p$ Norm Loss} (\textbf{v4}) nel prosieguo. Entrando nel merito, l'approccio proposto dai due autori è stato pensato per poter contemporaneamente stimare i valori di due proprietà geofisiche normalmente associate a modelli differenti, nello specifico la densità ($m_{1}$) e la suscettività ($m_{2}$), a partire da due set di dati distinti. Di conseguenza, la formulazione matematica impiegata tiene conto di questa suddivisione, presentando per ogni modello un termine di errore $\Phi_{d, i}$, di carattere più tradizionale e legato all'errore della previsione $d^{\text{pre}}$ rispetto all'effettivo valore osservato $d^{\text{obs}}$, e un termine di regolarizzazione $\Phi_{m, i}$, calcolato proprio mediante la $L_p$ Norm Regularization, che sfrutta la somma di una componente di \textit{smallness} e una di \textit{smoothness}; a questi si aggiunge, poi, un termine di accoppiamento $\Phi_{c}$, che consente lo scambio di informazioni tra i due modelli ed è basato sul \textit{cross-gradients coupling method}, presentato da Gallardo e Meju\cite{Cross_coupling_gradient}. Il vantaggio principale di un simile approccio consiste nella sua elevata flessibilità, conferita sia dalla possibilità di utilizzare differenti norme per le due componenti del termine di regolarizzazione, sia dall'uso dei numerosi coefficienti presenti nelle relazioni.  
 
@@ -192,9 +252,9 @@ In tutti questi casi, tuttavia, vengono sfruttate unicamente le informazioni leg
         \label{eq:Lp_og}
     \end{equation}
 
-Tuttavia, nella rete neurale sviluppata per questa tesi si ha un unico modello, necessario a stimare il vettore degli spostamenti, così come unico è anche il dataset. Tenendo conto di ciò e considerando le specifiche peculiarità legate ad un problema di posizionamento, occorre, dunque, adattare la formulazione mostrata in (\ref{eq:Lp_og}). Nel dettaglio, mentre il termine $\Phi_{d}$ resta pressoché invariato e, sostanzialmente, coincidente con una normale L2 Loss, cambia a livello concettuale il termine di regolarizzazione. In questo caso, infatti, la componente di smallness diventa rappresentativa della distanza tra lo spostamento predetto dalla rete neurale e quello ottenuto tramite integrazione del vettore velocità, mentre quella di smoothness è legata alla differenza tra lo spostamento stimato in secondi consecutivi. Inoltre, si sceglie di introdurre un termine aggiuntivo, legato all'MSE dell'errore complessivamente accumulato nella finestra di osservazione di $K$ secondi. Per quanto detto, la minimizzazione della funzione di perdita passa, di conseguenza, anche dalla riduzione dell'errore rispetto alla navigazione in dead-reckoning, richiamando in parte il meccanismo di funzionamento dell'architettura RBFNN presentata nel Capitolo 3, dal mantenimento di una gradualità nella variazione dello spostamento, favorendo una maggiore attinenza alla dinamica reale, e dalla minimizzazione dell'errore accumulato nei secondi di osservazione di una specifica finestra temporale. Un tema da evidenziare è legato al cambiamento strutturale apportato al meccanismo di suddivisione del dataset, reso necessario proprio dalla presenza del termine $\Phi_{\text{cum}}$. Dovendo valutare l'evoluzione della posizione attraverso più secondi consecutivi, segmentare il dataset in finestre da 1 singolo secondo, ognuna contenente 5 o 10 misurazioni a seconda della frequenza del sensore, aggregate poi in batch da 32 secondi non è più sufficiente. Pertanto, si introduce un ulteriore parametro da ottimizzare in concomitanza del batch size $B$, ovvero la window size $K$. 
+Tuttavia, nella rete neurale sviluppata per questa tesi si ha un unico modello, necessario a stimare il vettore degli spostamenti, così come unico è anche il dataset. Tenendo conto di ciò e considerando le specifiche peculiarità legate ad un problema di posizionamento, occorre, dunque, adattare la formulazione mostrata in (\ref{eq:Lp_og}). Nel dettaglio, mentre il termine $\Phi_{d}$ resta pressoché invariato e, sostanzialmente, coincidente con una normale L2 Loss, cambia a livello concettuale il termine di regolarizzazione. In questo caso, infatti, la componente di smallness diventa rappresentativa della distanza tra lo spostamento predetto dalla rete neurale e quello ottenuto tramite integrazione del vettore velocità, mentre quella di smoothness è legata alla differenza tra lo spostamento stimato in secondi consecutivi. Inoltre, si sceglie di introdurre un termine aggiuntivo, legato all'MSE dell'errore complessivamente accumulato nella finestra di osservazione di $K$ secondi. Per quanto detto, la minimizzazione della funzione di perdita passa, di conseguenza, anche dalla riduzione dell'errore rispetto alla navigazione in dead-reckoning, richiamando in parte il meccanismo di funzionamento dell'architettura RBFNN presentata nel Capitolo 3, dal mantenimento di una gradualità nella variazione dello spostamento, favorendo una maggiore attinenza alla dinamica reale, e dalla minimizzazione dell'errore accumulato nei secondi di osservazione di una specifica finestra temporale. Un tema da evidenziare è legato al cambiamento strutturale apportato al meccanismo di suddivisione del dataset, reso necessario proprio dalla presenza del termine $\Phi_{\text{cum}}$. Dovendo valutare l'evoluzione della posizione attraverso più secondi consecutivi, segmentare il dataset in finestre da 1 singolo secondo, ognuna contenente 5 o 10 misurazioni a seconda della frequenza del sensore, aggregate poi in batch da 32 secondi non è più sufficiente. Pertanto, si introduce un ulteriore parametro da ottimizzare in concomitanza dells batch\_size $B$, ovvero la window\_size $K$. 
 
-Quanto discusso, tenendo conto della necessità di utilizzare termini di spostamento normalizzati, si traduce, a livello matematico, nella formulazione presentata nel seguito, in grado di stimare la loss function per ogni finestra temporale di $K$ secondi considerata in un batch:
+Quanto discusso, tenendo conto della necessità di utilizzare termini di spostamento normalizzati, si traduce, a livello matematico, nella formulazione presentata nel seguito, in grado di stimare la loss function per ogni finestra temporale di $K$ secondi considerata in una mini-batch:
 
     \begin{equation}
         \begin{aligned}
@@ -209,9 +269,9 @@ Quanto discusso, tenendo conto della necessità di utilizzare termini di spostam
         \label{eq:Lp_norm}
     \end{equation}
 
-La loss function così definita introduce, naturalmente, molteplici parametri ignoti all'interno del modello, alcuni dei quali possono assumere valori appartenenti a range molto ampi; un esempio sono i pesi legati ai termini di regolarizzazione, contenuti nel range $[0.01, 1]$. Definire empiricamente la miglior combinazione di parametri per ogni specifica versione della rete neurale, considerando anche la successiva analisi di variabilità della dimensionalità, pur usando un'ottimizzazione Bayesiana, risulterebbe eccessivamente costoso in termini di tempo. Pertanto, in questa trattazione si sceglie di definire specifici valori sulla base del significato fisico e matematico dei vari termini. Si assegna, infatti, maggiore importanza all'errore di deriva accumulato nel corso del tempo, con un peso relativo pari a $w_{\text{cum}} = 0.1$, rispetto ai termini di regolarizzazione, considerati entrambi con un peso di $\alpha_{s} = \alpha_{t} = 0.05$. Per quanto concerne le norme su cui sono basati i due termini di smallness e smoothness, invece, si sceglie di mantenere un valore $p = q = 1$. Se per la prima componente la selezione risulta quasi obbligata, essendo 1 il minimo valore in grado di garantire la convessità della funzione favorendo allo stesso tempo soluzioni sparse, per la seconda la scelta è stata fatta in funzione delle quasi inevitabili brusche variazioni di spostamento presenti, associate a cambi di direzione o manovre specifiche; una norma L2, porterebbe, infatti, a un'eccessiva penalizzazione di questi casi, incrementando la gradualità dell'evoluzione degli spostamenti più del necessario e rischiando, di conseguenza, di perdere le informazioni legate ad alcune manovre compiute. Discorso diverso, invece, riguarda la batch size e la window size, valutate con un procedimento analogo a quello già presentato nel precedente paragrafo. 
+La loss function così definita introduce, naturalmente, molteplici parametri ignoti all'interno del modello, alcuni dei quali possono assumere valori appartenenti a range molto ampi; un esempio sono i pesi legati ai due termini di regolarizzazione, contenuti nel range $[0.01, 1]$. Definire empiricamente la miglior combinazione di parametri per ogni specifica versione della rete neurale, considerando anche la successiva analisi di variabilità della dimensionalità, pur usando un'ottimizzazione Bayesiana, risulterebbe eccessivamente costoso in termini di tempo. Pertanto, in questa trattazione si sceglie di definire specifici valori sulla base del significato fisico e matematico dei vari termini. Si assegna, infatti, maggiore importanza all'errore di deriva accumulato nel corso del tempo, con un peso relativo pari a $w_{\text{cum}} = 0.1$, rispetto ai termini di regolarizzazione, considerati entrambi con un peso di $\alpha_{s} = \alpha_{t} = 0.05$. Per quanto concerne le norme su cui sono basati i due termini di smallness e smoothness, invece, si sceglie di mantenere un valore $p = q = 1$. Se per la prima componente la selezione risulta quasi obbligata, essendo 1 il minimo valore in grado di garantire la convessità della funzione favorendo allo stesso tempo soluzioni sparse, per la seconda la scelta è stata fatta in funzione delle quasi inevitabili brusche variazioni di spostamento presenti, associate a cambi di direzione o manovre specifiche; una norma L2, porterebbe, infatti, a un'eccessiva penalizzazione di questi casi, incrementando la gradualità dell'evoluzione degli spostamenti più del necessario e rischiando, di conseguenza, di perdere le informazioni legate ad alcune manovre compiute. Discorso diverso, invece, riguarda la batch\_size e la window\_size, valutate con un procedimento analogo a quello già presentato nel precedente paragrafo. 
 
-Nello specifico, le varianti prese in considerazione sono 8, pensate per esaminare le prestazioni della rete neurale in funzione di quattro differenti dimensioni delle mini-batch utilizzate per la suddivisione dei dati. In \emph{Tabella} \ref{tab:v4_batch}, sono riportate le combinazioni testate e il relativo codice identificativo, mentre nelle \emph{Figure} \ref{fig:bp_v4_batch} e \ref{fig:rp_sp_v4_batch} sono introdotti i grafici risultanti dal processo di addestramento ed esecuzione dei modelli ottenuti.
+Nello specifico, le varianti prese in considerazione sono 8, pensate per esaminare le prestazioni della rete neurale in funzione di quattro differenti dimensioni delle mini-batch utilizzate per la suddivisione dei dati. In \emph{Tabella} \ref{tab:v4_batch}, sono riportate le combinazioni testate e il relativo codice identificativo, mentre in \emph{Figura} \ref{fig:bp_rp_sp_v4_batch} sono introdotti i grafici risultanti dal processo di addestramento ed esecuzione dei modelli ottenuti.
 
     \begingroup
         \footnotesize
@@ -246,10 +306,22 @@ Nello specifico, le varianti prese in considerazione sono 8, pensate per esamina
     \endgroup
 
     \begin{figure}[!htb]
+
         \centering
-        \includegraphics[width=0.8\linewidth]{./images/Risultati/v4/variazioni_windows/Box_plot/RMSE_tot_boxplot_total_missions.pdf}
-        \caption{Box plot globale al variare di window e batch size}
-        \label{fig:bp_v4_batch}
+
+        \subfloat[Box plot]{%
+                \includegraphics[width=0.7\linewidth]{./images/Risultati/v4/variazioni_windows/Box_plot/RMSE_tot_boxplot_total_missions.pdf}%
+                }\\
+        \subfloat[Range plot]{%
+                \includegraphics[width=0.50\linewidth]{images/Risultati/v4/variazioni_windows/Range_plot/RMSE_tot_rangeplot_total_missions.pdf}%
+                }\hfill
+        \subfloat[Scatter plot]{%
+                \includegraphics[width=0.49\linewidth]{images/Risultati/v4/variazioni_windows/Strip_plot/RMSE_tot_stripplot_total_missions.pdf}%
+                }\\
+
+        \caption{Grafici delle metriche di valutazione al variare della batch\_size e della window\_size}
+        \label{fig:bp_rp_sp_v4_batch}
+                
     \end{figure}
 
     \begingroup
@@ -276,59 +348,44 @@ Nello specifico, le varianti prese in considerazione sono 8, pensate per esamina
 
             \hline \endlastfoot
 
-            \multirow{8}{*}{validazione} & v4.0.01 & 0.67 & 1.69 & 1.10 & 2.29 \\* \cline{2-6}
-            & v4.0.02 & 0.99 & 2.01 & 1.36 & 2.62 \\* \cline{2-6}
-            & v4.0.03 & 0.62 & 1.76 & 1.09 & 2.58 \\* \cline{2-6}
-            & v4.0.04 & 0.66 & 1.86 & 1.45 & 2.91 \\* \cline{2-6}
-            & v4.0.05 & 1.06 & 2.56 & 2.04 & 3.50 \\* \cline{2-6}
-            & v4.0.06 & 0.82 & 2.37 & 1.67 & 4.60 \\* \cline{2-6}
-            & v4.0.07 & 0.52 & 1.80 & 1.23 & 3.09 \\* \cline{2-6}
+            \multirow{8}{*}{validazione} & v4.0.01 & 0.67 & 1.69 & 1.10 & 2.29 \\
+            & v4.0.02 & 0.99 & 2.01 & 1.36 & 2.62 \\
+            & v4.0.03 & 0.62 & 1.76 & 1.09 & 2.58 \\
+            & v4.0.04 & 0.66 & 1.86 & 1.45 & 2.91 \\
+            & v4.0.05 & 1.06 & 2.56 & 2.04 & 3.50 \\
+            & v4.0.06 & 0.82 & 2.37 & 1.67 & 4.60 \\
+            & v4.0.07 & 0.52 & 1.80 & 1.23 & 3.09 \\
             & v4.0.08 & 0.74 & 2.39 & 1.95 & 4.09 \\ \hline
 
-            \multirow{8}{*}{test} & v4.0.01 & 1.44 & 15.23 & 2.76 & 56.21 \\* \cline{2-6}
-            & v4.0.02 & 1.85 & 15.75 & 3.72 & 56.02 \\* \cline{2-6}
-            & v4.0.03 & 1.03 & 19.16 & 2.43 & 70.91 \\* \cline{2-6}
-            & v4.0.04 & 1.12 & 16.59 & 2.11 & 65.02 \\* \cline{2-6}
-            & v4.0.05 & 1.48 & 16.70 & 3.88 & 45.37 \\* \cline{2-6}
-            & v4.0.06 & 1.23 & 18.72 & 5.38 & 44.57 \\* \cline{2-6}
-            & v4.0.07 & 1.06 & 15.21 & 2.12 & 61.21 \\* \cline{2-6}
+            \multirow{8}{*}{test} & v4.0.01 & 1.44 & 15.23 & 2.76 & 56.21 \\
+            & v4.0.02 & 1.85 & 15.75 & 3.72 & 56.02 \\
+            & v4.0.03 & 1.03 & 19.16 & 2.43 & 70.91 \\
+            & v4.0.04 & 1.12 & 16.59 & 2.11 & 65.02 \\
+            & v4.0.05 & 1.48 & 16.70 & 3.88 & 45.37 \\
+            & v4.0.06 & 1.23 & 18.72 & 5.38 & 44.57 \\
+            & v4.0.07 & 1.06 & 15.21 & 2.12 & 61.21 \\
             & v4.0.08 & 1.93 & 14.97 & 2.71 & 54.59 \\ \hline
 
-            \multirow{8}{*}{globale} & v4.0.01 & 0.70 & 5.85 & 1.51 & 4.19 \\* \cline{2-6}
-            & v4.0.02 & 0.78 & 6.24 & 2.00 & 6.07 \\* \cline{2-6}
-            & v4.0.03 & 0.65 & 7.12 & 1.36 & 4.98 \\* \cline{2-6}
-            & v4.0.04 & 0.68 & 6.39 & 1.64 & 4.80 \\* \cline{2-6}
-            & v4.0.05 & 1.10 & 6.91 & 2.38 & 6.66 \\* \cline{2-6}
-            & v4.0.06 & 0.94 & 7.40 & 2.09 & 12.30 \\* \cline{2-6}
-            & v4.0.07 & 0.58 & 5.93 & 1.45 & 4.56 \\* \cline{2-6}
+            \multirow{8}{*}{globale} & v4.0.01 & 0.70 & 5.85 & 1.51 & 4.19 \\
+            & v4.0.02 & 0.78 & 6.24 & 2.00 & 6.07 \\
+            & v4.0.03 & 0.65 & 7.12 & 1.36 & 4.98 \\
+            & v4.0.04 & 0.68 & 6.39 & 1.64 & 4.80 \\
+            & v4.0.05 & 1.10 & 6.91 & 2.38 & 6.66 \\
+            & v4.0.06 & 0.94 & 7.40 & 2.09 & 12.30 \\
+            & v4.0.07 & 0.58 & 5.93 & 1.45 & 4.56 \\
             & v4.0.08 & 0.81 & 6.26 & 2.31 & 7.59 \\ \hline
 
         \end{xltabular}
     \endgroup
 
-    \begin{figure}[!htb]
 
-        \centering
+Dall'analisi numerica e grafica degli esiti mostrati, risulta immediatamente possibile scartare le configurazioni associate alla minima dimensionalità considerata, pari a 16 elementi (o secondi) per mini-batch, mentre risaltano le configurazioni v4.0.01, v4.0.03 e v4.0.07. Una prima tendenza osservabile, di carattere più generale, riguarda la distribuzione della dimensionalità; almeno per le combinazioni valutate, infatti, le prestazioni migliori risultano associate alle versioni in cui si dà maggiore spazio ai secondi racchiusi in una singola finestra, piuttosto che al numero di finestre prese in esame. Inoltre, per quanto riguarda le tre combinazioni più significative, si evidenzia una sorta di proporzionalità inversa tra media e mediana, con la versione v4.0.01 che presenta allo stesso tempo il minimo valor medio e la più alta mediana, mentre avviene l'opposto con la v4.0.03. In questo senso, si individua nella v4.0.07 un ottimo compromesso tra le due, capace di offrire un buon bilanciamento tra robustezza e precisione e, di conseguenza, nel seguito questa combinazione di parametri verrà utilizzata come standard per le versioni basate su questa loss function. Anche in questo caso, inoltre, si effettua un cambio di denominazione, riferendosi da ora in poi a questa versione con il codice \textbf{v4.1.0}.
 
-        \subfloat[Range plot]{%
-                \includegraphics[width=0.50\linewidth]{images/Risultati/v4/variazioni_windows/Range_plot/RMSE_tot_rangeplot_total_missions.pdf}%
-                }\hfill
-        \subfloat[Scatter plot]{%
-                \includegraphics[width=0.49\linewidth]{images/Risultati/v4/variazioni_windows/Strip_plot/RMSE_tot_stripplot_total_missions.pdf}%
-                }\\
-
-        \caption{Range plot e scatter plot globali al variare di window e batch size}
-        \label{fig:rp_sp_v4_batch}
-                
-    \end{figure}
-
-Dall'analisi numerica e grafica degli esiti mostrati, risulta immediatamente possibile scartare le configurazioni associate alla minima dimensionalità considerata, pari a 16 elementi (o secondi) per mini-batch, mentre risaltano le configurazioni v4.0.01, v4.0.03 e v4.0.07. Una prima tendenza osservabile, di carattere più generale, riguarda la distribuzione della dimensionalità; almeno per le combinazioni valutate, infatti, le prestazioni migliori risultano associate alle versioni in cui si dà maggiore spazio ai secondi racchiusi in una singola finestra, piuttosto che al numero di finestre prese in esame. Inoltre, per quanto riguarda le tre combinazioni più significative, si evidenzia una sorta di proporzionalità inversa tra media e mediana, con la versione v4.0.01 che presenta allo stesso tempo il minimo valor medio e la più alta mediana, mentre avviene l'opposto con la v4.0.03. In questo senso, pertanto, si individua nella v4.0.07 il miglior bilanciamento tra robustezza e precisione e, di conseguenza, nel seguito questa combinazione di parametri verrà utilizzata come standard per le versioni basate su questa loss function. Anche in questo caso, inoltre, si effettua un cambio di denominazione, riferendosi da ora in poi a questa versione con il codice \textbf{v4.1.0}.
-
-Valutato anche quest'ultimo aspetto è possibile procedere con la comparazione dei modelli ottenuti sfruttando la struttura base della rete NavNet e le varie funzioni di perdita citate. I risultati, presentati graficamente all'interno delle \emph{Figure} \ref{fig:bp_loss} e \ref{fig:rp_sp_loss} e numericamente in \emph{Tabella} \ref{tab:loss_function_analysis}, evidenziano prestazioni pressoché identiche per le tre funzioni di stampo più tradizionale. Nello specifico, mentre l'utilizzo della L1 Loss non si traduce in un effettivo miglioramento, indice di una già ottima capacità della rete di gestire i pochi outlier presenti nel dataset, il passaggio alla Log-Cosh Loss permette una riduzione di tutti i valori, con un intervallo più compatto e centrato su un RMSE di poco inferiore rispetto all'architettura originaria. Un significativo salto prestazionale si associa, invece, alla Lp Norm Loss; quest'ultima, infatti, presenta, oltre ad una riduzione del valor medio e della mediana dell'RMSE, una dispersione dell'errore estremamente ridotta e caratterizzata da soli 5 valori sopra la media rispetto ai 7 associati alle restanti versioni. Questa tendenza porta, come si può osservare in \emph{Figura} \ref{fig:rp_sp_loss} (a), ad una distribuzione in cui il 90\% dei dati si posiziona al di sotto della media. Questo è un chiaro indice di un'elevata robustezza e affidabilità del modello, che riesce a generalizzare al meglio i dati forniti.  
+Valutato anche quest'ultimo aspetto, è possibile procedere con la comparazione dei modelli ottenuti sfruttando la struttura base della rete NavNet e le varie funzioni di perdita citate. I risultati, presentati graficamente all'interno delle \emph{Figure} \ref{fig:bp_loss} e \ref{fig:rp_sp_loss} e numericamente in \emph{Tabella} \ref{tab:loss_function_analysis}, evidenziano prestazioni pressoché identiche per le tre funzioni di stampo più tradizionale. Nello specifico, mentre l'utilizzo della L1 Loss non si traduce in un effettivo miglioramento, indice di una già ottima capacità della rete di gestire i pochi outlier presenti nel dataset, il passaggio alla Log-Cosh Loss consente di ottenere una riduzione di tutte le metriche di valutazione, con un intervallo più compatto e centrato su un RMSE di poco inferiore rispetto all'architettura originaria. Un significativo salto prestazionale si associa, invece, alla Lp Norm Loss; quest'ultima, infatti, presenta, oltre ad una riduzione del valor medio e della mediana dell'RMSE, una dispersione dell'errore estremamente ridotta e caratterizzata da soli 5 valori sopra la media rispetto ai 7 associati alle restanti versioni. Questa tendenza porta, come si può osservare in \emph{Figura} \ref{fig:rp_sp_loss} (a), ad una distribuzione in cui il 90\% dei dati si posiziona al di sotto della media. Questo è un chiaro indice di un'elevata robustezza e affidabilità del modello, che riesce a generalizzare al meglio i dati forniti.  
 
     \begin{figure}[!htb]
         \centering
-        \includegraphics[width=0.8\linewidth]{./images/Risultati/variazione_loss_function/Box_plot/RMSE_tot_boxplot_total_missions.pdf}
+        \includegraphics[width=0.7\linewidth]{./images/Risultati/variazione_loss_function/Box_plot/RMSE_tot_boxplot_total_missions.pdf}
         \caption{Box plot globale al variare della loss function}
         \label{fig:bp_loss}
     \end{figure}
@@ -352,7 +409,7 @@ Valutato anche quest'ultimo aspetto è possibile procedere con la comparazione d
     \begingroup
         \footnotesize
         \keepXColumns
-        \renewcommand{\arraystretch}{1.4}
+        \renewcommand{\arraystretch}{1.5}
         \begin{xltabular}{\textwidth}{|>{\centering\arraybackslash}X|>{\centering\arraybackslash}X|>{\centering\arraybackslash}X|>{\centering\arraybackslash}X|>{\centering\arraybackslash}X|>{\centering\arraybackslash}X|}
 
             \caption{Metriche di valutazione delle versioni al variare della loss function}
@@ -373,19 +430,19 @@ Valutato anche quest'ultimo aspetto è possibile procedere con la comparazione d
 
             \hline \endlastfoot
 
-            \multirow{4}{*}{validazione} & v1.1.0 & 1.03 & 2.14 & 1.57 & 3.91 \\* \cline{2-6}
-            & v2.1.0 & 0.90 & 2.06 & 1.44 & 3.13 \\* \cline{2-6}
-            & v3.1.0 & 0.66 & 2.01 & 1.51 & 3.65 \\* \cline{2-6}
+            \multirow{4}{*}{validazione} & v1.1.0 & 1.03 & 2.14 & 1.57 & 3.91 \\
+            & v2.1.0 & 0.90 & 2.06 & 1.44 & 3.13 \\
+            & v3.1.0 & 0.66 & 2.01 & 1.51 & 3.65 \\
             & v4.1.0 & 0.52 & 1.80 & 1.23 & 3.09 \\ \hline
 
-            \multirow{4}{*}{test} & v1.1.0 & 1.94 & 16.96 & 5.53 & 51.97 \\* \cline{2-6}
-            & v2.1.0 & 1.87 & 17.47 & 4.66 & 47.84 \\* \cline{2-6}
-            & v3.1.0 & 1.54 & 17.21 & 4.89 & 53.47 \\* \cline{2-6}
+            \multirow{4}{*}{test} & v1.1.0 & 1.94 & 16.96 & 5.53 & 51.97 \\
+            & v2.1.0 & 1.87 & 17.47 & 4.66 & 47.84 \\
+            & v3.1.0 & 1.54 & 17.21 & 4.89 & 53.47 \\
             & v4.1.0 & 1.06 & 15.21 & 2.12 & 61.21 \\ \hline
 
-            \multirow{4}{*}{globale} & v1.1.0 & 1.08 & 6.70 & 1.83 & 14.48 \\* \cline{2-6}
-            & v2.1.0 & 0.94 & 6.80 & 1.88 & 14.52 \\* \cline{2-6}
-            & v3.1.0 & 0.84 & 6.69 & 1.74 & 13.64 \\* \cline{2-6}
+            \multirow{4}{*}{globale} & v1.1.0 & 1.08 & 6.70 & 1.83 & 14.48 \\
+            & v2.1.0 & 0.94 & 6.80 & 1.88 & 14.52 \\
+            & v3.1.0 & 0.84 & 6.69 & 1.74 & 13.64 \\
             & v4.1.0 & 0.58 & 5.93 & 1.45 & 4.56 \\ \hline
 
         \end{xltabular}
@@ -394,54 +451,255 @@ Valutato anche quest'ultimo aspetto è possibile procedere con la comparazione d
 
 \section{Analisi al variare della dimensionalità}
 
+Al fine di esplorare ulteriori possibilità di miglioramento delle prestazioni del modello, si rende necessario prendere in considerazione variazioni più sostanziali della sua architettura e, in particolare, della sua dimensionalità. Tipicamente, infatti, un aumento del numero di neuroni degli hidden layer, del numero di fully connected layers o di entrambi, può contribuire ad accrescere la capacità rappresentativa del modello, favorendo l'apprendimento di relazioni complesse a partire dai dati. Nello specifico, quindi, per ogni loss function esaminata nel precedente paragrafo, sono state definite sette configurazioni uniche, in aggiunta a quella già valutata, basate sull'utilizzo di valori di hidden\_size pari a 50, 150 e 300 e sull'implementazione di tre o quattro fully connected layers. Data la particolare struttura della NavNet, caratterizzata dalla presenza di due rami capaci di lavorare in parallelo, inoltre, si è scelto di valutare le prestazioni di ogni versione definita con l'utilizzo di un ramo aggiuntivo, associato alle sole grandezze di riferimento quali motori e velocità. Si arriva così a 16 versioni del modello per ogni loss function, identificate tramite una precisa codifica a 3 numeri, del tipo \textbf{vX.Y.Z}; nel dettaglio, il primo valore rappresenta la loss function utilizzata, coerentemente a quanto fatto nel precedente paragrafo, il secondo il numero di rami impiegato e il terzo la specifica combinazione dei parametri direttamente legati alla dimensionalità. All'interno della \emph{Tabella} \ref{tab:nomenclatura} è possibile trovare un riassunto di quanto detto, con un'indicazione numerica dell'effettiva dimensionalità del modello $N$, rappresentativa del numero di pesi e bias della rete. Questo valore, in particolare, è stato calcolato valutando per ogni configurazione il numero di parametri legati ad ogni layer, secondo le seguenti relazioni:
 
+    \begin{equation}
+        \begin{cases}
+            N_{\text{LSTM}} = 4 * (N_{\text{data}}*h + h^{2} + 2*h) \\
+            N_{\text{SAM}} = h + 1 \\
+            N_{\text{FC}} = 
 
-L'analisi finora svolta ha consentito di valutare le prestazioni della struttura base della rete neurale, passando per la definizione dei valori ottimali degli iperparametri e della migliore combinazione di grandezze su cui costruire il dataset. Esaminando i risultati prodotti, inoltre, sono stati evidenziati alcuni comportamenti peculiari, legati prevalentemente ad alcune missioni difficilmente elaborabili dal modello. Si vuole, ora, svolgere un diverso tipo di analisi, incentrato sulla valutazione della risposta della rete neurale a modifiche della sua dimensionalità. Nello specifico, per ogni loss function introdotta, si valutano 14 architetture, suddivise in due macrogruppi da sette configurazioni uniche. Oltre ai valori della configurazione base, si considerano, infatti, tre possibili valori di hidden size, 50, 150 e 200, e due possibili espansioni della rete, aggiungendo uno o due fully connected layers ai due già presenti. N  
+        \end{cases}
+    \end{equation}
 
-\subsection{Variazioni della hidden size}
+    \begingroup
+        \footnotesize
+        \keepXColumns
+        \renewcommand{\arraystretch}{1.5}
+        \begin{xltabular}{\textwidth}{|>{\centering\arraybackslash}X|>{\centering\arraybackslash}X|>{\centering\arraybackslash}X|>{\centering\arraybackslash}X|>{\centering\arraybackslash}X|>{\centering\arraybackslash}X|>{\centering\arraybackslash}X|>{\centering\arraybackslash}X|}
 
-\subsection{Variazioni del numero di fully connected layers}
-
-\subsection{Variazioni combinate}
-
-
-
-
-
-
-% QUesto è da indicare indirettamente mettendo i risultati a fianco di una tabella dettagliata riassuntiva della struttura base
-%Per quanto riguarda le traiettorie del paper, in particolare, sono forniti i seguenti errori medi sulla posizione: 
-
-\small
-\renewcommand{\arraystretch}{1.10}       % Riduce l'altezza delle righe 
-\setlength{\LTpre}{8pt}                  % Riduce lo spazio prima della longtable
-\setlength{\LTpost}{6pt}                 % Riduce lo spazio dopo della longtable
-\setlength{\belowcaptionskip}{5pt}       % Riduce lo spazio sotto la didascalia
-\begin{longtable}{ccc}
-
-            \caption{Valori dell'errore in termini di RMSE medio e posizione finale} 
-            \label{tab:errori_paper} \\
-            
-            \toprule
-            \textbf{ID traiettoria} & \textbf{RMSE [m]} & $\mathbf{\Delta_{pos} [m]}$\\
-            \midrule
+            \caption{Nomenclatura utilizzata per l'identificazione delle versioni}
+            \label{tab:nomenclatura} \\
+            \hline
+            \multicolumn{4}{|c|}{\textbf{2 rami}} & \multicolumn{4}{c|}{\textbf{3 rami}} \\
+            \hline
+            \textbf{ID} & \textbf{Hidden size} & \textbf{FC layers} & \textbf{N} & \textbf{ID} & \textbf{Hidden size} & \textbf{FC layers} & \textbf{N} \\
+            \hline
             \endfirsthead
-            
-            \toprule
-            \textbf{ID traiettoria} & \textbf{RMSE [m]} & $\mathbf{\Delta_{pos} [m]}$ \\
-            \midrule
+
+            \multicolumn{8}{|c|}{Continua dalla pagina precedente} \\
+            \hline
+            \multicolumn{4}{|c|}{\textbf{2 rami}} & \multicolumn{4}{c|}{\textbf{3 rami}} \\
+            \hline
+            \textbf{ID} & \textbf{Hidden size} & \textbf{FC layers} & \textbf{N} & \textbf{ID} & \textbf{Hidden size} & \textbf{FC layers} & \textbf{N} \\
+            \hline
             \endhead
 
-            \midrule
-            \multicolumn{3}{r}{{Continua nella pagina successiva}} \\
+            \hline
+            \multicolumn{8}{|r|}{Continua nella pagina successiva} \\
+            \hline
             \endfoot
 
-            \bottomrule
+            \hline
             \endlastfoot
 
-            1 & 1.7984 & 2.7435 \\
-            2 & 1.9538 & 0.9324 \\
-            3 & 2.1145 & 3.2894 \\
-            4 & 2.5404 & 3.5220 \\
-    
-\end{longtable}
+            vX.1.0 & 100 & 2 & 106\,904 & vX.2.0 & 100 & 2 & 172\,955 \\
+            vX.1.1 & 50  & 2 & 28\,454  & vX.2.1 & 50  & 2 & 45\,230 \\
+            vX.1.2 & 150 & 2 & 235\,354 & vX.2.2 & 150 & 2 & 383\,180 \\
+            vX.1.3 & 300 & 2 & 920\,704 & vX.2.3 & 300 & 2 & 1\,508\,855 \\
+            vX.1.4 & 100 & 3 & 111\,854 & vX.2.4 & 100 & 3 & 184\,130 \\
+            vX.1.5 & 100 & 4 & 113\,503 & vX.2.5 & 100 & 4 & 187\,880 \\
+            vX.1.6 & 150 & 3 & 246\,529 & vX.2.6 & 150 & 3 & 408\,266 \\
+            vX.1.7 & 300 & 4 & 980\,554 & vX.2.7 & 300 & 4 & 1\,643\,630 \\
+
+        \end{xltabular}
+    \endgroup
+
+Al termine della campagna di addestramente delle varie versione della rete neurale, si sono ottenuti i risultati numerici riportati in \emph{Tabella} xx, mentre la rappresentazione grafica è realizzata in \emph{Figura} yy.  
+
+    \begin{figure}[!htb]
+
+        \centering
+
+        \subfloat[Box plot]{%
+                \includegraphics[width=0.5\linewidth]{./images/Risultati/v1/v1.1/Box_plot/RMSE_tot_boxplot_total_missions.pdf}%
+                }\hfill
+        \subfloat[Range plot]{%
+                \includegraphics[width=0.49\linewidth]{./images/Risultati/v1/v1.2/Box_plot/RMSE_tot_boxplot_total_missions.pdf}%
+                }\\
+        \subfloat[Scatter plot]{%
+                \includegraphics[width=0.50\linewidth]{./images/Risultati/v2/v2.1/Box_plot/RMSE_tot_boxplot_total_missions.pdf}%
+                }\hfill
+        \subfloat[Box plot]{%
+                \includegraphics[width=0.49\linewidth]{./images/Risultati/v2/v2.2/Box_plot/RMSE_tot_boxplot_total_missions.pdf}%
+                }\\
+
+        \caption{Grafici di valutazione delle metriche globali al variare delle features del dataset}
+        \label{fig:bp_rp_sp_data1}
+                
+    \end{figure}
+
+
+
+
+
+
+
+%Per esplorare la possibile esistenza di ulteriori margini di miglioramento oltre a que
+
+
+%L'analisi finora svolta ha consentito di valutare le prestazioni della struttura base della rete neurale, passando per la definizione dei valori ottimali degli iperparametri e della migliore combinazione di grandezze su cui costruire il dataset. Esaminando i risultati prodotti, inoltre, sono stati evidenziati alcuni comportamenti peculiari, legati prevalentemente ad alcune missioni difficilmente elaborabili dal modello. Si vuole, ora, svolgere un diverso tipo di analisi, incentrato sulla valutazione della risposta della rete neurale a modifiche della sua dimensionalità. Nello specifico, per ogni loss function introdotta, si valutano 14 architetture, suddivise in due macrogruppi da sette configurazioni uniche. Oltre ai valori della configurazione base, si considerano, infatti, tre possibili valori di hidden size, 50, 150 e 200, e due possibili espansioni della rete, aggiungendo uno o due fully connected layers ai due già presenti. N  
+
+
+
+    \begin{figure}[!htb]
+
+        \centering
+
+        \subfloat[Box plot]{%
+                \includegraphics[width=0.7\linewidth]{./images/Risultati/v1/v1.1/Box_plot/RMSE_tot_boxplot_total_missions.pdf}%
+                }\\
+        \subfloat[Range plot]{%
+                \includegraphics[width=0.50\linewidth]{images/Risultati/v1/v1.1/Range_plot/RMSE_tot_rangeplot_total_missions.pdf}%
+                }\hfill
+        \subfloat[Scatter plot]{%
+                \includegraphics[width=0.49\linewidth]{images/Risultati/v1/v1.1/Strip_plot/RMSE_tot_stripplot_total_missions.pdf}%
+                }\\
+
+        \caption{Grafici di valutazione delle metriche globali al variare delle features del dataset}
+        \label{fig:bp_rp_sp_data1}
+                
+    \end{figure}
+
+    \begin{figure}[!htb]
+
+        \centering
+
+        \subfloat[Box plot]{%
+                \includegraphics[width=0.7\linewidth]{./images/Risultati/v2/v2.1/Box_plot/RMSE_tot_boxplot_total_missions.pdf}%
+                }\\
+        \subfloat[Range plot]{%
+                \includegraphics[width=0.50\linewidth]{images/Risultati/v2/v2.1/Range_plot/RMSE_tot_rangeplot_total_missions.pdf}%
+                }\hfill
+        \subfloat[Scatter plot]{%
+                \includegraphics[width=0.49\linewidth]{images/Risultati/v2/v2.1/Strip_plot/RMSE_tot_stripplot_total_missions.pdf}%
+                }\\
+
+        \caption{Grafici di valutazione delle metriche globali al variare delle features del dataset}
+        \label{fig:bp_rp_sp_data3}
+                
+    \end{figure}
+
+    \begin{figure}[!htb]
+
+        \centering
+
+        \subfloat[Box plot]{%
+                \includegraphics[width=0.7\linewidth]{./images/Risultati/v3/v3.1/Box_plot/RMSE_tot_boxplot_total_missions.pdf}%
+                }\\
+        \subfloat[Range plot]{%
+                \includegraphics[width=0.50\linewidth]{images/Risultati/v3/v3.1/Range_plot/RMSE_tot_rangeplot_total_missions.pdf}%
+                }\hfill
+        \subfloat[Scatter plot]{%
+                \includegraphics[width=0.49\linewidth]{images/Risultati/v3/v3.1/Strip_plot/RMSE_tot_stripplot_total_missions.pdf}%
+                }\\
+
+        \caption{Grafici di valutazione delle metriche globali al variare delle features del dataset}
+        \label{fig:bp_rp_sp_data5}
+                
+    \end{figure}
+
+    \begin{figure}[!htb]
+
+        \centering
+
+        \subfloat[Box plot]{%
+                \includegraphics[width=0.7\linewidth]{./images/Risultati/v4/v4.1/Box_plot/RMSE_tot_boxplot_total_missions.pdf}%
+                }\\
+        \subfloat[Range plot]{%
+                \includegraphics[width=0.50\linewidth]{images/Risultati/v4/v4.1/Range_plot/RMSE_tot_rangeplot_total_missions.pdf}%
+                }\hfill
+        \subfloat[Scatter plot]{%
+                \includegraphics[width=0.49\linewidth]{images/Risultati/v4/v4.1/Strip_plot/RMSE_tot_stripplot_total_missions.pdf}%
+                }\\
+
+        \caption{Grafici di valutazione delle metriche globali al variare delle features del dataset}
+        \label{fig:bp_rp_sp_data7}
+                
+    \end{figure}
+
+
+    \begin{figure}[!htb]
+
+        \centering
+
+        \subfloat[Box plot]{%
+                \includegraphics[width=0.7\linewidth]{./images/Risultati/v1/v1.2/Box_plot/RMSE_tot_boxplot_total_missions.pdf}%
+                }\\
+        \subfloat[Range plot]{%
+                \includegraphics[width=0.50\linewidth]{images/Risultati/v1/v1.2/Range_plot/RMSE_tot_rangeplot_total_missions.pdf}%
+                }\hfill
+        \subfloat[Scatter plot]{%
+                \includegraphics[width=0.49\linewidth]{images/Risultati/v1/v1.2/Strip_plot/RMSE_tot_stripplot_total_missions.pdf}%
+                }\\
+
+        \caption{Grafici di valutazione delle metriche globali al variare delle features del dataset}
+        \label{fig:bp_rp_sp_data2}
+
+    \end{figure}
+
+    \begin{figure}[!htb]
+
+        \centering
+
+        \subfloat[Box plot]{%
+                \includegraphics[width=0.7\linewidth]{./images/Risultati/v2/v2.2/Box_plot/RMSE_tot_boxplot_total_missions.pdf}%
+                }\\
+        \subfloat[Range plot]{%
+                \includegraphics[width=0.50\linewidth]{images/Risultati/v2/v2.2/Range_plot/RMSE_tot_rangeplot_total_missions.pdf}%
+                }\hfill
+        \subfloat[Scatter plot]{%
+                \includegraphics[width=0.49\linewidth]{images/Risultati/v2/v2.2/Strip_plot/RMSE_tot_stripplot_total_missions.pdf}%
+                }\\
+
+        \caption{Grafici di valutazione delle metriche globali al variare delle features del dataset}
+        \label{fig:bp_rp_sp_data4}
+                
+    \end{figure}
+
+    \begin{figure}[!htb]
+
+        \centering
+
+        \subfloat[Box plot]{%
+                \includegraphics[width=0.7\linewidth]{./images/Risultati/v3/v3.2/Box_plot/RMSE_tot_boxplot_total_missions.pdf}%
+                }\\
+        \subfloat[Range plot]{%
+                \includegraphics[width=0.50\linewidth]{images/Risultati/v3/v3.2/Range_plot/RMSE_tot_rangeplot_total_missions.pdf}%
+                }\hfill
+        \subfloat[Scatter plot]{%
+                \includegraphics[width=0.49\linewidth]{images/Risultati/v3/v3.2/Strip_plot/RMSE_tot_stripplot_total_missions.pdf}%
+                }\\
+
+        \caption{Grafici di valutazione delle metriche globali al variare delle features del dataset}
+        \label{fig:bp_rp_sp_data6}
+                
+    \end{figure}
+
+    \begin{figure}[!htb]
+
+        \centering
+
+        \subfloat[Box plot]{%
+                \includegraphics[width=0.7\linewidth]{./images/Risultati/v4/v4.2/Box_plot/RMSE_tot_boxplot_total_missions.pdf}%
+                }\\
+        \subfloat[Range plot]{%
+                \includegraphics[width=0.50\linewidth]{images/Risultati/v4/v4.2/Range_plot/RMSE_tot_rangeplot_total_missions.pdf}%
+                }\hfill
+        \subfloat[Scatter plot]{%
+                \includegraphics[width=0.49\linewidth]{images/Risultati/v4/v4.2/Strip_plot/RMSE_tot_stripplot_total_missions.pdf}%
+                }\\
+
+        \caption{Grafici di valutazione delle metriche globali al variare delle features del dataset}
+        \label{fig:bp_rp_sp_data8}
+                
+    \end{figure}
+
+
+
+                
+
+
+
+
+
