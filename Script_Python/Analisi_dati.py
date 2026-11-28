@@ -1152,22 +1152,22 @@ class PostProcessing:
             'family': 'serif',      # Simula il font serif di Latin Modern usato all'interno del template Latex per la tesi
             'color': '#002E5F',     # Colore blupolito definito all'interno del template
             'weight': 'bold',       # Grassetto per far risaltare il titolo del grafico
-            'size': 20,             # Dimensione equilibrata per il titolo del grafico
+            'size': 18,             # Dimensione equilibrata per il titolo del grafico
             'style': 'normal'
         }
 
         self.legend_font = {'family': 'serif',
                             'weight': 'bold',
-                            'size': 17}
-        self.tick_size = 18
-        self.value_size = 18
+                            'size': 16}
+        self.tick_size = 16
+        self.value_size = 14
 
         # Dizionario per le Etichette degli Assi (X e Y)
         self.axis_font = {
             'family': 'serif',      # Simula il font serif di Latin Modern usato all'interno del template Latex per la tesi
             'color': 'black',       # Testo nero ad alto contrasto per la massima leggibilità
             'weight': 'bold',     # Peso normale per le etichette descrittive
-            'size': 18,             # Dimensione leggibile ma subordinata al titolo
+            'size': 16,             # Dimensione leggibile ma subordinata al titolo
             'style': 'normal'
         }
 
@@ -3023,7 +3023,7 @@ class PostProcessing:
 
                     # Si definiscono i parametri associati all'asse
                     ax.set_xticks(range(len(versions)))
-                    ax.set_xticklabels([f"v{version}" for version in versions], rotation=0,
+                    ax.set_xticklabels([f"v{version}" for version in versions], rotation=45,
                                        fontdict=self.axis_font)
                     ax.set_ylabel(f"{metric} [m]", fontdict=self.axis_font)
                     ax.set_title(fig_title, fontdict=self.title_font, pad=10)
